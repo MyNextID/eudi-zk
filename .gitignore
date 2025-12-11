@@ -34,3 +34,6 @@ go.work.sum
 gnark-eudi
 *.ccs
 *.key
+circuits/.DS_Store
+.gitignore
+circuits/signature-verification/.DS_Store
