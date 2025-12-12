@@ -8,14 +8,9 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark/backend/groth16"
-	"github.com/consensys/gnark/constraint"
-	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	ccb "github.com/mynextid/gnark-eudi/circuits/compare-bytes"
@@ -27,17 +22,14 @@ type Secp256r1Fp = emulated.P256Fp
 type Secp256r1Fr = emulated.P256Fr
 
 func TestCompareB64Url(t *testing.T) {
+	// == Circuit data ==
 	ccsPath := "compiled/cb-circuit-b64url-v1.ccs"
 	pkPath := "compiled/cb-proving-b64url-v1.key"
 	vkPath := "compiled/cb-verifying-b64url-v1.key"
-
+	// true: recompile, false: load circuit if exists
 	forceCompile := true
 
-	var ccs constraint.ConstraintSystem
-	var pk groth16.ProvingKey
-	var vk groth16.VerifyingKey
-
-	// == create dummy data ==
+	// == Prepare the inputs ==
 	// Generate ES256 (P-256) key pair
 	signerKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -46,48 +38,15 @@ func TestCompareB64Url(t *testing.T) {
 
 	// Properly encode the public key in uncompressed format
 	// This ensures X and Y are always 32 bytes each
-	publicKeyXBytes := signerKey.PublicKey.X.Bytes()
-	publicKeyYBytes := signerKey.PublicKey.Y.Bytes()
 	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.PublicKey.X, signerKey.PublicKey.Y)
 
 	pubKeyBytesDigest := sha256.Sum256(pubKeyBytes)
 	pubKeyBytesDigestHex := hex.EncodeToString(pubKeyBytesDigest[:])
 	pubKeyBytesDigestHexB64 := []byte(base64.RawURLEncoding.EncodeToString([]byte(pubKeyBytesDigestHex)))
 
-	fmt.Println("\n--- Loading the circuit ---")
-	startCircuit := time.Now()
-	if forceCompile {
-		os.Remove(ccsPath)
-		os.Remove(pkPath)
-		os.Remove(vkPath)
-	}
-
-	fmt.Println(len(publicKeyXBytes))
-	fmt.Println(len(publicKeyYBytes))
-
-	if _, err := os.Stat(pkPath); os.IsNotExist(err) || forceCompile {
-		fmt.Println("compiling the circuit")
-		// First time: compile and save
-		circuitTemplate := &ccb.CircuitB64Url{
-
-			Bytes:    make([]uints.U8, len(pubKeyBytesDigest)),
-			BytesB64: make([]uints.U8, len(pubKeyBytesDigestHexB64)),
-		}
-
-		if err := common.SetupAndSave(circuitTemplate, ccsPath, pkPath, vkPath); err != nil {
-			panic(err)
-		}
-		// Load what we just saved
-		ccs, pk, vk, err = common.LoadSetup(ccsPath, pkPath, vkPath)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		// Subsequent runs: just load
-		ccs, pk, vk, err = common.LoadSetup(ccsPath, pkPath, vkPath)
-		if err != nil {
-			panic(err)
-		}
+	circuitTemplate := &ccb.CircuitB64Url{
+		Bytes:    make([]uints.U8, len(pubKeyBytesDigest)),
+		BytesB64: make([]uints.U8, len(pubKeyBytesDigestHexB64)),
 	}
 
 	// Create witness assignment with actual values
@@ -96,57 +55,20 @@ func TestCompareB64Url(t *testing.T) {
 		BytesB64: common.BytesToU8Array(pubKeyBytesDigestHexB64),
 	}
 
+	// == Init the circuit ==
+	fmt.Println("\n--- Init the circuit ---")
+	startCircuit := time.Now()
+
+	ccs, pk, vk, err := common.InitCircut(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	if err != nil {
+		t.Fatalf("failed to inititalize a circuit: %v", err)
+	}
+
 	circuitTime := time.Since(startCircuit)
 	fmt.Printf("✓ Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
-	// Create witness
-	fmt.Println("\n--- Creating Witness ---")
-	startWitness := time.Now()
-	witness, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
-	if err != nil {
-		panic(err)
-	}
-	witnessTime := time.Since(startWitness)
-	fmt.Printf("✓ Witness created successfully! (took %v)\n", witnessTime)
-
-	// Generate proof
-	fmt.Println("\n--- Generating Proof ---")
-	startProof := time.Now()
-	proof, err := groth16.Prove(ccs, pk, witness)
-	if err != nil {
-		panic(err)
-	}
-	proofTime := time.Since(startProof)
-	fmt.Printf("✓ Proof generated successfully! (took %v)\n", proofTime)
-
-	// Extract public witness for verification
-	fmt.Println("\n--- Extracting Public Witness ---")
-	startPublic := time.Now()
-	publicWitness, err := witness.Public()
-	if err != nil {
-		panic(err)
-	}
-	publicTime := time.Since(startPublic)
-	fmt.Printf("✓ Public witness extracted! (took %v)\n", publicTime)
-
-	// Verify proof
-	fmt.Println("\n--- Verifying Proof ---")
-	startVerify := time.Now()
-	err = groth16.Verify(proof, vk, publicWitness)
-	if err != nil {
-		panic("❌ Verification failed: " + err.Error())
-	}
-	verifyTime := time.Since(startVerify)
-	fmt.Printf("✅ Proof verified successfully! (took %v)\n", verifyTime)
-
-	// Summary
-	fmt.Println("\n=== Performance Summary ===")
-	fmt.Printf("Circuit creation:  %v\n", circuitTime)
-	fmt.Printf("Witness creation:  %v\n", witnessTime)
-	fmt.Printf("Proof generation:  %v\n", proofTime)
-	fmt.Printf("Public extraction: %v\n", publicTime)
-	fmt.Printf("Verification:      %v\n", verifyTime)
-	fmt.Printf("Total time:        %v\n", witnessTime+proofTime+publicTime+verifyTime)
+	// == Run the circuit ==
+	common.TestCircuit(assignment, ccs, pk, vk)
 }
 
 func TestCompareHex(t *testing.T) {
@@ -156,10 +78,6 @@ func TestCompareHex(t *testing.T) {
 
 	forceCompile := true
 
-	var ccs constraint.ConstraintSystem
-	var pk groth16.ProvingKey
-	var vk groth16.VerifyingKey
-
 	// == create dummy data ==
 	// Generate ES256 (P-256) key pair
 	signerKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -169,46 +87,13 @@ func TestCompareHex(t *testing.T) {
 
 	// Properly encode the public key in uncompressed format
 	// This ensures X and Y are always 32 bytes each
-	publicKeyXBytes := signerKey.PublicKey.X.Bytes()
-	publicKeyYBytes := signerKey.PublicKey.Y.Bytes()
 	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.PublicKey.X, signerKey.PublicKey.Y)
 
 	pubKeyBytesHex := []byte(hex.EncodeToString(pubKeyBytes))
 
-	fmt.Println("\n--- Loading the circuit ---")
-	startCircuit := time.Now()
-	if forceCompile {
-		os.Remove(ccsPath)
-		os.Remove(pkPath)
-		os.Remove(vkPath)
-	}
-
-	fmt.Println(len(publicKeyXBytes))
-	fmt.Println(len(publicKeyYBytes))
-
-	if _, err := os.Stat(pkPath); os.IsNotExist(err) || forceCompile {
-		fmt.Println("compiling the circuit")
-		// First time: compile and save
-		circuitTemplate := &ccb.CircuitHex{
-
-			Bytes:    make([]uints.U8, len(pubKeyBytes)),
-			BytesHex: make([]uints.U8, len(pubKeyBytesHex)),
-		}
-
-		if err := common.SetupAndSave(circuitTemplate, ccsPath, pkPath, vkPath); err != nil {
-			panic(err)
-		}
-		// Load what we just saved
-		ccs, pk, vk, err = common.LoadSetup(ccsPath, pkPath, vkPath)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		// Subsequent runs: just load
-		ccs, pk, vk, err = common.LoadSetup(ccsPath, pkPath, vkPath)
-		if err != nil {
-			panic(err)
-		}
+	circuitTemplate := &ccb.CircuitHex{
+		Bytes:    make([]uints.U8, len(pubKeyBytes)),
+		BytesHex: make([]uints.U8, len(pubKeyBytesHex)),
 	}
 
 	// Create witness assignment with actual values
@@ -217,57 +102,21 @@ func TestCompareHex(t *testing.T) {
 		BytesHex: common.BytesToU8Array(pubKeyBytesHex),
 	}
 
+	// == Init the circuit ==
+	fmt.Println("\n--- Init the circuit ---")
+	startCircuit := time.Now()
+
+	ccs, pk, vk, err := common.InitCircut(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	if err != nil {
+		t.Fatalf("failed to inititalize a circuit: %v", err)
+	}
+
 	circuitTime := time.Since(startCircuit)
 	fmt.Printf("✓ Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
-	// Create witness
-	fmt.Println("\n--- Creating Witness ---")
-	startWitness := time.Now()
-	witness, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
-	if err != nil {
-		panic(err)
-	}
-	witnessTime := time.Since(startWitness)
-	fmt.Printf("✓ Witness created successfully! (took %v)\n", witnessTime)
+	// == Run the circuit ==
+	common.TestCircuit(assignment, ccs, pk, vk)
 
-	// Generate proof
-	fmt.Println("\n--- Generating Proof ---")
-	startProof := time.Now()
-	proof, err := groth16.Prove(ccs, pk, witness)
-	if err != nil {
-		panic(err)
-	}
-	proofTime := time.Since(startProof)
-	fmt.Printf("✓ Proof generated successfully! (took %v)\n", proofTime)
-
-	// Extract public witness for verification
-	fmt.Println("\n--- Extracting Public Witness ---")
-	startPublic := time.Now()
-	publicWitness, err := witness.Public()
-	if err != nil {
-		panic(err)
-	}
-	publicTime := time.Since(startPublic)
-	fmt.Printf("✓ Public witness extracted! (took %v)\n", publicTime)
-
-	// Verify proof
-	fmt.Println("\n--- Verifying Proof ---")
-	startVerify := time.Now()
-	err = groth16.Verify(proof, vk, publicWitness)
-	if err != nil {
-		panic("❌ Verification failed: " + err.Error())
-	}
-	verifyTime := time.Since(startVerify)
-	fmt.Printf("✅ Proof verified successfully! (took %v)\n", verifyTime)
-
-	// Summary
-	fmt.Println("\n=== Performance Summary ===")
-	fmt.Printf("Circuit creation:  %v\n", circuitTime)
-	fmt.Printf("Witness creation:  %v\n", witnessTime)
-	fmt.Printf("Proof generation:  %v\n", proofTime)
-	fmt.Printf("Public extraction: %v\n", publicTime)
-	fmt.Printf("Verification:      %v\n", verifyTime)
-	fmt.Printf("Total time:        %v\n", witnessTime+proofTime+publicTime+verifyTime)
 }
 
 func TestCompareDigestPubKeys(t *testing.T) {
@@ -277,10 +126,6 @@ func TestCompareDigestPubKeys(t *testing.T) {
 
 	forceCompile := true
 
-	var ccs constraint.ConstraintSystem
-	var pk groth16.ProvingKey
-	var vk groth16.VerifyingKey
-
 	// == create dummy data ==
 	// Generate ES256 (P-256) key pair
 	signerKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -290,46 +135,14 @@ func TestCompareDigestPubKeys(t *testing.T) {
 
 	// Properly encode the public key in uncompressed format
 	// This ensures X and Y are always 32 bytes each
-	publicKeyXBytes := signerKey.PublicKey.X.Bytes()
-	publicKeyYBytes := signerKey.PublicKey.Y.Bytes()
 	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.PublicKey.X, signerKey.PublicKey.Y)
 
 	pubKeyBytesDigest := sha256.Sum256(pubKeyBytes)
 
-	fmt.Println("\n--- Loading the circuit ---")
-	startCircuit := time.Now()
-	if forceCompile {
-		os.Remove(ccsPath)
-		os.Remove(pkPath)
-		os.Remove(vkPath)
-	}
+	circuitTemplate := &ccb.CircuitPKDigest{
 
-	fmt.Println(len(publicKeyXBytes))
-	fmt.Println(len(publicKeyYBytes))
-
-	if _, err := os.Stat(pkPath); os.IsNotExist(err) || forceCompile {
-		fmt.Println("compiling the circuit")
-		// First time: compile and save
-		circuitTemplate := &ccb.CircuitPKDigest{
-
-			SignerPubKeyBytes:  make([]uints.U8, len(pubKeyBytes)),
-			SignerPubKeyDigest: make([]uints.U8, len(pubKeyBytesDigest)),
-		}
-
-		if err := common.SetupAndSave(circuitTemplate, ccsPath, pkPath, vkPath); err != nil {
-			panic(err)
-		}
-		// Load what we just saved
-		ccs, pk, vk, err = common.LoadSetup(ccsPath, pkPath, vkPath)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		// Subsequent runs: just load
-		ccs, pk, vk, err = common.LoadSetup(ccsPath, pkPath, vkPath)
-		if err != nil {
-			panic(err)
-		}
+		SignerPubKeyBytes:  make([]uints.U8, len(pubKeyBytes)),
+		SignerPubKeyDigest: make([]uints.U8, len(pubKeyBytesDigest)),
 	}
 
 	// Create witness assignment with actual values
@@ -339,58 +152,20 @@ func TestCompareDigestPubKeys(t *testing.T) {
 		SignerPubKeyBytes:  common.BytesToU8Array(pubKeyBytes),
 		SignerPubKeyDigest: common.BytesToU8Array(pubKeyBytesDigest[:]),
 	}
+	// == Init the circuit ==
+	fmt.Println("\n--- Init the circuit ---")
+	startCircuit := time.Now()
+
+	ccs, pk, vk, err := common.InitCircut(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	if err != nil {
+		t.Fatalf("failed to inititalize a circuit: %v", err)
+	}
 
 	circuitTime := time.Since(startCircuit)
 	fmt.Printf("✓ Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
-	// Create witness
-	fmt.Println("\n--- Creating Witness ---")
-	startWitness := time.Now()
-	witness, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
-	if err != nil {
-		panic(err)
-	}
-	witnessTime := time.Since(startWitness)
-	fmt.Printf("✓ Witness created successfully! (took %v)\n", witnessTime)
-
-	// Generate proof
-	fmt.Println("\n--- Generating Proof ---")
-	startProof := time.Now()
-	proof, err := groth16.Prove(ccs, pk, witness)
-	if err != nil {
-		panic(err)
-	}
-	proofTime := time.Since(startProof)
-	fmt.Printf("✓ Proof generated successfully! (took %v)\n", proofTime)
-
-	// Extract public witness for verification
-	fmt.Println("\n--- Extracting Public Witness ---")
-	startPublic := time.Now()
-	publicWitness, err := witness.Public()
-	if err != nil {
-		panic(err)
-	}
-	publicTime := time.Since(startPublic)
-	fmt.Printf("✓ Public witness extracted! (took %v)\n", publicTime)
-
-	// Verify proof
-	fmt.Println("\n--- Verifying Proof ---")
-	startVerify := time.Now()
-	err = groth16.Verify(proof, vk, publicWitness)
-	if err != nil {
-		panic("❌ Verification failed: " + err.Error())
-	}
-	verifyTime := time.Since(startVerify)
-	fmt.Printf("✅ Proof verified successfully! (took %v)\n", verifyTime)
-
-	// Summary
-	fmt.Println("\n=== Performance Summary ===")
-	fmt.Printf("Circuit creation:  %v\n", circuitTime)
-	fmt.Printf("Witness creation:  %v\n", witnessTime)
-	fmt.Printf("Proof generation:  %v\n", proofTime)
-	fmt.Printf("Public extraction: %v\n", publicTime)
-	fmt.Printf("Verification:      %v\n", verifyTime)
-	fmt.Printf("Total time:        %v\n", witnessTime+proofTime+publicTime+verifyTime)
+	// == Run the circuit ==
+	common.TestCircuit(assignment, ccs, pk, vk)
 }
 
 func TestComparePublicKeys(t *testing.T) {
@@ -399,10 +174,6 @@ func TestComparePublicKeys(t *testing.T) {
 	vkPath := "compiled/cb-verifying-pub-key-v1.key"
 
 	forceCompile := true
-
-	var ccs constraint.ConstraintSystem
-	var pk groth16.ProvingKey
-	var vk groth16.VerifyingKey
 
 	// == create dummy data ==
 	// Generate ES256 (P-256) key pair
@@ -413,46 +184,14 @@ func TestComparePublicKeys(t *testing.T) {
 
 	// Properly encode the public key in uncompressed format
 	// This ensures X and Y are always 32 bytes each
-	// pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.PublicKey.X, signerKey.PublicKey.Y)
 	publicKeyXBytes := signerKey.PublicKey.X.Bytes()
 	publicKeyYBytes := signerKey.PublicKey.Y.Bytes()
 
-	fmt.Println("\n--- Loading the circuit ---")
-	startCircuit := time.Now()
-	if forceCompile {
-		os.Remove(ccsPath)
-		os.Remove(pkPath)
-		os.Remove(vkPath)
+	circuitTemplate := &ccb.CircuitPK{
+
+		SignerPubKeyXBytes: make([]uints.U8, len(publicKeyXBytes)),
+		SignerPubKeyYBytes: make([]uints.U8, len(publicKeyYBytes)),
 	}
-
-	fmt.Println(len(publicKeyXBytes))
-	fmt.Println(len(publicKeyYBytes))
-
-	if _, err := os.Stat(pkPath); os.IsNotExist(err) || forceCompile {
-		fmt.Println("compiling the circuit")
-		// First time: compile and save
-		circuitTemplate := &ccb.CircuitPK{
-
-			SignerPubKeyXBytes: make([]uints.U8, len(publicKeyXBytes)),
-			SignerPubKeyYBytes: make([]uints.U8, len(publicKeyYBytes)),
-		}
-
-		if err := common.SetupAndSave(circuitTemplate, ccsPath, pkPath, vkPath); err != nil {
-			panic(err)
-		}
-		// Load what we just saved
-		ccs, pk, vk, err = common.LoadSetup(ccsPath, pkPath, vkPath)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		// Subsequent runs: just load
-		ccs, pk, vk, err = common.LoadSetup(ccsPath, pkPath, vkPath)
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	// Create witness assignment with actual values
 	assignment := &ccb.CircuitPK{
 		SignerPubKeyX:      emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
@@ -461,57 +200,20 @@ func TestComparePublicKeys(t *testing.T) {
 		SignerPubKeyYBytes: common.BytesToU8Array(publicKeyYBytes),
 	}
 
+	// == Init the circuit ==
+	fmt.Println("\n--- Init the circuit ---")
+	startCircuit := time.Now()
+
+	ccs, pk, vk, err := common.InitCircut(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	if err != nil {
+		t.Fatalf("failed to inititalize a circuit: %v", err)
+	}
+
 	circuitTime := time.Since(startCircuit)
 	fmt.Printf("✓ Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
-	// Create witness
-	fmt.Println("\n--- Creating Witness ---")
-	startWitness := time.Now()
-	witness, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
-	if err != nil {
-		panic(err)
-	}
-	witnessTime := time.Since(startWitness)
-	fmt.Printf("✓ Witness created successfully! (took %v)\n", witnessTime)
-
-	// Generate proof
-	fmt.Println("\n--- Generating Proof ---")
-	startProof := time.Now()
-	proof, err := groth16.Prove(ccs, pk, witness)
-	if err != nil {
-		panic(err)
-	}
-	proofTime := time.Since(startProof)
-	fmt.Printf("✓ Proof generated successfully! (took %v)\n", proofTime)
-
-	// Extract public witness for verification
-	fmt.Println("\n--- Extracting Public Witness ---")
-	startPublic := time.Now()
-	publicWitness, err := witness.Public()
-	if err != nil {
-		panic(err)
-	}
-	publicTime := time.Since(startPublic)
-	fmt.Printf("✓ Public witness extracted! (took %v)\n", publicTime)
-
-	// Verify proof
-	fmt.Println("\n--- Verifying Proof ---")
-	startVerify := time.Now()
-	err = groth16.Verify(proof, vk, publicWitness)
-	if err != nil {
-		panic("❌ Verification failed: " + err.Error())
-	}
-	verifyTime := time.Since(startVerify)
-	fmt.Printf("✅ Proof verified successfully! (took %v)\n", verifyTime)
-
-	// Summary
-	fmt.Println("\n=== Performance Summary ===")
-	fmt.Printf("Circuit creation:  %v\n", circuitTime)
-	fmt.Printf("Witness creation:  %v\n", witnessTime)
-	fmt.Printf("Proof generation:  %v\n", proofTime)
-	fmt.Printf("Public extraction: %v\n", publicTime)
-	fmt.Printf("Verification:      %v\n", verifyTime)
-	fmt.Printf("Total time:        %v\n", witnessTime+proofTime+publicTime+verifyTime)
+	// == Run the circuit ==
+	common.TestCircuit(assignment, ccs, pk, vk)
 }
 
 func TestCompareBytes(t *testing.T) {
@@ -521,50 +223,20 @@ func TestCompareBytes(t *testing.T) {
 
 	forceCompile := true
 
-	var ccs constraint.ConstraintSystem
-	var pk groth16.ProvingKey
-	var vk groth16.VerifyingKey
-
 	byteSize := 32
 
-	randomBytes, err := GenerateRandomBytes(byteSize)
+	randomBytes, err := common.GenerateRandomBytes(byteSize)
 	if err != nil {
 		t.Error(err)
 	}
-	randomBytes2, err := GenerateRandomBytes(byteSize)
+	randomBytes2, err := common.GenerateRandomBytes(byteSize)
 	if err != nil {
 		t.Error(err)
 	}
 
-	fmt.Println("\n--- Loading the circuit ---")
-	startCircuit := time.Now()
-	if forceCompile {
-		os.Remove(ccsPath)
-		os.Remove(pkPath)
-		os.Remove(vkPath)
-	}
-	if _, err := os.Stat(pkPath); os.IsNotExist(err) || forceCompile {
-		fmt.Println("compiling the circuit")
-		// First time: compile and save
-		circuitTemplate := &ccb.Circuit{
-			Bytes:    make([]uints.U8, byteSize),
-			PubBytes: make([]uints.U8, byteSize),
-		}
-
-		if err := common.SetupAndSave(circuitTemplate, ccsPath, pkPath, vkPath); err != nil {
-			panic(err)
-		}
-		// Load what we just saved
-		ccs, pk, vk, err = common.LoadSetup(ccsPath, pkPath, vkPath)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		// Subsequent runs: just load
-		ccs, pk, vk, err = common.LoadSetup(ccsPath, pkPath, vkPath)
-		if err != nil {
-			panic(err)
-		}
+	circuitTemplate := &ccb.Circuit{
+		Bytes:    make([]uints.U8, byteSize),
+		PubBytes: make([]uints.U8, byteSize),
 	}
 
 	// Create witness assignment with actual values
@@ -577,65 +249,19 @@ func TestCompareBytes(t *testing.T) {
 	}
 	_ = randomBytes2
 
+	// == Init the circuit ==
+	fmt.Println("\n--- Init the circuit ---")
+	startCircuit := time.Now()
+
+	ccs, pk, vk, err := common.InitCircut(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	if err != nil {
+		t.Fatalf("failed to inititalize a circuit: %v", err)
+	}
+
 	circuitTime := time.Since(startCircuit)
 	fmt.Printf("✓ Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
-	// Create witness
-	fmt.Println("\n--- Creating Witness ---")
-	startWitness := time.Now()
-	witness, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
-	if err != nil {
-		panic(err)
-	}
-	witnessTime := time.Since(startWitness)
-	fmt.Printf("✓ Witness created successfully! (took %v)\n", witnessTime)
+	// == Run the circuit ==
+	common.TestCircuit(assignment, ccs, pk, vk)
 
-	// Generate proof
-	fmt.Println("\n--- Generating Proof ---")
-	startProof := time.Now()
-	proof, err := groth16.Prove(ccs, pk, witness)
-	if err != nil {
-		panic(err)
-	}
-	proofTime := time.Since(startProof)
-	fmt.Printf("✓ Proof generated successfully! (took %v)\n", proofTime)
-
-	// Extract public witness for verification
-	fmt.Println("\n--- Extracting Public Witness ---")
-	startPublic := time.Now()
-	publicWitness, err := witness.Public()
-	if err != nil {
-		panic(err)
-	}
-	publicTime := time.Since(startPublic)
-	fmt.Printf("✓ Public witness extracted! (took %v)\n", publicTime)
-
-	// Verify proof
-	fmt.Println("\n--- Verifying Proof ---")
-	startVerify := time.Now()
-	err = groth16.Verify(proof, vk, publicWitness)
-	if err != nil {
-		panic("❌ Verification failed: " + err.Error())
-	}
-	verifyTime := time.Since(startVerify)
-	fmt.Printf("✅ Proof verified successfully! (took %v)\n", verifyTime)
-
-	// Summary
-	fmt.Println("\n=== Performance Summary ===")
-	fmt.Printf("Circuit creation:  %v\n", circuitTime)
-	fmt.Printf("Witness creation:  %v\n", witnessTime)
-	fmt.Printf("Proof generation:  %v\n", proofTime)
-	fmt.Printf("Public extraction: %v\n", publicTime)
-	fmt.Printf("Verification:      %v\n", verifyTime)
-	fmt.Printf("Total time:        %v\n", witnessTime+proofTime+publicTime+verifyTime)
-}
-
-// GenerateRandomBytes returns cryptographically secure random bytes
-func GenerateRandomBytes(size int) ([]byte, error) {
-	randomBytes := make([]byte, size)
-	_, err := rand.Read(randomBytes)
-	if err != nil {
-		return nil, err
-	}
-	return randomBytes, nil
 }
