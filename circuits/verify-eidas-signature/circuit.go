@@ -10,7 +10,7 @@ import (
 type Secp256r1Fp = emulated.P256Fp
 type Secp256r1Fr = emulated.P256Fr
 
-// CircuitJWS defines the ZK circuit for JWT with X.509 certificate verification
+// CircuitJWS defines the ZK circuit for JWS with X.509 certificate verification
 type CircuitJWS struct {
 	// ===== PRIVATE INPUTS =====
 	JWSHeaderB64  []uints.U8                    `gnark:",secret"`
@@ -28,7 +28,7 @@ type CircuitJWS struct {
 	QTSPPubKeyY      emulated.Element[Secp256r1Fp] `gnark:",public"`
 }
 
-// Define verifies the ES256 JWT signature in-circuit
+// Define verifies the ES256 JWS signature in-circuit
 func (c *CircuitJWS) Define(api frontend.API) error {
 	c.VerifyJWS(api)
 	c.VerifyX509Signature(api)
