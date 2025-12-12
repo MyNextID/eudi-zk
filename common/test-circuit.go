@@ -12,7 +12,7 @@ import (
 )
 
 // Init circuit initializes a circuit
-func InitCircut(ccsPath, pkPath, vkPath string, forceCompile bool, circuitTemplate frontend.Circuit) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey, error) {
+func InitCircuit(ccsPath, pkPath, vkPath string, forceCompile bool, circuitTemplate frontend.Circuit) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey, error) {
 	if forceCompile {
 		os.Remove(ccsPath)
 		os.Remove(pkPath)

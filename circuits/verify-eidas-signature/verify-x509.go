@@ -3,35 +3,26 @@ package csv
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/algebra/emulated/sw_emulated"
-	"github.com/consensys/gnark/std/hash/sha2"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/signature/ecdsa"
+	"github.com/mynextid/gnark-eudi/common"
 )
 
-func (c *JWTCircuit) VerifyX509(api frontend.API) error {
-	// Initialize SHA256 hasher
-	hasher, err := sha2.New(api)
-	if err != nil {
-		return err
-	}
+// VerifyX509Signature verifies signature of a DER encoded X.509 certificate
+func (c *CircuitJWS) VerifyX509Signature(api frontend.API) error {
 
-	// Write payload to hasher
-	hasher.Write(c.SignerCertDER)
-
-	// Compute SHA256 hash of header.payload
-	messageHash := hasher.Sum()
+	messageHash, _ := common.SHA256(api, c.SignerCertDER)
 
 	mHash, err := sha256ToP256Fr(api, messageHash)
 	if err != nil {
 		return err
 	}
-	_ = mHash
 
 	Pub := ecdsa.PublicKey[emulated.P256Fp, emulated.P256Fr]{
 		X: c.QTSPPubKeyX,
 		Y: c.QTSPPubKeyY,
 	}
-	_ = Pub
+
 	Sig := ecdsa.Signature[emulated.P256Fr]{
 		R: c.CertSigR,
 		S: c.CertSigS,

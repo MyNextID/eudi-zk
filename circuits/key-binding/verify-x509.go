@@ -8,7 +8,7 @@ import (
 	"github.com/consensys/gnark/std/signature/ecdsa"
 )
 
-func (c *JWTCircuit) VerifyX509(api frontend.API) error {
+func (c *JWSCircuit) VerifyX509(api frontend.API) error {
 	// Initialize SHA256 hasher
 	hasher, err := sha2.New(api)
 	if err != nil {

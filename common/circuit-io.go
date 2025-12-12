@@ -12,7 +12,6 @@ import (
 )
 
 // Save compiled circuit and keys
-// func SetupAndSave(circuitTemplate *JWTCircuit, ccsPath, pkPath, vkPath string) error {
 func SetupAndSave(circuitTemplate frontend.Circuit, ccsPath, pkPath, vkPath string) error {
 	fmt.Println("\n--- Compiling Circuit ---")
 	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, circuitTemplate)

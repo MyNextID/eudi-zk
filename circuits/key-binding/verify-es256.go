@@ -9,7 +9,7 @@ import (
 	"github.com/consensys/gnark/std/signature/ecdsa"
 )
 
-func (c *JWTCircuit) VerifyJWT(api frontend.API) error {
+func (c *JWSCircuit) VerifyJWS(api frontend.API) error {
 	// Initialize SHA256 hasher
 	hasher, err := sha2.New(api)
 	if err != nil {
@@ -17,17 +17,17 @@ func (c *JWTCircuit) VerifyJWT(api frontend.API) error {
 	}
 
 	// Concatenate header and payload with a '.' separator (ASCII 46 = 0x2E)
-	// JWT format: base64url(header).base64url(payload)
+	// JWS format: base64url(header).base64url(payload)
 	dotSeparator := uints.NewU8(46)
 
 	// Write header to hasher
-	hasher.Write(c.JWTHeaderB64)
+	hasher.Write(c.JWSHeaderB64)
 
 	// Write dot separator
 	hasher.Write([]uints.U8{dotSeparator})
 
 	// Write payload to hasher
-	hasher.Write(c.JWTPayloadPublic)
+	hasher.Write(c.JWSPayloadPublic)
 
 	// Compute SHA256 hash of header.payload
 	messageHash := hasher.Sum()
@@ -44,8 +44,8 @@ func (c *JWTCircuit) VerifyJWT(api frontend.API) error {
 	}
 	_ = Pub
 	Sig := ecdsa.Signature[emulated.P256Fr]{
-		R: c.JWTSigR,
-		S: c.JWTSigS,
+		R: c.JWSSigR,
+		S: c.JWSSigS,
 	}
 
 	// // signature verification assertion is done in-circuit

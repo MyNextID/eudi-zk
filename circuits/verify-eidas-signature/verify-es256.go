@@ -9,53 +9,53 @@ import (
 	"github.com/consensys/gnark/std/signature/ecdsa"
 )
 
-func (c *JWTCircuit) VerifyJWT(api frontend.API) error {
-	// Initialize SHA256 hasher
-	hasher, err := sha2.New(api)
+// VerifyJWS combines a protected JWS header with the payload and verifies the
+// signature using the provided public keys. Only for ES256
+func (c *CircuitJWS) VerifyJWS(api frontend.API) error {
+	// Initialize SHA256 hash
+	hash, err := sha2.New(api)
 	if err != nil {
 		return err
 	}
 
 	// Concatenate header and payload with a '.' separator (ASCII 46 = 0x2E)
-	// JWT format: base64url(header).base64url(payload)
+	// format: base64url(header).base64url(payload)
 	dotSeparator := uints.NewU8(46)
 
 	// Write header to hasher
-	hasher.Write(c.JWTHeaderB64)
+	hash.Write(c.JWSHeaderB64)
 
 	// Write dot separator
-	hasher.Write([]uints.U8{dotSeparator})
+	hash.Write([]uints.U8{dotSeparator})
 
 	// Write payload to hasher
-	hasher.Write(c.JWTPayloadPublic)
+	hash.Write(c.JWSPayloadPublic)
 
 	// Compute SHA256 hash of header.payload
-	messageHash := hasher.Sum()
+	messageHash := hash.Sum()
 
+	// convert to P256Fr
 	mHash, err := sha256ToP256Fr(api, messageHash)
 	if err != nil {
 		return err
 	}
-	_ = mHash
 
 	Pub := ecdsa.PublicKey[emulated.P256Fp, emulated.P256Fr]{
 		X: c.SignerPubKeyX,
 		Y: c.SignerPubKeyY,
 	}
-	_ = Pub
 	Sig := ecdsa.Signature[emulated.P256Fr]{
-		R: c.JWTSigR,
-		S: c.JWTSigS,
+		R: c.JWSSigR,
+		S: c.JWSSigS,
 	}
 
-	// // signature verification assertion is done in-circuit
+	// Verify the signature
 	Pub.Verify(api, sw_emulated.GetCurveParams[emulated.P256Fp](), mHash, &Sig)
 
 	return nil
 }
 
 // sha256ToP256Fr converts SHA256 hash output ([]uints.U8) to P256Fr field element
-// This version correctly handles the emulated field limb structure
 func sha256ToP256Fr(api frontend.API, hash []uints.U8) (*emulated.Element[emulated.P256Fr], error) {
 	if len(hash) != 32 {
 		panic("SHA256 hash must be 32 bytes")

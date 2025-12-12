@@ -7,7 +7,7 @@ import (
 )
 
 // verifyPubKeyInCertificateOptimized searches for the public key X coordinate in the DER certificate
-func (circuit *JWTCircuit) verifyPubKeyInCertificateOptimized(api frontend.API) error {
+func (circuit *CircuitJWS) verifyPubKeyInCertificateOptimized(api frontend.API) error {
 	/*
 		More efficient approach:
 		1. Find the 0x04 (uncompressed point indicator) in the certificate
@@ -63,7 +63,7 @@ func (circuit *JWTCircuit) verifyPubKeyInCertificateOptimized(api frontend.API) 
 }
 
 // compareBytes compares two byte slices and returns 1 if all bytes match, 0 otherwise
-func (circuit *JWTCircuit) compareBytes(api frontend.API, a, b []uints.U8) frontend.Variable {
+func (circuit *CircuitJWS) compareBytes(api frontend.API, a, b []uints.U8) frontend.Variable {
 	// Returns 1 if all bytes match, 0 otherwise
 	allMatch := frontend.Variable(1)
 
@@ -83,7 +83,7 @@ func (circuit *JWTCircuit) compareBytes(api frontend.API, a, b []uints.U8) front
 }
 
 // emulatedElementToBytes32 converts an emulated field element to 32 bytes (big-endian)
-func (circuit *JWTCircuit) emulatedElementToBytes32(api frontend.API, elem emulated.Element[Secp256r1Fp]) []uints.U8 {
+func (circuit *CircuitJWS) emulatedElementToBytes32(api frontend.API, elem emulated.Element[Secp256r1Fp]) []uints.U8 {
 	/*
 		Convert emulated field element to 32 bytes for P-256 coordinate
 		P-256 field prime is 2^256 - 2^224 + 2^192 + 2^96 - 1
@@ -119,121 +119,6 @@ func (circuit *JWTCircuit) emulatedElementToBytes32(api frontend.API, elem emula
 		}
 		// Fix: Pass byteValue directly as frontend.Variable
 		bytes[i] = uints.U8{Val: byteValue}
-	}
-
-	return bytes
-}
-
-// Alternative implementation using limbs directly (may be more efficient)
-func (circuit *JWTCircuit) emulatedElementToBytes32Limbs(api frontend.API, elem emulated.Element[Secp256r1Fp]) []uints.U8 {
-	/*
-		Alternative approach: extract bytes directly from limbs
-		This may generate fewer constraints than the bit-based approach
-	*/
-
-	field, err := emulated.NewField[Secp256r1Fp](api)
-	if err != nil {
-		panic(err)
-	}
-
-	// Reduce to canonical form
-	reduced := field.Reduce(&elem)
-
-	// Get limbs (gnark uses multiple limbs to represent large numbers)
-	// The number of limbs and their bit-width depends on the field
-	limbs := reduced.Limbs
-
-	bytes := make([]uints.U8, 32)
-
-	// Extract bytes from limbs
-	// This is a simplified version - actual implementation depends on limb configuration
-	bitsProcessed := 0
-	limbIndex := 0
-
-	for byteIndex := 31; byteIndex >= 0; byteIndex-- { // Start from least significant byte
-		// We need to extract 8 bits for this byte
-		byteValue := frontend.Variable(0)
-
-		for bitInByte := 0; bitInByte < 8; bitInByte++ {
-			// Determine which limb and bit position we're at
-			if limbIndex < len(limbs) {
-				// Extract bit from current limb
-				bitPos := bitsProcessed % 64 // Assuming 64-bit limbs
-				bit := api.And(
-					api.Div(limbs[limbIndex], 1<<bitPos),
-					1,
-				)
-
-				byteValue = api.Add(
-					api.Mul(byteValue, 2),
-					bit,
-				)
-
-				bitsProcessed++
-				if bitsProcessed%64 == 0 {
-					limbIndex++
-				}
-			}
-		}
-
-		// Fix: Create U8 with Val field
-		bytes[byteIndex] = uints.U8{Val: byteValue}
-	}
-
-	return bytes
-}
-
-// More robust version that handles edge cases
-func (circuit *JWTCircuit) emulatedElementToBytes32Robust(api frontend.API, elem emulated.Element[Secp256r1Fp]) []uints.U8 {
-	/*
-		Most robust approach using gnark's built-in conversion
-	*/
-
-	field, err := emulated.NewField[Secp256r1Fp](api)
-	if err != nil {
-		panic(err)
-	}
-
-	// Reduce to ensure we're in range [0, p)
-	reduced := field.Reduce(&elem)
-
-	// Convert to bits (most reliable method)
-	bits := field.ToBits(reduced)
-
-	// Ensure we have exactly 256 bits
-	if len(bits) < 256 {
-		// Pad with zeros if needed
-		paddedBits := make([]frontend.Variable, 256)
-		for i := 0; i < 256-len(bits); i++ {
-			paddedBits[i] = 0
-		}
-		copy(paddedBits[256-len(bits):], bits)
-		bits = paddedBits
-	} else if len(bits) > 256 {
-		// Take only the lower 256 bits
-		bits = bits[len(bits)-256:]
-	}
-
-	// Convert bits to bytes (big-endian)
-	bytes := make([]uints.U8, 32)
-
-	for byteIdx := 0; byteIdx < 32; byteIdx++ {
-		byteValue := frontend.Variable(0)
-
-		// Process 8 bits for this byte (big-endian)
-		for bitIdx := 0; bitIdx < 8; bitIdx++ {
-			// Most significant bit of most significant byte is at index 0
-			globalBitIdx := byteIdx*8 + bitIdx
-
-			// Build byte value: shift left and add bit
-			byteValue = api.Add(
-				api.Mul(byteValue, 2),
-				bits[globalBitIdx],
-			)
-		}
-
-		// Fix: Create U8 with Val field directly
-		bytes[byteIdx] = uints.U8{Val: byteValue}
 	}
 
 	return bytes

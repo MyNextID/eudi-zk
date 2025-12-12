@@ -6,19 +6,16 @@ import (
 	"github.com/consensys/gnark/std/math/uints"
 )
 
-// Define Secp256r1 field parameters
+// Secp256r1 field parameters
 type Secp256r1Fp = emulated.P256Fp
 type Secp256r1Fr = emulated.P256Fr
 
-// JWTCircuit defines the ZK circuit for JWT with X.509 certificate verification
-/*
-
- */
-type JWTCircuit struct {
+// CircuitJWS defines the ZK circuit for JWT with X.509 certificate verification
+type CircuitJWS struct {
 	// ===== PRIVATE INPUTS =====
-	JWTHeaderB64  []uints.U8                    `gnark:",secret"`
-	JWTSigR       emulated.Element[Secp256r1Fr] `gnark:",secret"`
-	JWTSigS       emulated.Element[Secp256r1Fr] `gnark:",secret"`
+	JWSHeaderB64  []uints.U8                    `gnark:",secret"`
+	JWSSigR       emulated.Element[Secp256r1Fr] `gnark:",secret"`
+	JWSSigS       emulated.Element[Secp256r1Fr] `gnark:",secret"`
 	SignerPubKeyX emulated.Element[Secp256r1Fp] `gnark:",secret"`
 	SignerPubKeyY emulated.Element[Secp256r1Fp] `gnark:",secret"`
 	SignerCertDER []uints.U8                    `gnark:",secret"`
@@ -26,14 +23,14 @@ type JWTCircuit struct {
 	CertSigS      emulated.Element[Secp256r1Fr] `gnark:",secret"`
 
 	// ===== PUBLIC INPUTS =====
-	JWTPayloadPublic []uints.U8                    `gnark:",public"`
+	JWSPayloadPublic []uints.U8                    `gnark:",public"`
 	QTSPPubKeyX      emulated.Element[Secp256r1Fp] `gnark:",public"`
 	QTSPPubKeyY      emulated.Element[Secp256r1Fp] `gnark:",public"`
 }
 
 // Define verifies the ES256 JWT signature in-circuit
-func (c *JWTCircuit) Define(api frontend.API) error {
-	c.VerifyJWT(api)
-	c.VerifyX509(api)
+func (c *CircuitJWS) Define(api frontend.API) error {
+	c.VerifyJWS(api)
+	c.VerifyX509Signature(api)
 	return c.verifyPubKeyInCertificateOptimized(api)
 }

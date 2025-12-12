@@ -24,7 +24,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
-	csv "github.com/mynextid/gnark-eudi/circuits/signature-verification"
+	csv "github.com/mynextid/gnark-eudi/circuits/verify-eidas-signature"
 	"github.com/mynextid/gnark-eudi/common"
 )
 
@@ -37,11 +37,6 @@ const (
 // Define Secp256r1 field parameters
 type Secp256r1Fp = emulated.P256Fp
 type Secp256r1Fr = emulated.P256Fr
-
-type JWTHeader struct {
-	Alg string `json:"alg"`
-	Typ string `json:"typ"`
-}
 
 func TestCompareHex(t *testing.T) {
 	// == create dummy data ==
@@ -60,10 +55,10 @@ func TestCompareHex(t *testing.T) {
 
 	pkDigestHex := hex.EncodeToString(pkDigest[:])
 
-	// 2. Create JWT header
+	// 2. Create JWS header
 	header := map[string]string{
 		"alg": "ES256",
-		"typ": "JWT",
+		"typ": "JWS",
 		"kid": pkDigestHex,
 	}
 
@@ -106,7 +101,7 @@ func TestCompareB64(t *testing.T) {
 
 	pkDigestHex := hex.EncodeToString(pkDigest[:])
 
-	// 2. Create JWT header
+	// 2. Create JWS header
 	header := map[string]string{
 		"alg": "ES256",
 		"kid": pkDigestHex,
@@ -222,7 +217,7 @@ func CircuitB64Kid(pk ecdsa.PublicKey, headerB64 string, kidValueStart, kidValue
 
 }
 
-func TestJWTCircuit(t *testing.T) {
+func TestJWSCircuit(t *testing.T) {
 	// == create dummy data ==
 	// 1. Generate ES256 (P-256) key pair
 	signerKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -230,10 +225,10 @@ func TestJWTCircuit(t *testing.T) {
 		panic(fmt.Sprintf("Failed to generate key: %v", err))
 	}
 
-	// 2. Create JWT header
+	// 2. Create JWS header
 	header := map[string]any{
 		"alg": "ES256",
-		"typ": "JWT",
+		"typ": "JWS",
 	}
 	headerJSON, err := json.Marshal(header)
 	if err != nil {
@@ -241,7 +236,7 @@ func TestJWTCircuit(t *testing.T) {
 	}
 	headerB64 := base64.RawURLEncoding.EncodeToString(headerJSON)
 
-	// 3. Create JWT payload
+	// 3. Create JWS payload
 	payload := map[string]interface{}{
 		"sub":  "1234567890",
 		"name": "John Doe",
@@ -265,12 +260,12 @@ func TestJWTCircuit(t *testing.T) {
 		panic(fmt.Sprintf("Failed to sign: %v", err))
 	}
 
-	// 7. Create the complete JWT
+	// 7. Create the complete JWS
 	signatureBytes := append(common.PadTo32Bytes(r.Bytes()), common.PadTo32Bytes(s.Bytes())...)
 	signatureB64 := base64.RawURLEncoding.EncodeToString(signatureBytes)
 	jwtToken := signingInput + "." + signatureB64
 
-	fmt.Println("Generated JWT:", jwtToken)
+	fmt.Println("Generated JWS:", jwtToken)
 	fmt.Println("\n--- Circuit Inputs ---")
 	fmt.Printf("Header JSON length: %d bytes\n", len(headerJSON))
 	fmt.Printf("Payload B64 length: %d bytes\n", len(payloadB64))
@@ -334,9 +329,9 @@ func TestJWTCircuit(t *testing.T) {
 	// Check if files exist
 	if _, err := os.Stat(pkPath); os.IsNotExist(err) {
 		// First time: compile and save
-		circuitTemplate := &csv.JWTCircuit{
-			JWTHeaderB64:     make([]uints.U8, len(headerB64)),
-			JWTPayloadPublic: make([]uints.U8, len(payloadB64)),
+		circuitTemplate := &csv.CircuitJWS{
+			JWSHeaderB64:     make([]uints.U8, len(headerB64)),
+			JWSPayloadPublic: make([]uints.U8, len(payloadB64)),
 			SignerCertDER:    make([]uints.U8, len(tbsCert)),
 		}
 		if err := common.SetupAndSave(circuitTemplate, ccsPath, pkPath, vkPath); err != nil {
@@ -356,11 +351,11 @@ func TestJWTCircuit(t *testing.T) {
 	}
 
 	// Create witness assignment with actual values
-	assignment := &csv.JWTCircuit{
+	assignment := &csv.CircuitJWS{
 		// Private inputs
-		JWTHeaderB64:  common.StringToU8Array(headerB64),
-		JWTSigR:       emulated.ValueOf[Secp256r1Fr](r),
-		JWTSigS:       emulated.ValueOf[Secp256r1Fr](s),
+		JWSHeaderB64:  common.StringToU8Array(headerB64),
+		JWSSigR:       emulated.ValueOf[Secp256r1Fr](r),
+		JWSSigS:       emulated.ValueOf[Secp256r1Fr](s),
 		SignerPubKeyX: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
 		SignerPubKeyY: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.Y),
 		SignerCertDER: common.BytesToU8Array(tbsCert),
@@ -368,7 +363,7 @@ func TestJWTCircuit(t *testing.T) {
 		CertSigS:      emulated.ValueOf[Secp256r1Fr](certSig.S),
 
 		// Public input
-		JWTPayloadPublic: common.StringToU8Array(payloadB64),
+		JWSPayloadPublic: common.StringToU8Array(payloadB64),
 		QTSPPubKeyX:      emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.X),
 		QTSPPubKeyY:      emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.Y),
 	}
