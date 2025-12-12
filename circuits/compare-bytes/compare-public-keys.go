@@ -63,11 +63,11 @@ func EmulatedElementToBytes32(api frontend.API, elem emulated.Element[Secp256r1F
 	// Convert LSB-first bits to big-endian bytes
 	// Byte 0 (most significant) contains bits [255:248]
 	// Byte 31 (least significant) contains bits [7:0]
-	for byteIdx := 0; byteIdx < 32; byteIdx++ {
+	for byteIdx := range 32 {
 		byteValue := frontend.Variable(0)
 
 		// Build each byte from 8 bits
-		for bitIdx := 0; bitIdx < 8; bitIdx++ {
+		for bitIdx := range 8 {
 			// For big-endian bytes from LSB-first bits:
 			// Byte 0 needs bits 255,254,253,...,248
 			// Byte 31 needs bits 7,6,5,...,0
