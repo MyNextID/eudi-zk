@@ -1,4 +1,4 @@
-package csv_test
+package ckb_test
 
 import (
 	"crypto/ecdsa"
@@ -164,12 +164,12 @@ func CircuitB64Kid(pk ecdsa.PublicKey, headerB64 string, kidValueStart, kidValue
 			if 4: position_start-=2
 
 			r = position_end * 8 % 6
-			if 2: position_end++
-			if 4: position_end+=2
+			if 2: position_end+=2
+			if 4: position_end++
 
 			if we fallow this approach, we can
 
-			- prepend/append the additional ", chars as needed
+			- prepend/append the additional chars as needed
 			- encode the prepended/appended key-value pair
 			- do string comparison of the 2 encoded strings
 	*/

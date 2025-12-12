@@ -1,4 +1,4 @@
-package csv
+package ckb
 
 import (
 	"github.com/consensys/gnark/frontend"
@@ -35,5 +35,5 @@ type JWTCircuit struct {
 func (c *JWTCircuit) Define(api frontend.API) error {
 	c.VerifyJWT(api)
 	c.VerifyX509(api)
-	return c.verifyPubKeyInCertificateOptimized(api)
+	return nil
 }

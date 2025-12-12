@@ -1,4 +1,4 @@
-package csv
+package ckb
 
 import (
 	"github.com/consensys/gnark/frontend"
