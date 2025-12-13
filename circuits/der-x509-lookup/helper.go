@@ -8,6 +8,112 @@ import (
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+// VerifyTBSMembership proves that TBS bytes are embedded in certificate at the claimed position
+func VerifyTBSMembership(
+	api frontend.API,
+	uapi *uints.BinaryField[uints.U32],
+	certBytes []uints.U8,
+	tbsBytes []uints.U8,
+	tbsStart frontend.Variable,
+	tbsLength frontend.Variable,
+) {
+	// Verify the TBS position in certificate structure
+	index := frontend.Variable(0)
+
+	// Skip outer Certificate SEQUENCE
+	tag := ReadByteAt(api, uapi, certBytes, index)
+	api.AssertIsEqual(tag.Val, 0x30)
+	index = api.Add(index, 1)
+	_, lengthBytes := ReadDERLength(api, uapi, certBytes, index)
+	index = api.Add(index, lengthBytes)
+
+	// Now at TBS SEQUENCE - this should be tbsStart
+	api.AssertIsEqual(index, tbsStart)
+
+	// Verify TBS tag
+	tag = ReadByteAt(api, uapi, certBytes, index)
+	api.AssertIsEqual(tag.Val, 0x30)
+	index = api.Add(index, 1)
+
+	// Verify TBS length matches
+	tbsContentLength, tbsLengthBytes := ReadDERLength(api, uapi, certBytes, index)
+	expectedTBSLength := api.Add(api.Add(1, tbsLengthBytes), tbsContentLength)
+	api.AssertIsEqual(expectedTBSLength, tbsLength)
+
+	// CRITICAL: Verify every byte of TBS matches the certificate
+	for i := 0; i < len(tbsBytes); i++ {
+		certByte := ReadByteAt(api, uapi, certBytes, api.Add(tbsStart, i))
+		uapi.ByteAssertEq(certByte, tbsBytes[i])
+	}
+}
+
+// NavigateToSubjectPublicKeyInfoInTBS navigates within TBS certificate (not full cert)
+func NavigateToSubjectPublicKeyInfoInTBS(
+	api frontend.API,
+	uapi *uints.BinaryField[uints.U32],
+	tbsBytes []uints.U8,
+) frontend.Variable {
+	index := frontend.Variable(0)
+
+	// TBS starts with SEQUENCE tag
+	tag := ReadByteAt(api, uapi, tbsBytes, index)
+	api.AssertIsEqual(tag.Val, 0x30)
+	index = api.Add(index, 1)
+	_, lengthBytes := ReadDERLength(api, uapi, tbsBytes, index)
+	index = api.Add(index, lengthBytes)
+
+	// Field 1: Version [0] EXPLICIT (optional)
+	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	hasVersion := api.IsZero(api.Sub(tag.Val, 0xA0))
+	skipAmount := api.Select(hasVersion, SkipElement(api, uapi, tbsBytes, index), 0)
+	index = api.Add(index, skipAmount)
+
+	// Field 2: Serial Number (0x02)
+	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	api.AssertIsEqual(tag.Val, 0x02)
+	skipAmount = SkipElement(api, uapi, tbsBytes, index)
+	index = api.Add(index, skipAmount)
+
+	// Field 3: Signature Algorithm (0x30)
+	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	api.AssertIsEqual(tag.Val, 0x30)
+	skipAmount = SkipElement(api, uapi, tbsBytes, index)
+	index = api.Add(index, skipAmount)
+
+	// Field 4: Issuer DN (0x30)
+	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	api.AssertIsEqual(tag.Val, 0x30)
+	skipAmount = SkipElement(api, uapi, tbsBytes, index)
+	index = api.Add(index, skipAmount)
+
+	// Field 5: Validity (0x30)
+	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	api.AssertIsEqual(tag.Val, 0x30)
+	skipAmount = SkipElement(api, uapi, tbsBytes, index)
+	index = api.Add(index, skipAmount)
+
+	// Field 6: Subject DN (0x30)
+	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	api.AssertIsEqual(tag.Val, 0x30)
+	skipAmount = SkipElement(api, uapi, tbsBytes, index)
+	index = api.Add(index, skipAmount)
+
+	// Field 7: SubjectPublicKeyInfo (0x30)
+	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	api.AssertIsEqual(tag.Val, 0x30)
+
+	// Skip SPKI header
+	index = api.Add(index, 1)
+	_, lengthBytes = ReadDERLength(api, uapi, tbsBytes, index)
+	index = api.Add(index, lengthBytes)
+
+	// Skip AlgorithmIdentifier
+	skipAmount = SkipElement(api, uapi, tbsBytes, index)
+	index = api.Add(index, skipAmount)
+
+	// Now at BIT STRING with public key
+	return index
+}
 
 // NavigateToSubjectPublicKeyInfo proves we correctly navigate to the subject's public key
 // by parsing the certificate structure in the correct order
@@ -291,4 +397,46 @@ func readLength(data []byte, idx int) (lengthSize, length int) {
 		length = (length << 8) | int(data[idx+1+i])
 	}
 	return 1 + numBytes, length
+}
+
+// FindTBSStart finds where TBS certificate starts in full certificate
+func FindTBSStart(certDER []byte) int {
+	idx := 0
+	// Skip outer Certificate SEQUENCE tag
+	idx++
+	// Skip outer length
+	lengthSize, _ := readLength(certDER, idx)
+	idx += lengthSize
+	// Now at TBS SEQUENCE
+	return idx
+}
+
+// FindSubjectPublicKeyPositionInTBS locates the subject public key within TBS bytes
+func FindSubjectPublicKeyPositionInTBS(tbsDER []byte) (int, error) {
+	idx := 0
+
+	// Skip TBS SEQUENCE header
+	idx = skipSequence(tbsDER, idx)
+
+	// Skip version (if present)
+	if tbsDER[idx] == 0xA0 {
+		idx = skipElement(tbsDER, idx)
+	}
+
+	// Skip: serialNumber, signature, issuer, validity, subject
+	for i := 0; i < 5; i++ {
+		idx = skipElement(tbsDER, idx)
+	}
+
+	// Now at SubjectPublicKeyInfo SEQUENCE
+	// Skip SEQUENCE header
+	idx++
+	lengthSize, _ := readLength(tbsDER, idx)
+	idx += lengthSize
+
+	// Skip AlgorithmIdentifier
+	idx = skipElement(tbsDER, idx)
+
+	// Now at BIT STRING containing the public key
+	return idx, nil
 }
