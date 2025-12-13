@@ -8,7 +8,7 @@ import (
 	"github.com/mynextid/gnark-eudi/common"
 )
 
-// CircuitSPK proves:
+// CircuitPoP proves:
 // 1. I have a certificate with a subject public key
 // 2. I can sign a challenge with the private key corresponding to that public key
 // 3. Without revealing the certificate or the public key
