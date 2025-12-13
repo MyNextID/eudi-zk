@@ -11,6 +11,10 @@ import (
 
 // VerifyJWS combines a protected JWS header with the payload and verifies the
 // signature using the provided public keys. Only for ES256
+// Assumptions:
+// - protected header contains all the non-PII metadata and is a private input
+// - payload contains all user info and is a public input
+// - selective disclosure of the user info is out of scope of this circuit as we'll address it later
 func (c *CircuitJWS) VerifyJWS(api frontend.API) error {
 	// Initialize SHA256 hash
 	hash, err := sha2.New(api)
@@ -34,7 +38,7 @@ func (c *CircuitJWS) VerifyJWS(api frontend.API) error {
 	// Compute SHA256 hash of header.payload
 	messageHash := hash.Sum()
 
-	// convert to P256Fr
+	// Convert to P256Fr
 	mHash, err := sha256ToP256Fr(api, messageHash)
 	if err != nil {
 		return err
@@ -78,18 +82,18 @@ func sha256ToP256Fr(api frontend.API, hash []uints.U8) (*emulated.Element[emulat
 	// hash[8..15] -> limb[1]
 	// hash[16..23] -> limb[2]
 	// hash[24..31] -> limb[3] (most significant)
-	for i := 0; i < nbLimbs; i++ {
+	for i := range nbLimbs {
 		var limbVal frontend.Variable = 0
 
 		// Process 8 bytes for this limb (little-endian within limb)
-		for j := 0; j < bytesPerLimb; j++ {
+		for j := range bytesPerLimb {
 			// Read from end of hash going backwards (to match little-endian)
 			byteIdx := len(hash) - 1 - (i*bytesPerLimb + j)
 
 			if byteIdx >= 0 && byteIdx < len(hash) {
 				// Shift: multiply by 2^(j*8) = 256^j
 				shift := frontend.Variable(1)
-				for k := 0; k < j; k++ {
+				for range j {
 					shift = api.Mul(shift, 256)
 				}
 				limbVal = api.Add(limbVal, api.Mul(hash[byteIdx].Val, shift))
