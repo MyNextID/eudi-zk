@@ -163,7 +163,7 @@ func TestJWSCircuit(t *testing.T) {
 
 	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
-		t.Fatalf("failed to inititalize a circuit: %v", err)
+		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
 
 	circuitTime := time.Since(startCircuit)

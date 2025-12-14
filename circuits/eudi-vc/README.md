@@ -17,7 +17,13 @@ challenge
 
 3. **Credential Validity**: The holder possesses a verifiable credential (VC)
 issued by a legitimate issuer. We showcase a VC (payload can be W3C VCDM, SD-JWT
-VC, ID Token or any other JSON) signed using JSON Web Signature (JWS).
+VC, ID Token or any other JSON or JSON-LD) signed using JSON Web Signature (JWS).
+
+Note: JSON-LD `@context` can be present, but it is not processed within the
+circuit when signature format is JWS. JSON-LD can be, however, processed before
+passing the payload to the ZK circuit, if digital signature format is W3C
+Verifiable Credential Data Integrity. Data Integrity signatures are out of scope
+of this work.
 
 4. **Identity Binding**: The credential is bound to the certificate holder
 through a key identifier (kid) that references the holders's public key. The

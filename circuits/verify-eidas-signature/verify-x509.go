@@ -14,7 +14,7 @@ func (c *CircuitJWS) VerifyX509Signature(api frontend.API) error {
 
 	messageHash, _ := common.SHA256(api, c.CertTBSDER)
 
-	mHash, err := sha256ToP256Fr(api, messageHash)
+	mHash, err := common.Sha256ToP256Fr(api, messageHash)
 	if err != nil {
 		return err
 	}

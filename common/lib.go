@@ -277,15 +277,15 @@ func base64UrlCharToValue(api frontend.API, char uints.U8) frontend.Variable {
 func VerifyES256(api frontend.API, message []uints.U8, publicKey ecdsa.PublicKey[emulated.P256Fp, emulated.P256Fr], signature ecdsa.Signature[emulated.P256Fr]) {
 	messageHash, _ := SHA256(api, message)
 
-	mHash, _ := sha256ToP256Fr(api, messageHash)
+	mHash, _ := Sha256ToP256Fr(api, messageHash)
 
 	// signature verification assertion is done in-circuit
 	publicKey.Verify(api, sw_emulated.GetCurveParams[emulated.P256Fp](), mHash, &signature)
 
 }
 
-// sha256ToP256Fr converts SHA256 hash output ([]uints.U8) to P256Fr field element
-func sha256ToP256Fr(api frontend.API, hash []uints.U8) (*emulated.Element[emulated.P256Fr], error) {
+// Sha256ToP256Fr converts SHA256 hash output ([]uints.U8) to P256Fr field element
+func Sha256ToP256Fr(api frontend.API, hash []uints.U8) (*emulated.Element[emulated.P256Fr], error) {
 	if len(hash) != 32 {
 		panic("SHA256 hash must be 32 bytes")
 	}
@@ -432,7 +432,7 @@ func VerifyJWS(api frontend.API, protected []uints.U8, payload []uints.U8, publi
 	messageHash := hash.Sum()
 
 	// Convert to P256Fr
-	mHash, err := sha256ToP256Fr(api, messageHash)
+	mHash, err := Sha256ToP256Fr(api, messageHash)
 	if err != nil {
 		return
 	}

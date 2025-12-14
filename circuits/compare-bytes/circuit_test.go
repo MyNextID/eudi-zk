@@ -61,7 +61,7 @@ func TestCompareB64Url(t *testing.T) {
 
 	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
-		t.Fatalf("failed to inititalize a circuit: %v", err)
+		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
 
 	circuitTime := time.Since(startCircuit)
@@ -108,7 +108,7 @@ func TestCompareHex(t *testing.T) {
 
 	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
-		t.Fatalf("failed to inititalize a circuit: %v", err)
+		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
 
 	circuitTime := time.Since(startCircuit)
@@ -158,7 +158,7 @@ func TestCompareDigestPubKeys(t *testing.T) {
 
 	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
-		t.Fatalf("failed to inititalize a circuit: %v", err)
+		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
 
 	circuitTime := time.Since(startCircuit)
@@ -206,7 +206,7 @@ func TestComparePublicKeys(t *testing.T) {
 
 	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
-		t.Fatalf("failed to inititalize a circuit: %v", err)
+		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
 
 	circuitTime := time.Since(startCircuit)
@@ -244,7 +244,6 @@ func TestCompareBytes(t *testing.T) {
 		// Private inputs
 		Bytes: common.BytesToU8Array(randomBytes),
 		// Public inputs
-		// PubBytes: common.BytesToU8Array(randomBytes),
 		PubBytes: common.BytesToU8Array(randomBytes),
 	}
 	_ = randomBytes2
@@ -255,7 +254,7 @@ func TestCompareBytes(t *testing.T) {
 
 	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
-		t.Fatalf("failed to inititalize a circuit: %v", err)
+		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
 
 	circuitTime := time.Since(startCircuit)

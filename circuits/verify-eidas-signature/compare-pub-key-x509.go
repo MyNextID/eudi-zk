@@ -2,8 +2,8 @@ package csv
 
 import (
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
+	"github.com/mynextid/eudi-zk/common"
 )
 
 // verifyPubKeyInCertificateOptimized searches for the public key X coordinate in the DER certificate
@@ -21,7 +21,7 @@ func (circuit *CircuitJWS) verifyPubKeyInCertificateOptimized(api frontend.API) 
 	*/
 
 	// Convert public key X to bytes (32 bytes for P-256)
-	pubKeyXBytes := circuit.emulatedElementToBytes32(api, circuit.SignerPubKeyX)
+	pubKeyXBytes := common.EmulatedElementToBytes32(api, circuit.SignerPubKeyX)
 
 	derLen := len(circuit.CertTBSDER)
 	matchCount := frontend.Variable(0)
@@ -82,46 +82,4 @@ func (circuit *CircuitJWS) compareBytes(api frontend.API, a, b []uints.U8) front
 	}
 
 	return allMatch
-}
-
-// emulatedElementToBytes32 converts an emulated field element to 32 bytes (big-endian)
-func (circuit *CircuitJWS) emulatedElementToBytes32(api frontend.API, elem emulated.Element[Secp256r1Fp]) []uints.U8 {
-	/*
-		Convert emulated field element to 32 bytes for P-256 coordinate
-		P-256 field prime is 2^256 - 2^224 + 2^192 + 2^96 - 1
-		So coordinates fit in 32 bytes
-	*/
-
-	// Create emulated field API
-	field, err := emulated.NewField[Secp256r1Fp](api)
-	if err != nil {
-		panic(err)
-	}
-
-	// Reduce the element to canonical form
-	reduced := field.Reduce(&elem)
-
-	// Convert to bits (256 bits = 32 bytes)
-	bits := field.ToBits(reduced)
-
-	// Group bits into bytes (8 bits per byte)
-	// Big-endian: most significant byte first
-	bytes := make([]uints.U8, 32)
-
-	for i := 0; i < 32; i++ {
-		// Each byte is composed of 8 bits
-		// For big-endian, byte 0 contains bits [255:248]
-		byteValue := frontend.Variable(0)
-		for j := 0; j < 8; j++ {
-			bitIndex := 255 - (i*8 + j) // Big-endian bit ordering
-			if bitIndex >= 0 && bitIndex < len(bits) {
-				// Shift and add: byteValue = byteValue * 2 + bit
-				byteValue = api.Add(api.Mul(byteValue, 2), bits[bitIndex])
-			}
-		}
-		// Fix: Pass byteValue directly as frontend.Variable
-		bytes[i] = uints.U8{Val: byteValue}
-	}
-
-	return bytes
 }

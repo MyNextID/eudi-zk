@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/gnark/std/hash/sha2"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/signature/ecdsa"
+	"github.com/mynextid/eudi-zk/common"
 )
 
 func (c *JWSCircuit) VerifyX509(api frontend.API) error {
@@ -21,7 +22,7 @@ func (c *JWSCircuit) VerifyX509(api frontend.API) error {
 	// Compute SHA256 hash of header.payload
 	messageHash := hasher.Sum()
 
-	mHash, err := sha256ToP256Fr(api, messageHash)
+	mHash, err := common.Sha256ToP256Fr(api, messageHash)
 	if err != nil {
 		return err
 	}
