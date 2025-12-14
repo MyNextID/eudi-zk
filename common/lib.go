@@ -76,20 +76,12 @@ func hexCharToNibble(api frontend.API, char uints.U8) frontend.Variable {
 	digitValue := api.Sub(charVal, 48)  // For '0'-'9'
 	letterValue := api.Sub(charVal, 87) // For 'a'-'f'
 
-	// Check if character code >= 97 ('a')
-	// Use a threshold check: if charVal >= 97, it's a letter
-	// diff := api.Sub(charVal, 97)
-
-	// If diff >= 0, it's a letter (use letterValue)
-	// If diff < 0, it's a digit (use digitValue)
-	// We can check if diff >= 0 by seeing if it equals its absolute value
-
-	// Simpler: check if charVal - 97 is non-negative
+	// check if charVal - 97 is non-negative
 	// Use comparison: charVal >= 97
 	cmpResult := api.Cmp(charVal, 96) // Compare with 96 (one before 'a')
-	// cmpResult = 1 if charVal > 96 (i.e., >= 97), meaning it's a letter
+	// cmpResult = 1 if charVal > 96 (i.e., >= 97), it's a letter
 	// cmpResult = 0 if charVal == 96 (impossible)
-	// cmpResult = -1 if charVal < 96, meaning it's a digit
+	// cmpResult = -1 if charVal < 96, it's a digit
 
 	isLetter := api.IsZero(api.Sub(cmpResult, 1)) // 1 if cmpResult == 1, else 0
 
@@ -107,11 +99,12 @@ func DecodeBase64Url(api frontend.API, base64Chars []uints.U8) ([]uints.U8, erro
 	remainingChars := inputLen % 4
 
 	outputSize := numCompleteGroups * 3
-	if remainingChars == 2 {
+	switch remainingChars {
+	case 2:
 		outputSize += 1
-	} else if remainingChars == 3 {
+	case 3:
 		outputSize += 2
-	} else if remainingChars == 1 {
+	case 1:
 		return nil, fmt.Errorf("invalid base64 length: cannot have 1 remaining character")
 	}
 
@@ -141,20 +134,20 @@ func DecodeBase64Url(api frontend.API, base64Chars []uints.U8) ([]uints.U8, erro
 
 		// byte1 = v1[5:0] << 2 | v2[5:4]
 		// byte1 = v1 * 4 + v2 / 16
-		byte1_v1 := api.Mul(v1, 4)          // v1 << 2
-		byte1_v2 := divideBy16(api, bf, v2) // v2 >> 4 (upper 2 bits)
+		byte1_v1 := api.Mul(v1, 4)      // v1 << 2
+		byte1_v2 := divideBy16(api, v2) // v2 >> 4 (upper 2 bits)
 		byte1 := api.Add(byte1_v1, byte1_v2)
 
 		// byte2 = v2[3:0] << 4 | v3[5:2]
-		v2_lower := moduloBy16(api, bf, v2) // v2 & 0xF (lower 4 bits)
-		byte2_v2 := api.Mul(v2_lower, 16)   // v2_lower << 4
-		byte2_v3 := divideBy4(api, bf, v3)  // v3 >> 2 (upper 4 bits)
+		v2_lower := moduloBy16(api, v2)   // v2 & 0xF (lower 4 bits)
+		byte2_v2 := api.Mul(v2_lower, 16) // v2_lower << 4
+		byte2_v3 := divideBy4(api, v3)    // v3 >> 2 (upper 4 bits)
 		byte2 := api.Add(byte2_v2, byte2_v3)
 
 		// byte3 = v3[1:0] << 6 | v4[5:0]
-		v3_lower := moduloBy4(api, bf, v3) // v3 & 0x3 (lower 2 bits)
-		byte3_v3 := api.Mul(v3_lower, 64)  // v3_lower << 6
-		byte3 := api.Add(byte3_v3, v4)     // v4 is already 6 bits
+		v3_lower := moduloBy4(api, v3)    // v3 & 0x3 (lower 2 bits)
+		byte3_v3 := api.Mul(v3_lower, 64) // v3_lower << 6
+		byte3 := api.Add(byte3_v3, v4)    // v4 is already 6 bits
 
 		bytes[outputIdx] = bf.ValueOf(byte1)
 		bytes[outputIdx+1] = bf.ValueOf(byte2)
@@ -163,7 +156,8 @@ func DecodeBase64Url(api frontend.API, base64Chars []uints.U8) ([]uints.U8, erro
 	}
 
 	// Process remaining characters
-	if remainingChars == 2 {
+	switch remainingChars {
+	case 2:
 		c1 := base64Chars[numCompleteGroups*4]
 		c2 := base64Chars[numCompleteGroups*4+1]
 
@@ -171,11 +165,11 @@ func DecodeBase64Url(api frontend.API, base64Chars []uints.U8) ([]uints.U8, erro
 		v2 := base64UrlCharToValue(api, c2)
 
 		byte1_v1 := api.Mul(v1, 4)
-		byte1_v2 := divideBy16(api, bf, v2)
+		byte1_v2 := divideBy16(api, v2)
 		byte1 := api.Add(byte1_v1, byte1_v2)
 
 		bytes[outputIdx] = bf.ValueOf(byte1)
-	} else if remainingChars == 3 {
+	case 3:
 		c1 := base64Chars[numCompleteGroups*4]
 		c2 := base64Chars[numCompleteGroups*4+1]
 		c3 := base64Chars[numCompleteGroups*4+2]
@@ -185,12 +179,12 @@ func DecodeBase64Url(api frontend.API, base64Chars []uints.U8) ([]uints.U8, erro
 		v3 := base64UrlCharToValue(api, c3)
 
 		byte1_v1 := api.Mul(v1, 4)
-		byte1_v2 := divideBy16(api, bf, v2)
+		byte1_v2 := divideBy16(api, v2)
 		byte1 := api.Add(byte1_v1, byte1_v2)
 
-		v2_lower := moduloBy16(api, bf, v2)
+		v2_lower := moduloBy16(api, v2)
 		byte2_v2 := api.Mul(v2_lower, 16)
-		byte2_v3 := divideBy4(api, bf, v3)
+		byte2_v3 := divideBy4(api, v3)
 		byte2 := api.Add(byte2_v2, byte2_v3)
 
 		bytes[outputIdx] = bf.ValueOf(byte1)
@@ -203,17 +197,17 @@ func DecodeBase64Url(api frontend.API, base64Chars []uints.U8) ([]uints.U8, erro
 // Helper functions to perform proper integer division and modulo
 // These work by enumerating all possible 6-bit values (0-63)
 
-func divideBy4(api frontend.API, bf *uints.Bytes, v frontend.Variable) frontend.Variable {
+func divideBy4(api frontend.API, v frontend.Variable) frontend.Variable {
 	// v / 4 for v in [0, 63]
 	result := frontend.Variable(0)
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		isValue := api.IsZero(api.Sub(v, i))
 		result = api.Select(isValue, i/4, result)
 	}
 	return result
 }
 
-func divideBy16(api frontend.API, bf *uints.Bytes, v frontend.Variable) frontend.Variable {
+func divideBy16(api frontend.API, v frontend.Variable) frontend.Variable {
 	// v / 16 for v in [0, 63]
 	result := frontend.Variable(0)
 	for i := 0; i < 64; i++ {
@@ -223,7 +217,7 @@ func divideBy16(api frontend.API, bf *uints.Bytes, v frontend.Variable) frontend
 	return result
 }
 
-func moduloBy4(api frontend.API, bf *uints.Bytes, v frontend.Variable) frontend.Variable {
+func moduloBy4(api frontend.API, v frontend.Variable) frontend.Variable {
 	// v % 4 for v in [0, 63]
 	result := frontend.Variable(0)
 	for i := 0; i < 64; i++ {
@@ -233,7 +227,7 @@ func moduloBy4(api frontend.API, bf *uints.Bytes, v frontend.Variable) frontend.
 	return result
 }
 
-func moduloBy16(api frontend.API, bf *uints.Bytes, v frontend.Variable) frontend.Variable {
+func moduloBy16(api frontend.API, v frontend.Variable) frontend.Variable {
 	// v % 16 for v in [0, 63]
 	result := frontend.Variable(0)
 	for i := 0; i < 64; i++ {

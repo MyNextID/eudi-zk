@@ -39,7 +39,7 @@ func CompareBytes(api frontend.API, A, B []uints.U8) {
 // Len computes the array size
 func Len(api frontend.API, bytes []uints.U8) frontend.Variable {
 	length := frontend.Variable(0)
-	for _ = range bytes {
+	for range bytes {
 		length = api.Add(length, 1)
 	}
 	return length

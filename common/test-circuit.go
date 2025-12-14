@@ -2,7 +2,6 @@ package common
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -11,27 +10,50 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
-// Init circuit initializes a circuit
 func InitCircuit(ccsPath, pkPath, vkPath string, forceCompile bool, circuitTemplate frontend.Circuit) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey, error) {
-	if forceCompile {
-		os.Remove(ccsPath)
-		os.Remove(pkPath)
-		os.Remove(vkPath)
+	// Validate paths to prevent directory traversal attacks
+	if err := validatePath(ccsPath); err != nil {
+		return nil, nil, nil, fmt.Errorf("invalid ccsPath: %w", err)
+	}
+	if err := validatePath(pkPath); err != nil {
+		return nil, nil, nil, fmt.Errorf("invalid pkPath: %w", err)
+	}
+	if err := validatePath(vkPath); err != nil {
+		return nil, nil, nil, fmt.Errorf("invalid vkPath: %w", err)
 	}
 
-	if _, err := os.Stat(pkPath); os.IsNotExist(err) || forceCompile {
-		fmt.Println("compiling the circuit")
+	// Create all necessary subdirectories
+	if err := ensureDirectories(ccsPath, pkPath, vkPath); err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to create directories: %w", err)
+	}
 
+	if forceCompile {
+		// Safe removal with path validation
+		if err := safeRemove(ccsPath); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to remove ccsPath: %w", err)
+		}
+		if err := safeRemove(pkPath); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to remove pkPath: %w", err)
+		}
+		if err := safeRemove(vkPath); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to remove vkPath: %w", err)
+		}
+	}
+
+	// Check if all files exist
+	allFilesExist := fileExists(ccsPath) && fileExists(pkPath) && fileExists(vkPath)
+
+	if !allFilesExist || forceCompile {
+		fmt.Println("compiling the circuit")
 		if err := SetupAndSave(circuitTemplate, ccsPath, pkPath, vkPath); err != nil {
-			panic(err)
+			return nil, nil, nil, fmt.Errorf("setup and save failed: %w", err)
 		}
 		// Load what we just saved
 		return LoadSetup(ccsPath, pkPath, vkPath)
-	} else {
-		// Subsequent runs: just load
-		return LoadSetup(ccsPath, pkPath, vkPath)
 	}
 
+	// All files exist: just load
+	return LoadSetup(ccsPath, pkPath, vkPath)
 }
 
 // TestCircuit executes witness and proof creation, and verification. The function times the real function time of execution

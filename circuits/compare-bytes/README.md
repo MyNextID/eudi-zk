@@ -2,7 +2,9 @@
 
 Version: 1
 
-Here we test different decoding and public key transformation functions within ZK circuits.
+Here we test different decoding and public key transformation functions within
+ZK circuits. These circuits are mainly intended for testing and building core
+functions.
 
 In this repository we have the following test circuits:
 
