@@ -27,7 +27,7 @@ challenge
 issued by a legitimate issuer, signed using JSON Web Signature (JWS)
 
 4. **Identity Binding**: The credential is bound to the certificate holder
-through a key identifier (kid) that references the holders's public key
+through a confirmation claim (cnf) that references the holders's public key
 
 5. **Privacy Preservation**: All of the above is proven without revealing: the
 holder's certificate, the holder's public key, the challenge signature (from
@@ -93,7 +93,7 @@ the holder's public key.
 Protected header is a private input, whereas the payload is the public input.
 
 **Security Achievement**: Proves the credential was issued by a legitimate
-*issuer and binds it to the holder's certificate through the kid field.
+*issuer and binds it to the holder's certificate through the `cnf` claim.
 
 #### Step 8: Key Binding Verification (Pending Implementation)
 

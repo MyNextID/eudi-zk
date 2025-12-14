@@ -65,6 +65,7 @@ func TestEUDI(t *testing.T) {
 	// Issue the credential
 
 	// Create a JWS header
+	// TODO: replace kid with cnf
 	header := map[string]any{
 		"alg": "ES256",
 		"kid": subPkDigestHex,

@@ -167,6 +167,8 @@ func CircuitB64Kid(pk ecdsa.PublicKey, headerB64 string, kidValueStart, kidValue
 			- prepend/append the additional chars as needed
 			- encode the prepended/appended key-value pair
 			- do string comparison of the 2 encoded strings
+
+			See the notes for better explanation
 	*/
 
 	// Public key to bytes
