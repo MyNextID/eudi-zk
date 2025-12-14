@@ -71,7 +71,7 @@ func TestCircuitCompareCnf(t *testing.T) {
 
 	protectedB64 := base64.RawURLEncoding.EncodeToString(protectedJSON)
 
-	// Find where "cnf":" appears, then move past it to the value
+	// Find where "cnf":" appears
 	cnfStart := strings.Index(string(protectedJSON), cnfStr)
 	if cnfStart == -1 {
 		t.Fatal("cnf field not found in JSON")
@@ -80,7 +80,7 @@ func TestCircuitCompareCnf(t *testing.T) {
 	cnfLen := len(cnfStr)
 	cnfEnd := cnfStart + cnfLen
 
-	cnfStartNew, cnfEndNew := B64Align(cnfStart, cnfEnd)
+	cnfStartNew, cnfEndNew := common.B64Align(cnfStart, cnfEnd)
 
 	cnfAligned := protectedJSON[cnfStartNew:cnfEndNew]
 	fmt.Println(string(cnfJSON))
@@ -139,29 +139,4 @@ func TestCircuitCompareCnf(t *testing.T) {
 	// == Run the circuit ==
 	common.TestCircuitSimple(assignment, ccs, pk, vk)
 
-}
-
-func B64Align(start, end int) (startNew, endNew int) {
-
-	r := (start * 8) % 6
-	switch r {
-	case 2:
-		startNew = start + 1
-	case 4:
-		startNew = start + 2
-	default:
-		startNew = start
-	}
-
-	r = (end * 8) % 6
-	switch r {
-	case 2:
-		endNew = end + 2
-	case 4:
-		endNew = end + 1
-	default:
-		endNew = end
-	}
-
-	return
 }

@@ -354,6 +354,25 @@ func ComparePublicKeys(api frontend.API, PubKeyX, PubKeyY emulated.Element[Secp2
 	CompareBytes(api, pubKeyBytes, PubKeyBytes)
 }
 
+// PublicKeyDigest returns hash of the public keys
+func PublicKeyDigest(api frontend.API, PubKeyX, PubKeyY emulated.Element[Secp256r1Fp]) (PubKeyDigest []uints.U8) {
+
+	// public key to bytes
+	xBytes := EmulatedElementToBytes32(api, PubKeyX)
+	yBytes := EmulatedElementToBytes32(api, PubKeyY)
+
+	// Create the 0x04 prefix for uncompressed point
+	prefix := uints.NewU8(4)
+
+	// Concatenate: 0x04 || X || Y (total 65 bytes)
+	pubKeyBytes := append(xBytes, yBytes...)
+	pubKeyBytes = append([]uints.U8{prefix}, pubKeyBytes...)
+
+	PubKeyDigest, _ = SHA256(api, pubKeyBytes)
+
+	return
+}
+
 func EmulatedElementToBytes32(api frontend.API, elem emulated.Element[Secp256r1Fp]) []uints.U8 {
 	field, err := emulated.NewField[Secp256r1Fp](api)
 	if err != nil {
@@ -531,4 +550,59 @@ func GetSubset(api frontend.API, bytes []uints.U8, start frontend.Variable, leng
 	api.AssertIsEqual(matchedCount, length)
 
 	return result
+}
+
+func B64Align(start, end int) (startNew, endNew int) {
+
+	r := (start * 8) % 6
+	switch r {
+	case 2:
+		startNew = start + 1
+	case 4:
+		startNew = start + 2
+	default:
+		startNew = start
+	}
+
+	r = (end * 8) % 6
+	switch r {
+	case 2:
+		endNew = end + 2
+	case 4:
+		endNew = end + 1
+	default:
+		endNew = end
+	}
+
+	return
+}
+
+func VerifyCnf(api frontend.API, HeaderB64, CnfB64 []uints.U8, CnfB64Position, PubKeyHexPosition frontend.Variable, PublicKeyDigest []uints.U8) error {
+	// Verify whether cnfB64 is a subset of headerB64
+	err := IsSubset(api, HeaderB64, CnfB64, CnfB64Position)
+	if err != nil {
+		return err
+	}
+
+	// Decode the header
+	cnf, err := DecodeBase64Url(api, CnfB64)
+	if err != nil {
+		return err
+	}
+
+	// Extract the hex encoded public key
+	pubKeyHexLength := 64 // size of the hex encoded SHA256 digest
+	publicKeyHex := GetSubset(api, cnf, PubKeyHexPosition, pubKeyHexLength)
+
+	// Decode the hex encoded public key
+	publicKeyDigest, err := DecodeHex(api, publicKeyHex)
+	if err != nil {
+		return err
+	}
+
+	// compare the bytes
+	CompareBytes(api, publicKeyDigest, PublicKeyDigest)
+
+	return nil
+
 }

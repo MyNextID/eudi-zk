@@ -38,6 +38,11 @@ type CircuitEUDI struct {
 
 	// VC JWS header
 	JWSProtected []uints.U8 `gnark:",secret"`
+	// confirmation claim
+	CnfB64            []uints.U8        `gnark:",secret"` // base64url encoded cnf part of the header
+	CnfB64Position    frontend.Variable `gnark:",secret"` // cnfB64 start position in the header
+	CnfKeyHexPosition frontend.Variable `gnark:",secret"` // public key position within the decoded cnfB64
+
 	// VC Signature
 	JWSR emulated.Element[Secp256r1Fr] `gnark:",secret"`
 	JWSS emulated.Element[Secp256r1Fr] `gnark:",secret"`
@@ -122,7 +127,10 @@ func (c *CircuitEUDI) Define(api frontend.API) error {
 
 	common.VerifyJWS(api, c.JWSProtected, c.JWSPayload, issuerPublicKey, jws)
 
-	// TODO: verify that the subject public key is in the protected JWS header
+	// ===== STEP 8: Verify that the subject key == confirmation key ==
+	subjectPublicKeyDigest := common.PublicKeyDigest(api, c.SubjectPubKeyX, c.SubjectPubKeyY)
+
+	common.VerifyCnf(api, c.JWSProtected, c.CnfB64, c.CnfB64Position, c.CnfKeyHexPosition, subjectPublicKeyDigest)
 
 	return nil
 }

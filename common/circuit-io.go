@@ -21,7 +21,7 @@ func SetupAndSave(circuitTemplate frontend.Circuit, ccsPath, pkPath, vkPath stri
 	if err != nil {
 		return err
 	}
-	fmt.Printf("✓ Circuit compiled: %d constraints\n", ccs.GetNbConstraints())
+	fmt.Printf("[OK] Circuit compiled: %d constraints\n", ccs.GetNbConstraints())
 
 	// Save compiled circuit
 	ccsFile, err := os.Create(ccsPath)
@@ -59,7 +59,7 @@ func SetupAndSave(circuitTemplate frontend.Circuit, ccsPath, pkPath, vkPath stri
 		return err
 	}
 
-	fmt.Println("✓ Setup completed and saved!")
+	fmt.Println("[OK] Setup completed and saved!")
 	return nil
 }
 
@@ -101,7 +101,7 @@ func LoadSetup(ccsPath, pkPath, vkPath string) (constraint.ConstraintSystem, gro
 		return nil, nil, nil, err
 	}
 
-	fmt.Println("✓ Loaded pre-compiled setup")
+	fmt.Println("[OK] Loaded pre-compiled setup")
 	return ccs, pk, vk, nil
 }
 

@@ -112,7 +112,7 @@ func TestPubKeyHashCircuit_Define(t *testing.T) {
 	}
 
 	circuitTime := time.Since(startCircuit)
-	fmt.Printf("✓ Circuit created/loaded successfully! (took %v)\n", circuitTime)
+	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// Create witness
 	fmt.Println("\n--- Creating Witness ---")
@@ -122,7 +122,7 @@ func TestPubKeyHashCircuit_Define(t *testing.T) {
 		panic(err)
 	}
 	witnessTime := time.Since(startWitness)
-	fmt.Printf("✓ Witness created successfully! (took %v)\n", witnessTime)
+	fmt.Printf("[OK] Witness created successfully! (took %v)\n", witnessTime)
 
 	// Generate proof
 	fmt.Println("\n--- Generating Proof ---")
@@ -132,7 +132,7 @@ func TestPubKeyHashCircuit_Define(t *testing.T) {
 		panic(err)
 	}
 	proofTime := time.Since(startProof)
-	fmt.Printf("✓ Proof generated successfully! (took %v)\n", proofTime)
+	fmt.Printf("[OK] Proof generated successfully! (took %v)\n", proofTime)
 
 	// Extract public witness for verification
 	fmt.Println("\n--- Extracting Public Witness ---")
@@ -142,7 +142,7 @@ func TestPubKeyHashCircuit_Define(t *testing.T) {
 		panic(err)
 	}
 	publicTime := time.Since(startPublic)
-	fmt.Printf("✓ Public witness extracted! (took %v)\n", publicTime)
+	fmt.Printf("[OK] Public witness extracted! (took %v)\n", publicTime)
 
 	// Verify proof
 	fmt.Println("\n--- Verifying Proof ---")

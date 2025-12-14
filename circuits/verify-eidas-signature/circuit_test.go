@@ -167,7 +167,7 @@ func TestJWSCircuit(t *testing.T) {
 	}
 
 	circuitTime := time.Since(startCircuit)
-	fmt.Printf("✓ Circuit created/loaded successfully! (took %v)\n", circuitTime)
+	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
 	common.TestCircuit(assignment, ccs, pk, vk)

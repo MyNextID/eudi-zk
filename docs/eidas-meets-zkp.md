@@ -97,10 +97,8 @@ Protected header is a private input, whereas the payload is the public input.
 
 #### Step 8: Key Binding Verification (Pending Implementation)
 
-*Note: The final verification—confirming that the cnf in the JWS header matches
-*the SHA-256 hash of the holder's public key—is still in progress in the current
-*implementation. This step is critical for completing the cryptographic binding
-*between the certificate and credential.*
+Verifies that the subject's public key matches the public key in the Verifiable
+Credential.
 
 ### Roadmap
 
