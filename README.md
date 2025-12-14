@@ -11,7 +11,7 @@ This repository implements zero-knowledge proof circuits for the eIDAS
 developer-friendly API and readable codebase. These reference implementations
 demonstrate core ZKP capabilities but are not production-optimized.
 
-**Production Implementation:** Our production system uses
+**Production Implementation:** Our future system is being built using
 [Longfellow-ZK](https://github.com/google/longfellow-zk), which offers superior
 performance for:
 
@@ -21,7 +21,25 @@ performance for:
 All the circuits presented here are framework-agnostic and can be implemented in
 alternative ZKP systems like
 [Longfellow-ZK](https://github.com/google/longfellow-zk/) or
-[zkID/OpenAC](https://pse.dev/projects/zk-id).
+[zkID/OpenAC](https://pse.dev/projects/zk-id) or other ZK frameworks.
+
+## Motivation
+
+The main motivations for this work are:
+
+**Complexity of credential management with salt-hash table-based selective disclosure.**
+Achieving even the simplest form of unlinkability requires one-time credentials
+where batches must be managed by both the issuer and the wallet. This creates
+high operational complexity and tight coupling between issuers and wallets.
+
+**Demonstrating infrastructure reusability.**
+We aim to show that existing e-signing and e-sealing infrastructure can be
+reused as-is to introduce efficient wallet systems, requiring only the addition
+of ZKP circuits.
+
+With ZK circuits we can achieve different levels of
+linkability/pseudonymity/anonymity as described in
+[PII linkability, pseudonymity, and anonymity](./docs/unlinkability.md).
 
 ## Getting Started
 
@@ -29,6 +47,7 @@ Start exploring the circuits:
 
 - **All circuits:** [circuits/](./circuits/README.md)
 - **Simple circuits:** [circuits/compare-bytes/](./circuits/compare-bytes/README.md)
+- **EUDI/eIDAS circuits:** [circuits/eudi-vc/](./circuits/eudi-vc/README.md)
 
 ## Core Circuits
 
@@ -39,13 +58,16 @@ the eIDAS/EUDI context:
 
 Location: [circuits/signature-verification/](./circuits/verify-eidas-signature)
 
-Proves that a signed payload is valid without revealing the signature, public key, or the public key certificate, while proving that the certificate has been signed by a legitimate Certificate Authority.
+Proves that a signed payload is valid without revealing the signature, public
+key, or the public key certificate, while proving that the certificate has been
+signed by a legitimate Certificate Authority.
 
 **What it verifies:**
 
 - Signature validity against a public key
 - Public key belongs to a valid X.509 certificate
-- Certificate is signed by a legitimate Certificate Authority (e.g., a Qualified Trust Service Provider)
+- Certificate is signed by a legitimate Certificate Authority (e.g., a Qualified
+Trust Service Provider)
 
 ### 2. Verifiable Credential Validation
 
@@ -61,19 +83,22 @@ Enables privacy-preserving verification of EUDI Wallet credentials.
 
 ## What this means for eIDAS and EUDI
 
-[Learn more what these results enable](eidas-meets-zkp.md)
+[Learn more what these results enable](docs/eidas-meets-zkp.md)
 
 ## Use Cases
 
 These circuits enable:
 
 - Regulatory compliance: Meet eIDAS requirements while maximizing user privacy.
-- Building a wallet framework on the existing eIDAS infrastructure with the highest assurance level, e.g., qualified e-seals for Verifiable Credentials and qualified e-signatures for proof of possession and cryptographic holder binding
+- Building a wallet framework on the existing eIDAS infrastructure with the
+highest assurance level, e.g., qualified e-seals for Verifiable Credentials and
+qualified e-signatures for proof of possession and cryptographic holder binding
 - Unlinkability: Prove credential validity across services without creating
 tracking vectors. It enables issuing one-time credentials and share them as many
 time as needed without a need for batch credential issuance or one-time
 credential issuance.
-- Selective disclosure: Share specific attributes without revealing entire credentials.
+- Selective disclosure: Share specific attributes without revealing entire
+credentials.
 
 ## Contributing
 
