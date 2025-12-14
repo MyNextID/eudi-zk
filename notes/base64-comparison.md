@@ -19,7 +19,11 @@ base64url encoding. Given a key-value pair $(k,v)$ and access only to E(P),
 we wish to verify $(k,v) \in P$ without computing $P = D(E(P))$, where $D$
 represents the decoding operation.
 
-Our approach: Rather than decode $E(P)$, we construct $E(S)$ where $S$ is a properly formatted JSON fragment containing $(k,v)$, then perform substring matching on the encoded representations. The central challenge lies in aligning base64url encoding boundaries between arbitrary JSON positions and 6-bit base64 chunks.
+Our approach: Rather than decode $E(P)$, we construct $E(S)$ where $S$ is a
+properly formatted JSON fragment containing $(k,v)$, then perform substring
+matching on the encoded representations. The central challenge lies in aligning
+base64url encoding boundaries between arbitrary JSON positions and 6-bit base64
+chunks.
 
 ## Preliminaries
 
@@ -29,9 +33,10 @@ Let us establish the basic parameters of our encoding scheme:
 
 - JSON text is UTF-8 encoded, where each character occupies 8 bits
 - Base64url encoding maps 6-bit chunks to printable ASCII characters
-- The encoding function $E: \{0,1\}^{8n} \to \mathcal{B}^{\lceil 4n/3 \rceil}$ maps $n$ bytes to base64url alphabet $\mathcal{B}$
+- The encoding function $E: \{0,1\}^{8n} \to \mathcal{B}^{\lceil 4n/3 \rceil}$
+maps $n$ bytes to base64url alphabet $\mathcal{B}$
 
-The alignment problem. Since $\gcd(6,8) = 2$, the encoding boundaries align only at positions where $\text{bit\_offset} \equiv 0 \pmod{6}$. At arbitrary byte positions $p$ in the original text, we have $\text{bit\_offset} = 8p \bmod 6 \in \{0,2,4\}$.
+The alignment problem. Since $\gcd(6,8) = 2$, the encoding boundaries align only at positions where $`\text{bit\_offset} \equiv 0 \pmod{6}`$. At arbitrary byte positions $p$ in the original text, we have $`\text{bit\_offset} = 8p \bmod 6 \in \{0,2,4\}`$.
 
 ### Assumptions
 
