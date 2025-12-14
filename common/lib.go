@@ -441,3 +441,94 @@ func VerifyJWS(api frontend.API, protected []uints.U8, payload []uints.U8, publi
 	publicKey.Verify(api, sw_emulated.GetCurveParams[emulated.P256Fp](), mHash, &signature)
 
 }
+
+// Verifies if the subset is a subset of bytes
+func IsSubset(api frontend.API, bytes, subset []uints.U8, positionStart frontend.Variable) error {
+	bytesAPI, err := uints.NewBytes(api)
+	if err != nil {
+		return err
+	}
+
+	matchedCount := frontend.Variable(0)
+
+	// For each position in bytes
+	for byteIndex := range bytes {
+		// Convert byteIndex to frontend.Variable for comparison
+		currentPos := frontend.Variable(byteIndex)
+
+		// Check if current position matches positionStart + matchedCount
+		isAtMatchPosition := api.IsZero(api.Sub(currentPos, api.Add(positionStart, matchedCount)))
+
+		// Check if we haven't matched all subset bytes yet
+		hasMoreToMatch := api.Sub(1, api.IsZero(api.Sub(matchedCount, len(subset))))
+
+		// Only match if at correct position AND haven't finished matching
+		isAtMatchPosition = api.Mul(isAtMatchPosition, hasMoreToMatch)
+
+		// For each possible index in subset
+		for subsetIndex := range subset {
+			// Check if we're comparing the right subset element
+			isCorrectSubsetIndex := api.IsZero(api.Sub(matchedCount, subsetIndex))
+
+			// shouldCompare = 1 only when both conditions are true
+			shouldCompare := api.Mul(isAtMatchPosition, isCorrectSubsetIndex)
+
+			// Select which byte to compare
+			selectedByte := bytesAPI.Select(shouldCompare, bytes[byteIndex], subset[subsetIndex])
+			bytesAPI.AssertIsEqual(selectedByte, subset[subsetIndex])
+		}
+
+		// Increment counter when we're in the matching range
+		matchedCount = api.Add(matchedCount, isAtMatchPosition)
+	}
+
+	// Ensure all subset bytes were matched
+	api.AssertIsEqual(matchedCount, len(subset))
+	return nil
+}
+
+// GetSubset extracts bytes[start:start+length] into a result array
+// length is fixed at compile time and determines the result array size
+func GetSubset(api frontend.API, bytes []uints.U8, start frontend.Variable, length int) []uints.U8 {
+	bytesAPI, err := uints.NewBytes(api)
+	if err != nil {
+		panic(err)
+	}
+
+	result := make([]uints.U8, length)
+
+	// Initialize result with zeros
+	for i := range result {
+		result[i] = uints.NewU8(0)
+	}
+
+	matchedCount := frontend.Variable(0)
+
+	// For each position in source bytes
+	for byteIndex := range bytes {
+		currentPos := frontend.Variable(byteIndex)
+
+		// Check if at position start + matchedCount
+		isAtPosition := api.IsZero(api.Sub(currentPos, api.Add(start, matchedCount)))
+
+		// Check if we haven't exceeded the desired length
+		notDone := api.Sub(1, api.IsZero(api.Sub(matchedCount, length)))
+
+		shouldCopy := api.Mul(isAtPosition, notDone)
+
+		// Copy to each possible result position
+		for outIndex := range result {
+			isCorrectOutPos := api.IsZero(api.Sub(matchedCount, outIndex))
+			shouldCopyHere := api.Mul(shouldCopy, isCorrectOutPos)
+
+			result[outIndex] = bytesAPI.Select(shouldCopyHere, bytes[byteIndex], result[outIndex])
+		}
+
+		matchedCount = api.Add(matchedCount, shouldCopy)
+	}
+
+	// Assert we extracted the correct length
+	api.AssertIsEqual(matchedCount, length)
+
+	return result
+}
