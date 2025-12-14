@@ -37,7 +37,7 @@ the eIDAS/EUDI context:
 
 ### 1. eIDAS Signature Verification
 
-Location: [circuits/signature-verification/](./circuits/signature-verification)
+Location: [circuits/signature-verification/](./circuits/verify-eidas-signature)
 
 Proves that a signed payload is valid without revealing the signature, public key, or the public key certificate, while proving that the certificate has been signed by a legitimate Certificate Authority.
 
