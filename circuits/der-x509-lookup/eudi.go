@@ -8,7 +8,7 @@ import (
 	"github.com/mynextid/eudi-zk/common"
 )
 
-// CircuitPoPCA proves:
+// CircuitEUDI proves:
 // 1. I (subject/holder) have a certificate with a subject public key
 // 2. I can sign a challenge with the private key corresponding to that public key
 // 3. My certificate signature is verified with the public key of the CA/QTSP(public input)

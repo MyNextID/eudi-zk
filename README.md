@@ -2,45 +2,89 @@
 
 ## Overview
 
-In this repository we design several basic ZK circuits using
-[Go/Gnark](https://docs.gnark.consensys.io/) zk-SNARKS framework.
+This repository implements zero-knowledge proof circuits for the eIDAS
+(Electronic Identification, Authentication and Trust Services) and EUDI
+(European Digital Identity) ecosystems using
+[Gnark](https://docs.gnark.consensys.io/), a Go-based zk-SNARKs framework.
 
-We selected Gnark as it enables to design and build circuits fast and the code
-is easy to follow. The circuits are not optimized and are intended only to
-showcase the different capabilities.
+**Why Gnark?** We chose Gnark for rapid prototyping due to its
+developer-friendly API and readable codebase. These reference implementations
+demonstrate core ZKP capabilities but are not production-optimized.
 
-For the production implementation we're using the Longfellow-ZK framework that's
-faster and more efficient, so that it can be easily executed on servers (where
-HSM-keys are used for proof generation) or devices where non-HSM keys are being
-used.
+**Production Implementation:** Our production system uses
+[Longfellow-ZK](https://github.com/google/longfellow-zk), which offers superior
+performance for:
 
-The same circuits can be implemented using other ZK frameworks, such as:
+- Server-side proof generation with HSM-protected keys
+- Resource-constrained devices using standard cryptographic keys
 
-- [Longfellow-ZK](https://github.com/google/longfellow-zk) -
-[zkID/OpenAC](https://pse.dev/projects/zk-id)
+All the circuits presented here are framework-agnostic and can be implemented in
+alternative ZKP systems like
+[Longfellow-ZK](https://github.com/google/longfellow-zk/) or
+[zkID/OpenAC](https://pse.dev/projects/zk-id).
 
-## Where to start
+## Getting Started
 
-Go to [circuits](./circuits/README.md) or to the
-[circuits/compare-bytes](./circuits/compare-bytes/README.md) folder.
+Start exploring the circuits:
 
-## The real deal
+- **All circuits:** [circuits/](./circuits/README.md)
+- **Simple circuits:** [circuits/compare-bytes/](./circuits/compare-bytes/README.md)
 
-We are introducing two main circuits that may play an important role in the
-eIDAS and EUDI ecosystem:
+## Core Circuits
 
-- [VC validation](./circuits/der-x509-lookup/README.md) a circuit that verifies
-that a holder controls a private key to which a VC has been bound and verifies -
-[eIDAS signatures](./circuits/signature-verification/) a circuit that verifies
-that a file has been signed with signing key that has been certified by a
-legitimate certificate authority or qualified trust service provider
+We've developed two fundamental circuit families relevant for verification in
+the eIDAS/EUDI context:
 
-[What these results enable?](eidas-meets-zkp.md)
+### 1. eIDAS Signature Verification
+
+Location: [circuits/signature-verification/](./circuits/signature-verification)
+
+Proves that a signed payload is valid without revealing the signature, public key, or the public key certificate, while proving that the certificate has been signed by a legitimate Certificate Authority.
+
+**What it verifies:**
+
+- Signature validity against a public key
+- Public key belongs to a valid X.509 certificate
+- Certificate is signed by a legitimate Certificate Authority (e.g., a Qualified Trust Service Provider)
+
+### 2. Verifiable Credential Validation
+
+Location: [circuits/der-x509-lookup/](./circuits/der-x509-lookup/)
+
+Enables privacy-preserving verification of EUDI Wallet credentials.
+
+**What it verifies:**
+
+- Credential was issued using a valid eIDAS e-seal
+- Holder controls the holder-binding key
+- Holder's key is certified by a legitimate CA/QTSP via X.509 certificate
+
+## What this means for eIDAS and EUDI
+
+[Learn more what these results enable](eidas-meets-zkp.md)
+
+## Use Cases
+
+These circuits enable:
+
+- Regulatory compliance: Meet eIDAS requirements while maximizing user privacy.
+- Building a wallet framework on the existing eIDAS infrastructure with the highest assurance level, e.g., qualified e-seals for Verifiable Credentials and qualified e-signatures for proof of possession and cryptographic holder binding
+- Unlinkability: Prove credential validity across services without creating
+tracking vectors. It enables issuing one-time credentials and share them as many
+time as needed without a need for batch credential issuance or one-time
+credential issuance.
+- Selective disclosure: Share specific attributes without revealing entire credentials.
+
+## Contributing
+
+We welcome contributions! Here's how to get involved:
+
+1. **Report issues:** Open an [issue](https://github.com/MyNextID/eudi-zk/issues) for bugs or feature requests
+2. **Submit changes:** Create a [pull request](https://github.com/MyNextID/eudi-zk/pulls) with your improvements
+3. **Discuss ideas:** Start a discussion before major architectural changes
+
+Please ensure code follows existing patterns.
 
 ## License
 
-MIT
-
-## How to contribute?
-
-1. Open an issue 2. Create a PR
+This project is licensed under the [MIT License](./LICENSE).
