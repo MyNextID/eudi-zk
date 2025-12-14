@@ -8,10 +8,11 @@ import (
 	"github.com/mynextid/eudi-zk/common"
 )
 
-// VerifyX509Signature verifies signature of a DER encoded X.509 certificate
+// VerifyX509Signature verifies a signature of a DER encoded X.509 certificate
+// CertTBSDER is the DER encoded certificate signature payload, aka Certificate To Be Signed (TBS) payload.
 func (c *CircuitJWS) VerifyX509Signature(api frontend.API) error {
 
-	messageHash, _ := common.SHA256(api, c.SignerCertDER)
+	messageHash, _ := common.SHA256(api, c.CertTBSDER)
 
 	mHash, err := sha256ToP256Fr(api, messageHash)
 	if err != nil {

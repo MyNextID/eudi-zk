@@ -1,4 +1,4 @@
-# Notes on ASN.1 and DER encoding
+# Notes DER encoding
 
 **DER** is a binary format for data structures described by ASN.1. DER is
 *providing for exactly one way to encode an ASN.1 value. DER is intended

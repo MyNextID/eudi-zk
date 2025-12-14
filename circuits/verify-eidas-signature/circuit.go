@@ -18,7 +18,7 @@ type CircuitJWS struct {
 	JWSSigS       emulated.Element[Secp256r1Fr] `gnark:",secret"`
 	SignerPubKeyX emulated.Element[Secp256r1Fp] `gnark:",secret"`
 	SignerPubKeyY emulated.Element[Secp256r1Fp] `gnark:",secret"`
-	SignerCertDER []uints.U8                    `gnark:",secret"`
+	CertTBSDER    []uints.U8                    `gnark:",secret"`
 	CertSigR      emulated.Element[Secp256r1Fr] `gnark:",secret"`
 	CertSigS      emulated.Element[Secp256r1Fr] `gnark:",secret"`
 

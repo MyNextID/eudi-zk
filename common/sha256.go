@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/gnark/std/math/uints"
 )
 
+// Computes SHA256 digest of the payload
 func SHA256(api frontend.API, payload []uints.U8) ([]uints.U8, error) {
 
 	// Instantiate SHA256
@@ -20,5 +21,3 @@ func SHA256(api frontend.API, payload []uints.U8) ([]uints.U8, error) {
 
 	return digest, nil
 }
-
-//

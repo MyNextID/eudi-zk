@@ -210,7 +210,7 @@ func divideBy4(api frontend.API, v frontend.Variable) frontend.Variable {
 func divideBy16(api frontend.API, v frontend.Variable) frontend.Variable {
 	// v / 16 for v in [0, 63]
 	result := frontend.Variable(0)
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		isValue := api.IsZero(api.Sub(v, i))
 		result = api.Select(isValue, i/16, result)
 	}
@@ -220,7 +220,7 @@ func divideBy16(api frontend.API, v frontend.Variable) frontend.Variable {
 func moduloBy4(api frontend.API, v frontend.Variable) frontend.Variable {
 	// v % 4 for v in [0, 63]
 	result := frontend.Variable(0)
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		isValue := api.IsZero(api.Sub(v, i))
 		result = api.Select(isValue, i%4, result)
 	}
@@ -230,7 +230,7 @@ func moduloBy4(api frontend.API, v frontend.Variable) frontend.Variable {
 func moduloBy16(api frontend.API, v frontend.Variable) frontend.Variable {
 	// v % 16 for v in [0, 63]
 	result := frontend.Variable(0)
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		isValue := api.IsZero(api.Sub(v, i))
 		result = api.Select(isValue, i%16, result)
 	}
@@ -245,19 +245,19 @@ func base64UrlCharToValue(api frontend.API, char uints.U8) frontend.Variable {
 
 	// Build up result by checking each possible character
 	// 'A'-'Z' (65-90) -> 0-25
-	for i := 0; i < 26; i++ {
+	for i := range 26 {
 		isChar := api.IsZero(api.Sub(charVal, 65+i))
 		result = api.Select(isChar, i, result)
 	}
 
 	// 'a'-'z' (97-122) -> 26-51
-	for i := 0; i < 26; i++ {
+	for i := range 26 {
 		isChar := api.IsZero(api.Sub(charVal, 97+i))
 		result = api.Select(isChar, 26+i, result)
 	}
 
 	// '0'-'9' (48-57) -> 52-61
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		isChar := api.IsZero(api.Sub(charVal, 48+i))
 		result = api.Select(isChar, 52+i, result)
 	}
@@ -273,12 +273,13 @@ func base64UrlCharToValue(api frontend.API, char uints.U8) frontend.Variable {
 	return result
 }
 
+// VerifyES256 verifies an ES256 signature of the message. The function computes the digest of the input message, make sure you provide the raw payload.
 func VerifyES256(api frontend.API, message []uints.U8, publicKey ecdsa.PublicKey[emulated.P256Fp, emulated.P256Fr], signature ecdsa.Signature[emulated.P256Fr]) {
 	messageHash, _ := SHA256(api, message)
 
 	mHash, _ := sha256ToP256Fr(api, messageHash)
 
-	// // signature verification assertion is done in-circuit
+	// signature verification assertion is done in-circuit
 	publicKey.Verify(api, sw_emulated.GetCurveParams[emulated.P256Fp](), mHash, &signature)
 
 }
@@ -336,6 +337,7 @@ func sha256ToP256Fr(api frontend.API, hash []uints.U8) (*emulated.Element[emulat
 	return field.Reduce(result), nil
 }
 
+// ComparePublicKeys compares public keys (emulated element) and an uncompressed EC public key (must have the 0x04 prefix)
 func ComparePublicKeys(api frontend.API, PubKeyX, PubKeyY emulated.Element[Secp256r1Fp], PubKeyBytes []uints.U8) {
 
 	// public key to bytes
@@ -405,6 +407,7 @@ func EmulatedElementToBytes32(api frontend.API, elem emulated.Element[Secp256r1F
 	return bytes
 }
 
+// VerifyJWS verifies a JWS signature where protected header and payload are provided separately. This way we can provide the protected header as a private input and the payload as public or private input. The function adds the . separator, hence the protected header must be only base64url encoded, without the .
 func VerifyJWS(api frontend.API, protected []uints.U8, payload []uints.U8, publicKey ecdsa.PublicKey[emulated.P256Fp, emulated.P256Fr], signature ecdsa.Signature[emulated.P256Fr]) {
 	// Initialize SHA256 hash
 	hash, err := sha2.New(api)

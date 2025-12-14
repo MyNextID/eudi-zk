@@ -332,7 +332,7 @@ func TestJWSCircuit(t *testing.T) {
 		circuitTemplate := &csv.CircuitJWS{
 			JWSHeaderB64:     make([]uints.U8, len(headerB64)),
 			JWSPayloadPublic: make([]uints.U8, len(payloadB64)),
-			SignerCertDER:    make([]uints.U8, len(tbsCert)),
+			CertTBSDER:       make([]uints.U8, len(tbsCert)),
 		}
 		if err := common.SetupAndSave(circuitTemplate, ccsPath, pkPath, vkPath); err != nil {
 			panic(err)
@@ -358,7 +358,7 @@ func TestJWSCircuit(t *testing.T) {
 		JWSSigS:       emulated.ValueOf[Secp256r1Fr](s),
 		SignerPubKeyX: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
 		SignerPubKeyY: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.Y),
-		SignerCertDER: common.BytesToU8Array(tbsCert),
+		CertTBSDER:    common.BytesToU8Array(tbsCert),
 		CertSigR:      emulated.ValueOf[Secp256r1Fr](certSig.R),
 		CertSigS:      emulated.ValueOf[Secp256r1Fr](certSig.S),
 

@@ -21,7 +21,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
-	cdl "github.com/mynextid/eudi-zk/circuits/der-x509-lookup"
+	cdl "github.com/mynextid/eudi-zk/circuits/eudi-vc"
 	"github.com/mynextid/eudi-zk/common"
 )
 

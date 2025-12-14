@@ -31,7 +31,7 @@ const (
 type Secp256r1Fp = emulated.P256Fp
 type Secp256r1Fr = emulated.P256Fr
 
-func TestJWSCircuit_Define(t *testing.T) {
+func TestJWSCircuit(t *testing.T) {
 	// == create dummy data ==
 	// Generate ES256 (P-256) key pair
 	signerKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -135,7 +135,7 @@ func TestJWSCircuit_Define(t *testing.T) {
 	circuitTemplate := &csv.CircuitJWS{
 		JWSHeaderB64:     make([]uints.U8, len(headerB64)),
 		JWSPayloadPublic: make([]uints.U8, len(payloadB64)),
-		SignerCertDER:    make([]uints.U8, len(tbsCert)),
+		CertTBSDER:       make([]uints.U8, len(tbsCert)),
 	}
 
 	// create witness assignment with actual values
@@ -146,7 +146,7 @@ func TestJWSCircuit_Define(t *testing.T) {
 		JWSSigS:       emulated.ValueOf[Secp256r1Fr](s),
 		SignerPubKeyX: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
 		SignerPubKeyY: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.Y),
-		SignerCertDER: common.BytesToU8Array(tbsCert),
+		CertTBSDER:    common.BytesToU8Array(tbsCert),
 		CertSigR:      emulated.ValueOf[Secp256r1Fr](certSig.R),
 		CertSigS:      emulated.ValueOf[Secp256r1Fr](certSig.S),
 
@@ -171,62 +171,5 @@ func TestJWSCircuit_Define(t *testing.T) {
 
 	// == Run the circuit ==
 	common.TestCircuit(assignment, ccs, pk, vk)
-
-}
-
-func TestX509(t *testing.T) {
-	// == create dummy data ==
-	// Generate ES256 (P-256) key pair
-	signerKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to generate key: %v", err))
-	}
-
-	// == Crate the x509 cert ==
-	// Generate certificate issuer (QTSP) key pair
-	qtspKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		panic(fmt.Errorf("failed to generate issuer key: %w", err))
-	}
-	// Create X.509 certificate signed by issuer
-	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			Organization: []string{"Test Org"},
-			CommonName:   "Test Signer",
-		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(365 * 24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-		BasicConstraintsValid: true,
-	}
-
-	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &signerKey.PublicKey, qtspKey)
-	if err != nil {
-		panic(fmt.Errorf("failed to create certificate: %w", err))
-	}
-
-	cert, err := x509.ParseCertificate(certDER)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse certificate: %w", err))
-	}
-
-	// Extract TBS (To-Be-Signed) certificate
-	tbsCert := cert.RawTBSCertificate
-
-	// Extract the signature from the certificate
-	var certSig struct {
-		R, S *big.Int
-	}
-	_, err = asn1.Unmarshal(cert.Signature, &certSig)
-	if err != nil {
-		// we need to re-sign to get the proper signature components
-		tbsHash := sha256.Sum256(tbsCert)
-		certSig.R, certSig.S, err = ecdsa.Sign(rand.Reader, qtspKey, tbsHash[:])
-		if err != nil {
-			panic(fmt.Errorf("failed to sign certificate: %w", err))
-		}
-	}
 
 }
