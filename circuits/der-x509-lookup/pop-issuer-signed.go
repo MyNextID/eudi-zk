@@ -5,7 +5,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/consensys/gnark/std/signature/ecdsa"
-	"github.com/mynextid/gnark-eudi/common"
+	"github.com/mynextid/eudi-zk/common"
 )
 
 // CircuitPoPCA proves:

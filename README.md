@@ -21,11 +21,12 @@ The same circuits can be implemented using other ZK frameworks, such as:
 
 ## Structure
 
-- [/circuits](./circuits/): ZK Circuits
+- [/circuits](./circuits/README.md): ZK Circuits
   - /{circuit-name}: folders containing one or more circuits
   - /{circuit-name}/README.md: information about the circuit(s)
   - /{circuit-name}/circuit_test.go: functions to run and test the different circuits
 - [/common](./common/): Common functions reused across different functions
+- [/notes](./notes/): Additional technical notes
 
 ## Where to start
 

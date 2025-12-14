@@ -5,7 +5,7 @@ import (
 	"github.com/consensys/gnark/std/algebra/emulated/sw_emulated"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/signature/ecdsa"
-	"github.com/mynextid/gnark-eudi/common"
+	"github.com/mynextid/eudi-zk/common"
 )
 
 // VerifyX509Signature verifies signature of a DER encoded X.509 certificate

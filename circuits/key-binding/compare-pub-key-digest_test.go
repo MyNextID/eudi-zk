@@ -17,8 +17,8 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
-	ckb "github.com/mynextid/gnark-eudi/circuits/key-binding"
-	"github.com/mynextid/gnark-eudi/common"
+	ckb "github.com/mynextid/eudi-zk/circuits/key-binding"
+	"github.com/mynextid/eudi-zk/common"
 )
 
 func TestPubKeyHashCircuit_Define(t *testing.T) {

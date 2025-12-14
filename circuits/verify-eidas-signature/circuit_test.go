@@ -17,8 +17,8 @@ import (
 
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
-	csv "github.com/mynextid/gnark-eudi/circuits/verify-eidas-signature"
-	"github.com/mynextid/gnark-eudi/common"
+	csv "github.com/mynextid/eudi-zk/circuits/verify-eidas-signature"
+	"github.com/mynextid/eudi-zk/common"
 )
 
 const (

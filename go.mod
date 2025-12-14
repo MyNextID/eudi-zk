@@ -1,4 +1,4 @@
-module github.com/mynextid/gnark-eudi
+module github.com/mynextid/eudi-zk
 
 go 1.24.2
 

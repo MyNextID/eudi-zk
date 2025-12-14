@@ -4,7 +4,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/mynextid/gnark-eudi/common"
+	"github.com/mynextid/eudi-zk/common"
 )
 
 type CircuitPKDigest struct {
