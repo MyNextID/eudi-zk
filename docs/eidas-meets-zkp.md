@@ -194,4 +194,5 @@ making the system highly scalable for deployment.
 ZKPs are much more efficient with byte-encoded payloads without additional
 hex/base64 encodings. E.g., processing DER encoded VCs is much more efficient
 than JWT/JWS based signatures. In the case of mDL/mDoc, CBOR encoding is
-sufficient, as there's no need to apply the mDoc salted-hash table selective disclosure approach as it can be achieved using the ZKP itself.
+sufficient, as there's no need to apply the mDoc salted-hash table selective
+disclosure approach as it can be achieved using the ZKP itself.
