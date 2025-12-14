@@ -49,7 +49,7 @@ Proves that a signed payload is valid without revealing the signature, public ke
 
 ### 2. Verifiable Credential Validation
 
-Location: [circuits/der-x509-lookup/](./circuits/der-x509-lookup/)
+Location: [circuits/eudi-vc/](./circuits/eudi-vc/)
 
 Enables privacy-preserving verification of EUDI Wallet credentials.
 

@@ -78,7 +78,7 @@ Circuits for validating digital signatures in eIDAS contexts:
 
 ### 4. VC Verification
 
-**Location:** [der-x509-lookup](./der-x509-lookup/README.md)
+**Location:** [eudi-vc](./eudi-vc/README.md)
 
 Circuits for validating VC signatures and holder binging proofs
 
