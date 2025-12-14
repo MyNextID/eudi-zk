@@ -47,4 +47,5 @@ MIT
 
 ## How to contribute?
 
-MIT
+1. Open an issue
+2. Create a PR

@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/algebra/emulated/sw_emulated"
+	"github.com/consensys/gnark/std/hash/sha2"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/consensys/gnark/std/signature/ecdsa"
@@ -408,4 +409,38 @@ func EmulatedElementToBytes32(api frontend.API, elem emulated.Element[Secp256r1F
 	}
 
 	return bytes
+}
+
+func VerifyJWS(api frontend.API, protected []uints.U8, payload []uints.U8, publicKey ecdsa.PublicKey[emulated.P256Fp, emulated.P256Fr], signature ecdsa.Signature[emulated.P256Fr]) {
+	// Initialize SHA256 hash
+	hash, err := sha2.New(api)
+	if err != nil {
+		return
+	}
+
+	// Concatenate header and payload with a '.' separator (ASCII 46 = 0x2E)
+	// format: base64url(header).base64url(payload)
+	dotSeparator := uints.NewU8(46)
+
+	// Write header to hasher
+	hash.Write(protected)
+
+	// Write dot separator
+	hash.Write([]uints.U8{dotSeparator})
+
+	// Write payload to hasher
+	hash.Write(payload)
+
+	// Compute SHA256 hash of header.payload
+	messageHash := hash.Sum()
+
+	// Convert to P256Fr
+	mHash, err := sha256ToP256Fr(api, messageHash)
+	if err != nil {
+		return
+	}
+
+	// Verify the signature
+	publicKey.Verify(api, sw_emulated.GetCurveParams[emulated.P256Fp](), mHash, &signature)
+
 }
