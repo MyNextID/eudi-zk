@@ -70,7 +70,8 @@ parameters.
 
 **Security Achievement**: Proves the holder controls the private key
 corresponding to the certificate's public key, establishing **proof of
-possession** without revealing the private or the public key or the signature value itself. Note: from the signature we can derive the public key.
+possession** without revealing the private or the public key or the signature
+value itself. Note: from the signature we can derive the public key.
 
 #### Step 6: Certificate Authority Signature Verification
 
@@ -84,7 +85,10 @@ input, allowing verifiers to specify which CAs they trust.
 
 #### Step 7: Verifiable Credential (JWS) Signature Verification
 
-The circuit verifies the issuer's ECDSA signature over the JWS signing input (base64url-encoded header + "." + base64url-encoded payload). The protected header contains the holder's key identifier (cnf) that should match the hash of the holder's public key.
+The circuit verifies the issuer's ECDSA signature over the JWS signing input
+(base64url-encoded header + "." + base64url-encoded payload). The protected
+header contains the holder's key identifier (cnf) that should match the hash of
+the holder's public key.
 
 Protected header is a private input, whereas the payload is the public input.
 
@@ -93,7 +97,10 @@ Protected header is a private input, whereas the payload is the public input.
 
 #### Step 8: Key Binding Verification (Pending Implementation)
 
-*Note: The final verification—confirming that the cnf in the JWS header matches the SHA-256 hash of the holder's public key—is still in progress in the current implementation. This step is critical for completing the cryptographic binding between the certificate and credential.*
+*Note: The final verification—confirming that the cnf in the JWS header matches
+*the SHA-256 hash of the holder's public key—is still in progress in the current
+*implementation. This step is critical for completing the cryptographic binding
+*between the certificate and credential.*
 
 ### Roadmap
 
@@ -155,11 +162,13 @@ This proof system achieves **maximum privacy** while maintaining **cryptographic
 
 ### Circuit Complexity Context
 
-This circuit is for discussion and educational purposes only. For production use, more optimized frameworks, such as Longfellow-ZK are being used.
+This circuit is for discussion and educational purposes only. For production
+use, more optimized frameworks, such as Longfellow-ZK are being used.
 
 ## Implications for EUDI and eIDAS
 
-Using ZKP, we can, establish digital wallet infrastructure on top of the existing QTSP IT and trust infrastructure as QTSPs can:
+Using ZKP, we can, establish digital wallet infrastructure on top of the
+existing QTSP IT and trust infrastructure as QTSPs can:
 
 - issue advanced or qualified certificates to Legal Entities (issuers or holders)
 - issue advanced or qualified certificates to Natural Persons (holders)
