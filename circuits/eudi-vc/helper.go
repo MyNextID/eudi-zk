@@ -11,7 +11,6 @@ import (
 // VerifyTBSMembership proves that TBS bytes are embedded in certificate at the claimed position
 func VerifyTBSMembership(
 	api frontend.API,
-	uapi *uints.BinaryField[uints.U32],
 	certBytes []uints.U8,
 	tbsBytes []uints.U8,
 	tbsStart frontend.Variable,
@@ -21,94 +20,93 @@ func VerifyTBSMembership(
 	index := frontend.Variable(0)
 
 	// Skip outer Certificate SEQUENCE
-	tag := ReadByteAt(api, uapi, certBytes, index)
+	tag := ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 	index = api.Add(index, 1)
-	_, lengthBytes := ReadDERLength(api, uapi, certBytes, index)
+	_, lengthBytes := ReadDERLength(api, certBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Now at TBS SEQUENCE - this should be tbsStart
 	api.AssertIsEqual(index, tbsStart)
 
 	// Verify TBS tag
-	tag = ReadByteAt(api, uapi, certBytes, index)
+	tag = ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 	index = api.Add(index, 1)
 
 	// Verify TBS length matches
-	tbsContentLength, tbsLengthBytes := ReadDERLength(api, uapi, certBytes, index)
+	tbsContentLength, tbsLengthBytes := ReadDERLength(api, certBytes, index)
 	expectedTBSLength := api.Add(api.Add(1, tbsLengthBytes), tbsContentLength)
 	api.AssertIsEqual(expectedTBSLength, tbsLength)
 
 	// CRITICAL: Verify every byte of TBS matches the certificate
-	for i := 0; i < len(tbsBytes); i++ {
-		certByte := ReadByteAt(api, uapi, certBytes, api.Add(tbsStart, i))
-		uapi.ByteAssertEq(certByte, tbsBytes[i])
+	for i := range tbsBytes {
+		certByte := ReadByteAt(api, certBytes, api.Add(tbsStart, i))
+		api.AssertIsEqual(certByte.Val, tbsBytes[i].Val)
 	}
 }
 
 // NavigateToSubjectPublicKeyInfoInTBS navigates within TBS certificate (not full cert)
 func NavigateToSubjectPublicKeyInfoInTBS(
 	api frontend.API,
-	uapi *uints.BinaryField[uints.U32],
 	tbsBytes []uints.U8,
 ) frontend.Variable {
 	index := frontend.Variable(0)
 
 	// TBS starts with SEQUENCE tag
-	tag := ReadByteAt(api, uapi, tbsBytes, index)
+	tag := ReadByteAt(api, tbsBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 	index = api.Add(index, 1)
-	_, lengthBytes := ReadDERLength(api, uapi, tbsBytes, index)
+	_, lengthBytes := ReadDERLength(api, tbsBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Field 1: Version [0] EXPLICIT (optional)
-	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	tag = ReadByteAt(api, tbsBytes, index)
 	hasVersion := api.IsZero(api.Sub(tag.Val, 0xA0))
-	skipAmount := api.Select(hasVersion, SkipElement(api, uapi, tbsBytes, index), 0)
+	skipAmount := api.Select(hasVersion, SkipElement(api, tbsBytes, index), 0)
 	index = api.Add(index, skipAmount)
 
 	// Field 2: Serial Number (0x02)
-	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	tag = ReadByteAt(api, tbsBytes, index)
 	api.AssertIsEqual(tag.Val, 0x02)
-	skipAmount = SkipElement(api, uapi, tbsBytes, index)
+	skipAmount = SkipElement(api, tbsBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 3: Signature Algorithm (0x30)
-	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	tag = ReadByteAt(api, tbsBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = SkipElement(api, uapi, tbsBytes, index)
+	skipAmount = SkipElement(api, tbsBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 4: Issuer DN (0x30)
-	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	tag = ReadByteAt(api, tbsBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = SkipElement(api, uapi, tbsBytes, index)
+	skipAmount = SkipElement(api, tbsBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 5: Validity (0x30)
-	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	tag = ReadByteAt(api, tbsBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = SkipElement(api, uapi, tbsBytes, index)
+	skipAmount = SkipElement(api, tbsBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 6: Subject DN (0x30)
-	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	tag = ReadByteAt(api, tbsBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = SkipElement(api, uapi, tbsBytes, index)
+	skipAmount = SkipElement(api, tbsBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 7: SubjectPublicKeyInfo (0x30)
-	tag = ReadByteAt(api, uapi, tbsBytes, index)
+	tag = ReadByteAt(api, tbsBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 
 	// Skip SPKI header
 	index = api.Add(index, 1)
-	_, lengthBytes = ReadDERLength(api, uapi, tbsBytes, index)
+	_, lengthBytes = ReadDERLength(api, tbsBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Skip AlgorithmIdentifier
-	skipAmount = SkipElement(api, uapi, tbsBytes, index)
+	skipAmount = SkipElement(api, tbsBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Now at BIT STRING with public key
@@ -119,77 +117,77 @@ func NavigateToSubjectPublicKeyInfoInTBS(
 // by parsing the certificate structure in the correct order
 func NavigateToSubjectPublicKeyInfo(
 	api frontend.API,
-	uapi *uints.BinaryField[uints.U32],
+
 	certBytes []uints.U8,
 ) frontend.Variable {
 	index := frontend.Variable(0)
 
 	// Verify and skip outer Certificate SEQUENCE (tag 0x30)
-	tag := ReadByteAt(api, uapi, certBytes, index)
+	tag := ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 	index = api.Add(index, 1)
-	_, lengthBytes := ReadDERLength(api, uapi, certBytes, index)
+	_, lengthBytes := ReadDERLength(api, certBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Enter TBSCertificate SEQUENCE (tag 0x30)
-	tag = ReadByteAt(api, uapi, certBytes, index)
+	tag = ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 	index = api.Add(index, 1)
-	_, lengthBytes = ReadDERLength(api, uapi, certBytes, index)
+	_, lengthBytes = ReadDERLength(api, certBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Field 1: Version [0] EXPLICIT (optional, tag 0xA0)
-	tag = ReadByteAt(api, uapi, certBytes, index)
+	tag = ReadByteAt(api, certBytes, index)
 	hasVersion := api.IsZero(api.Sub(tag.Val, 0xA0))
-	skipAmount := api.Select(hasVersion, SkipElement(api, uapi, certBytes, index), 0)
+	skipAmount := api.Select(hasVersion, SkipElement(api, certBytes, index), 0)
 	index = api.Add(index, skipAmount)
 
 	// Field 2: Serial Number (tag 0x02 - INTEGER)
 	// IMPORTANT: We verify the tag to ensure we're at the right field
-	tag = ReadByteAt(api, uapi, certBytes, index)
+	tag = ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x02)
-	skipAmount = SkipElement(api, uapi, certBytes, index)
+	skipAmount = SkipElement(api, certBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 3: Signature Algorithm (tag 0x30 - SEQUENCE)
-	tag = ReadByteAt(api, uapi, certBytes, index)
+	tag = ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = SkipElement(api, uapi, certBytes, index)
+	skipAmount = SkipElement(api, certBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 4: Issuer DN (tag 0x30 - SEQUENCE)
 	// This is the ISSUER, not what we want!
-	tag = ReadByteAt(api, uapi, certBytes, index)
+	tag = ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = SkipElement(api, uapi, certBytes, index)
+	skipAmount = SkipElement(api, certBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 5: Validity (tag 0x30 - SEQUENCE)
-	tag = ReadByteAt(api, uapi, certBytes, index)
+	tag = ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = SkipElement(api, uapi, certBytes, index)
+	skipAmount = SkipElement(api, certBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 6: Subject DN (tag 0x30 - SEQUENCE)
 	// This is the SUBJECT, but still not the public key
-	tag = ReadByteAt(api, uapi, certBytes, index)
+	tag = ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = SkipElement(api, uapi, certBytes, index)
+	skipAmount = SkipElement(api, certBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 7: SubjectPublicKeyInfo (tag 0x30 - SEQUENCE)
 	// THIS IS IT! We've proven we're at the 7th field in TBSCertificate
 	// which is by definition the subject's public key
-	tag = ReadByteAt(api, uapi, certBytes, index)
+	tag = ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 
 	// Skip SEQUENCE header to get to the content
 	index = api.Add(index, 1)
-	_, lengthBytes = ReadDERLength(api, uapi, certBytes, index)
+	_, lengthBytes = ReadDERLength(api, certBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Skip AlgorithmIdentifier SEQUENCE
-	skipAmount = SkipElement(api, uapi, certBytes, index)
+	skipAmount = SkipElement(api, certBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Now we're at the BIT STRING containing the subject's public key
@@ -200,11 +198,11 @@ func NavigateToSubjectPublicKeyInfo(
 // ReadDERLength reads a DER-encoded length and returns (length_value, bytes_used_for_length)
 func ReadDERLength(
 	api frontend.API,
-	uapi *uints.BinaryField[uints.U32],
+
 	data []uints.U8,
 	index frontend.Variable,
 ) (frontend.Variable, frontend.Variable) {
-	lengthByte := ReadByteAt(api, uapi, data, index)
+	lengthByte := ReadByteAt(api, data, index)
 
 	// Check if short form (< 0x80) or long form (>= 0x80)
 	bits := api.ToBinary(lengthByte.Val, 8)
@@ -218,8 +216,8 @@ func ReadDERLength(
 	numLengthBytes := api.Sub(lengthByte.Val, 0x80)
 
 	// Read up to 2 bytes for length (handles most certificates)
-	byte1 := ReadByteAt(api, uapi, data, api.Add(index, 1))
-	byte2 := ReadByteAt(api, uapi, data, api.Add(index, 2))
+	byte1 := ReadByteAt(api, data, api.Add(index, 1))
+	byte2 := ReadByteAt(api, data, api.Add(index, 2))
 
 	// Calculate long form length
 	// If numLengthBytes == 1: just byte1
@@ -242,7 +240,7 @@ func ReadDERLength(
 // SkipElement returns the number of bytes to skip for a complete DER element
 func SkipElement(
 	api frontend.API,
-	uapi *uints.BinaryField[uints.U32],
+
 	data []uints.U8,
 	index frontend.Variable,
 ) frontend.Variable {
@@ -250,7 +248,7 @@ func SkipElement(
 	lengthIndex := api.Add(index, 1)
 
 	// Read length
-	contentLength, lengthBytes := ReadDERLength(api, uapi, data, lengthIndex)
+	contentLength, lengthBytes := ReadDERLength(api, data, lengthIndex)
 
 	// Total bytes to skip = 1 (tag) + lengthBytes + contentLength
 	return api.Add(api.Add(1, lengthBytes), contentLength)
@@ -259,7 +257,7 @@ func SkipElement(
 // ExtractSubjectPublicKeyFromCert extracts the 64-byte EC public key from certificate
 func ExtractSubjectPublicKeyFromCert(
 	api frontend.API,
-	uapi *uints.BinaryField[uints.U32],
+
 	certBytes []uints.U8,
 	pubKeyPos frontend.Variable,
 ) []uints.U8 {
@@ -272,19 +270,19 @@ func ExtractSubjectPublicKeyFromCert(
 	// [64 bytes] = X coordinate (32 bytes) + Y coordinate (32 bytes)
 
 	// Verify we're at a BIT STRING
-	tag := ReadByteAt(api, uapi, certBytes, pubKeyPos)
+	tag := ReadByteAt(api, certBytes, pubKeyPos)
 	api.AssertIsEqual(tag.Val, 0x03)
 
 	// Verify length is 0x42 (66 bytes)
-	length := ReadByteAt(api, uapi, certBytes, api.Add(pubKeyPos, 1))
+	length := ReadByteAt(api, certBytes, api.Add(pubKeyPos, 1))
 	api.AssertIsEqual(length.Val, 0x42)
 
 	// Verify unused bits = 0x00
-	unusedBits := ReadByteAt(api, uapi, certBytes, api.Add(pubKeyPos, 2))
+	unusedBits := ReadByteAt(api, certBytes, api.Add(pubKeyPos, 2))
 	api.AssertIsEqual(unusedBits.Val, 0x00)
 
 	// Verify format = 0x04 (uncompressed)
-	// format := ReadByteAt(api, uapi, certBytes, api.Add(pubKeyPos, 3))
+	// format := ReadByteAt(api, certBytes, api.Add(pubKeyPos, 3))
 	// api.AssertIsEqual(format.Val, 0x04)
 
 	// Extract 65 bytes of public key (32 bytes X + 32 bytes Y)
@@ -293,7 +291,7 @@ func ExtractSubjectPublicKeyFromCert(
 
 	for i := range 65 {
 		idx := api.Add(keyStart, i)
-		publicKey[i] = ReadByteAt(api, uapi, certBytes, idx)
+		publicKey[i] = ReadByteAt(api, certBytes, idx)
 	}
 
 	return publicKey
@@ -302,7 +300,7 @@ func ExtractSubjectPublicKeyFromCert(
 // ReadByteAt reads a byte at a given index (variable index)
 func ReadByteAt(
 	api frontend.API,
-	uapi *uints.BinaryField[uints.U32],
+
 	data []uints.U8,
 	index frontend.Variable,
 ) uints.U8 {

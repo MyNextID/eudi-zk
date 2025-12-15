@@ -64,14 +64,10 @@ type CircuitEUDI struct {
 
 // Define implements the circuit logic
 func (c *CircuitEUDI) Define(api frontend.API) error {
-	uapi, err := uints.New[uints.U32](api)
-	if err != nil {
-		return err
-	}
 
 	// ===== STEP 1: Navigate certificate structure to find SubjectPublicKeyInfo =====
 	// This proves we're at the SUBJECT's public key, not the issuer's or any other key
-	subjectPubKeyPos := NavigateToSubjectPublicKeyInfoInTBS(api, uapi, c.CertBytes[:])
+	subjectPubKeyPos := NavigateToSubjectPublicKeyInfoInTBS(api, c.CertBytes[:])
 
 	// ===== STEP 2: Verify claimed position matches the proven position =====
 	api.AssertIsEqual(subjectPubKeyPos, c.SubjectPubKeyPos)
@@ -79,7 +75,6 @@ func (c *CircuitEUDI) Define(api frontend.API) error {
 	// ===== STEP 3: Extract subject public key from certificate =====
 	extractedPubKey := ExtractSubjectPublicKeyFromCert(
 		api,
-		uapi,
 		c.CertBytes[:],
 		subjectPubKeyPos, // Use the proven position
 	)

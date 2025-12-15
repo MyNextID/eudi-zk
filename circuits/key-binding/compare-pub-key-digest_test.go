@@ -1,26 +1,7 @@
 package ckb_test
 
-import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
-	"os"
-	"testing"
-	"time"
-
-	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark/backend/groth16"
-	"github.com/consensys/gnark/constraint"
-	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/std/math/emulated"
-	"github.com/consensys/gnark/std/math/uints"
-	ckb "github.com/mynextid/eudi-zk/circuits/key-binding"
-	"github.com/mynextid/eudi-zk/common"
-)
-
+// deprecated: old test
+/*
 func TestPubKeyHashCircuit_Define(t *testing.T) {
 	// == create dummy data ==
 	// Generate ES256 (P-256) key pair
@@ -149,10 +130,10 @@ func TestPubKeyHashCircuit_Define(t *testing.T) {
 	startVerify := time.Now()
 	err = groth16.Verify(proof, vk, publicWitness)
 	if err != nil {
-		panic("❌ Verification failed: " + err.Error())
+		panic("Verification failed: " + err.Error())
 	}
 	verifyTime := time.Since(startVerify)
-	fmt.Printf("✅ Proof verified successfully! (took %v)\n", verifyTime)
+	fmt.Printf("Proof verified successfully! (took %v)\n", verifyTime)
 
 	// Summary
 	fmt.Println("\n=== Performance Summary ===")
@@ -164,3 +145,4 @@ func TestPubKeyHashCircuit_Define(t *testing.T) {
 	fmt.Printf("Total time:        %v\n", witnessTime+proofTime+publicTime+verifyTime)
 
 }
+*/

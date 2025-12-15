@@ -97,13 +97,15 @@ Each circuit folder follows this organization:
 circuits/
 ├── {circuit-name}/
 │   ├── README.md              # Circuit-specific documentation
-│   ├── circuit_test.go        # Test functions and examples
+│   ├── {circuit-name}_test.go # Test functions and examples
 │   ├── {circuit-name}.go      # Circuit implementation
 │   └── compiled/              # Generated artifacts (gitignored)
 │       ├── circuit.ccs        # Constraint system
 │       ├── proving.key        # Proving key
 │       └── verification.key   # Verifier key
 ```
+
+Note: we're migrating from `circuit_test.go` to `{circuit-name}_test.go`
 
 ## Running the Circuits
 
@@ -120,8 +122,12 @@ cd circuits
 Execute all circuit tests:
 
 ```bash
-go test -v -timeout 5m ./...
+cd circuits
+go test -v -timeout 30m ./...
 ```
+
+Note: Each test compiles the circuit and initializes the ZK proving system
+independently. Expect the complete test suite to take significant time.
 
 ### Run Specific Circuit
 
