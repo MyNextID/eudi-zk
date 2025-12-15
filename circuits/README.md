@@ -4,13 +4,18 @@ This directory contains reference implementations of zero-knowledge proof
 circuits for eIDAS and EUDI use cases. These circuits prioritize clarity and
 educational value over performance optimization.
 
-**Note:** Production-optimized circuits will be published separately.
+Notes:
+
+- Production-optimized circuits will be published separately.
+- Some circuits take a while to compile/setup
+- Observation: memory consumption of some circuits is high
 
 ## Prerequisites
 
 ### Required Software
 
 1. Go 1.24.2 or higher
+
    - Download: <https://go.dev/doc/install>
    - Verify installation: `go version`
 
@@ -58,7 +63,9 @@ and all required dependencies.
 
 Basic circuits demonstrating fundamental operations like byte comparison, public key encoding, and digest matching.
 
-### 2. Key Binding
+### 2. Key Binding (deprecated)
+
+Note: these functions have been migrated to eudi-vc
 
 **Location:** [key-binding/](./key-binding/)
 
