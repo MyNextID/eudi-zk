@@ -39,6 +39,8 @@ digest of the public key (for the elliptic curves, uncompressed public key).
 which for elliptic curves we can derive the public key)
 - the VC signature and the protected header that contain all the signature metadata
 
+6. **CRL**: Circuit for basic CRL verification has been added; not integrated into the main circuit, yet; it's slightly inefficient for the moment
+
 ## Summary of the public and private inputs
 
 Private inputs (known only to the holder/prover):
@@ -64,4 +66,3 @@ certificate: enables to validate the holder's public key certificate
 Out of scope of this circuit:
 
 - Selective disclosure of the payload claims (trivial to implement)
-- CRL verification (membership lookup)
