@@ -48,7 +48,7 @@ func (c *CircuitCompareCnf) Define(api frontend.API) error {
 	}
 
 	// compare the bytes
-	common.CompareBytes(api, publicKeyDigest, c.PublicKeyDigest)
+	common.AssertIsEqualBytes(api, publicKeyDigest, c.PublicKeyDigest)
 
 	return nil
 }

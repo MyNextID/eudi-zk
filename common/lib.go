@@ -15,16 +15,33 @@ import (
 type Secp256r1Fp = emulated.P256Fp
 type Secp256r1Fr = emulated.P256Fr
 
-func CompareBytes(api frontend.API, A, B []uints.U8) {
-	lenA := Len(api, A)
-	lenB := Len(api, B)
+func AssertIsEqualBytes(api frontend.API, a, b []uints.U8) {
+	lenA := Len(api, a)
+	lenB := Len(api, b)
 
 	api.AssertIsEqual(lenA, lenB)
 
-	for i := range A {
-		api.AssertIsEqual(A[i].Val, B[i].Val)
+	for i := range a {
+		api.AssertIsEqual(a[i].Val, b[i].Val)
 	}
 
+}
+
+// IsEqualBytes compares two byte slices and returns 1 if all bytes match, 0 otherwise. If len(a) != len (b), we iterate over length = min(len(a), len(b))
+func IsEqualBytes(api frontend.API, a, b []uints.U8) frontend.Variable {
+	// Returns 1 if all bytes match, 0 otherwise
+	allMatch := frontend.Variable(1)
+
+	minLen := min(len(b), len(a))
+
+	for i := range minLen {
+		// Check if bytes are equal
+		bytesEqual := api.IsZero(api.Sub(a[i].Val, b[i].Val))
+		// Accumulate: if any byte doesn't match, allMatch becomes 0
+		allMatch = api.Mul(allMatch, bytesEqual)
+	}
+
+	return allMatch
 }
 
 // Len computes the array size
@@ -351,7 +368,7 @@ func ComparePublicKeys(api frontend.API, PubKeyX, PubKeyY emulated.Element[Secp2
 	pubKeyBytes := append(xBytes, yBytes...)
 	pubKeyBytes = append([]uints.U8{prefix}, pubKeyBytes...)
 
-	CompareBytes(api, pubKeyBytes, PubKeyBytes)
+	AssertIsEqualBytes(api, pubKeyBytes, PubKeyBytes)
 }
 
 // PublicKeyDigest returns hash of the public keys
@@ -601,7 +618,7 @@ func VerifyCnf(api frontend.API, HeaderB64, CnfB64 []uints.U8, CnfB64Position, P
 	}
 
 	// compare the bytes
-	CompareBytes(api, publicKeyDigest, PublicKeyDigest)
+	AssertIsEqualBytes(api, publicKeyDigest, PublicKeyDigest)
 
 	return nil
 

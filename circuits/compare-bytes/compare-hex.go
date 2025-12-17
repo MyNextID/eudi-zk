@@ -20,7 +20,7 @@ func (c *CircuitHex) Define(api frontend.API) error {
 	bytes, _ := common.DecodeHex(api, c.BytesHex)
 
 	// compare the decoded and provided bytes
-	common.CompareBytes(api, c.Bytes, bytes)
+	common.AssertIsEqualBytes(api, c.Bytes, bytes)
 
 	return nil
 }

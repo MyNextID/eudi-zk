@@ -47,7 +47,7 @@ func (c *CircuitSPK) Define(api frontend.API) error {
 	)
 
 	// ===== STEP 4: Verify extracted key matches the claimed public key =====
-	common.CompareBytes(api, extractedPubKey, c.SignerPubKeyBytes)
+	common.AssertIsEqualBytes(api, extractedPubKey, c.SignerPubKeyBytes)
 
 	return nil
 }

@@ -31,8 +31,8 @@ func (c *CircuitPKDigest) Define(api frontend.API) error {
 
 	digest, _ := common.SHA256(api, pubKeyBytes)
 
-	common.CompareBytes(api, pubKeyBytes, c.SignerPubKeyBytes)
-	common.CompareBytes(api, digest, c.SignerPubKeyDigest)
+	common.AssertIsEqualBytes(api, pubKeyBytes, c.SignerPubKeyBytes)
+	common.AssertIsEqualBytes(api, digest, c.SignerPubKeyDigest)
 
 	return nil
 }

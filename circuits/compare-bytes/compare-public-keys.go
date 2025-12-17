@@ -27,8 +27,8 @@ func (c *CircuitPK) Define(api frontend.API) error {
 	yBytes := EmulatedElementToBytes32(api, c.SignerPubKeyY)
 
 	// Compare the digests byte by byte using the Val() method to access the underlying variable
-	common.CompareBytes(api, xBytes, c.SignerPubKeyXBytes)
-	common.CompareBytes(api, yBytes, c.SignerPubKeyYBytes)
+	common.AssertIsEqualBytes(api, xBytes, c.SignerPubKeyXBytes)
+	common.AssertIsEqualBytes(api, yBytes, c.SignerPubKeyYBytes)
 
 	return nil
 }

@@ -20,7 +20,7 @@ type Circuit struct {
 func (c *Circuit) Define(api frontend.API) error {
 
 	// Compare the digests byte by byte using the Val() method to access the underlying variable
-	common.CompareBytes(api, c.Bytes, c.PubBytes)
+	common.AssertIsEqualBytes(api, c.Bytes, c.PubBytes)
 
 	return nil
 }

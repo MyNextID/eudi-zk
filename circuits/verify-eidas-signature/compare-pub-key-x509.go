@@ -6,7 +6,7 @@ import (
 	"github.com/mynextid/eudi-zk/common"
 )
 
-// verifyPubKeyInCertificateSimplified searches for the public key X coordinate in the DER certificate
+// verifyPubKeyInCertificateSimplified searches for the public key X coordinate in the DER certificate. Note: this simplified version is insecure as it will try to match ANY public key in the certificate.
 func (circuit *CircuitJWS) verifyPubKeyInCertificateSimplified(api frontend.API) error {
 	/*
 		Naive and insecure approach
@@ -47,7 +47,7 @@ func (circuit *CircuitJWS) verifyPubKeyInCertificateSimplified(api frontend.API)
 			for j := 0; j < 32; j++ {
 				certSlice[j] = circuit.CertTBSDER[i+1+j]
 			}
-			xMatch = circuit.compareBytes(api, certSlice, pubKeyXBytes)
+			xMatch = common.IsEqualBytes(api, certSlice, pubKeyXBytes)
 		} else {
 			xMatch = 0
 		}
@@ -62,24 +62,4 @@ func (circuit *CircuitJWS) verifyPubKeyInCertificateSimplified(api frontend.API)
 	isZero := api.IsZero(matchCount)
 	api.AssertIsEqual(isZero, 0)
 	return nil
-}
-
-// compareBytes compares two byte slices and returns 1 if all bytes match, 0 otherwise
-func (circuit *CircuitJWS) compareBytes(api frontend.API, a, b []uints.U8) frontend.Variable {
-	// Returns 1 if all bytes match, 0 otherwise
-	allMatch := frontend.Variable(1)
-
-	minLen := len(a)
-	if len(b) < minLen {
-		minLen = len(b)
-	}
-
-	for i := 0; i < minLen; i++ {
-		// Check if bytes are equal
-		bytesEqual := api.IsZero(api.Sub(a[i].Val, b[i].Val))
-		// Accumulate: if any byte doesn't match, allMatch becomes 0
-		allMatch = api.Mul(allMatch, bytesEqual)
-	}
-
-	return allMatch
 }

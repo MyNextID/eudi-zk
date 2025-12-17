@@ -22,7 +22,7 @@ func (c *CircuitB64Url) Define(api frontend.API) error {
 	decodedBytes, _ := common.DecodeHex(api, decodedBytesHex)
 
 	_ = decodedBytes
-	common.CompareBytes(api, c.Bytes, decodedBytes)
+	common.AssertIsEqualBytes(api, c.Bytes, decodedBytes)
 
 	return nil
 }
