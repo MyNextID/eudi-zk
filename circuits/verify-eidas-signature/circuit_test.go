@@ -133,15 +133,15 @@ func TestJWSCircuit(t *testing.T) {
 
 	// == Circuit ==
 	circuitTemplate := &csv.CircuitJWS{
-		JWSHeaderB64:     make([]uints.U8, len(headerB64)),
-		JWSPayloadPublic: make([]uints.U8, len(payloadB64)),
-		CertTBSDER:       make([]uints.U8, len(tbsCert)),
+		JWSProtected: make([]uints.U8, len(headerB64)),
+		JWSPayload:   make([]uints.U8, len(payloadB64)),
+		CertTBSDER:   make([]uints.U8, len(tbsCert)),
 	}
 
 	// create witness assignment with actual values
 	assignment := &csv.CircuitJWS{
 		// Private inputs
-		JWSHeaderB64:  common.StringToU8Array(headerB64),
+		JWSProtected:  common.StringToU8Array(headerB64),
 		JWSSigR:       emulated.ValueOf[Secp256r1Fr](r),
 		JWSSigS:       emulated.ValueOf[Secp256r1Fr](s),
 		SignerPubKeyX: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
@@ -151,9 +151,9 @@ func TestJWSCircuit(t *testing.T) {
 		CertSigS:      emulated.ValueOf[Secp256r1Fr](certSig.S),
 
 		// Public input
-		JWSPayloadPublic: common.StringToU8Array(payloadB64),
-		QTSPPubKeyX:      emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.X),
-		QTSPPubKeyY:      emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.Y),
+		JWSPayload:  common.StringToU8Array(payloadB64),
+		QTSPPubKeyX: emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.X),
+		QTSPPubKeyY: emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.Y),
 	}
 
 	// == Init the circuit ==
@@ -170,6 +170,6 @@ func TestJWSCircuit(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuit(assignment, ccs, pk, vk)
+	common.TestCircuitSimple(assignment, ccs, pk, vk)
 
 }

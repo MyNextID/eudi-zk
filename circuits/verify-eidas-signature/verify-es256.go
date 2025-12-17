@@ -28,13 +28,13 @@ func (c *CircuitJWS) VerifyJWS(api frontend.API) error {
 	dotSeparator := uints.NewU8(46)
 
 	// Write header to hasher
-	hash.Write(c.JWSHeaderB64)
+	hash.Write(c.JWSProtected)
 
 	// Write dot separator
 	hash.Write([]uints.U8{dotSeparator})
 
 	// Write payload to hasher
-	hash.Write(c.JWSPayloadPublic)
+	hash.Write(c.JWSPayload)
 
 	// Compute SHA256 hash of header.payload
 	messageHash := hash.Sum()

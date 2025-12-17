@@ -332,9 +332,9 @@ func TestJWSCircuit(t *testing.T) {
 	if _, err := os.Stat(pkPath); os.IsNotExist(err) {
 		// First time: compile and save
 		circuitTemplate := &csv.CircuitJWS{
-			JWSHeaderB64:     make([]uints.U8, len(headerB64)),
-			JWSPayloadPublic: make([]uints.U8, len(payloadB64)),
-			CertTBSDER:       make([]uints.U8, len(tbsCert)),
+			JWSProtected: make([]uints.U8, len(headerB64)),
+			JWSPayload:   make([]uints.U8, len(payloadB64)),
+			CertTBSDER:   make([]uints.U8, len(tbsCert)),
 		}
 		if err := common.SetupAndSave(circuitTemplate, ccsPath, pkPath, vkPath); err != nil {
 			panic(err)
@@ -355,7 +355,7 @@ func TestJWSCircuit(t *testing.T) {
 	// Create witness assignment with actual values
 	assignment := &csv.CircuitJWS{
 		// Private inputs
-		JWSHeaderB64:  common.StringToU8Array(headerB64),
+		JWSProtected:  common.StringToU8Array(headerB64),
 		JWSSigR:       emulated.ValueOf[Secp256r1Fr](r),
 		JWSSigS:       emulated.ValueOf[Secp256r1Fr](s),
 		SignerPubKeyX: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
@@ -365,9 +365,9 @@ func TestJWSCircuit(t *testing.T) {
 		CertSigS:      emulated.ValueOf[Secp256r1Fr](certSig.S),
 
 		// Public input
-		JWSPayloadPublic: common.StringToU8Array(payloadB64),
-		QTSPPubKeyX:      emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.X),
-		QTSPPubKeyY:      emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.Y),
+		JWSPayload:  common.StringToU8Array(payloadB64),
+		QTSPPubKeyX: emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.X),
+		QTSPPubKeyY: emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.Y),
 	}
 
 	circuitTime := time.Since(startCircuit)

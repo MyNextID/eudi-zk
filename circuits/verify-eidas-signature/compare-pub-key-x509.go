@@ -6,8 +6,8 @@ import (
 	"github.com/mynextid/eudi-zk/common"
 )
 
-// verifyPubKeyInCertificateOptimized searches for the public key X coordinate in the DER certificate
-func (circuit *CircuitJWS) verifyPubKeyInCertificateOptimized(api frontend.API) error {
+// verifyPubKeyInCertificateSimplified searches for the public key X coordinate in the DER certificate
+func (circuit *CircuitJWS) verifyPubKeyInCertificateSimplified(api frontend.API) error {
 	/*
 		Naive and insecure approach
 		1. Find the 0x04 (uncompressed point indicator) in the certificate
