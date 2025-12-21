@@ -223,7 +223,7 @@ func TestCompareBytes(t *testing.T) {
 
 	forceCompile := true
 
-	byteSize := 32
+	byteSize := 1024
 
 	randomBytes, err := common.GenerateRandomBytes(byteSize)
 	if err != nil {

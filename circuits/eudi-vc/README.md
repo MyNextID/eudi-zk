@@ -4,7 +4,7 @@ Version: 1
 
 ## What We Prove
 
-The verification establishes five critical security properties in a single
+The verification establishes six critical security properties in a single
 proof:
 
 1. **Certificate Ownership & Authenticity**: The holder possesses an X.509
@@ -39,7 +39,8 @@ digest of the public key (for the elliptic curves, uncompressed public key).
 which for elliptic curves we can derive the public key)
 - the VC signature and the protected header that contain all the signature metadata
 
-6. **CRL**: Circuit for basic CRL verification has been added; not integrated into the main circuit, yet; it's slightly inefficient for the moment
+6. **CRL**: Circuit for basic CRL verification has been added; not integrated
+into the main circuit, yet; it's slightly inefficient for the moment
 
 ## Summary of the public and private inputs
 

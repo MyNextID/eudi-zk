@@ -44,6 +44,19 @@ func IsEqualBytes(api frontend.API, a, b []uints.U8) frontend.Variable {
 	return allMatch
 }
 
+// IsEqualByte compares two bytes returns 1 if the bytes match, 0 otherwise.
+func IsEqualByte(api frontend.API, a, b uints.U8) frontend.Variable {
+	// Returns 1 if all bytes match, 0 otherwise
+	allMatch := frontend.Variable(1)
+
+	// Check if bytes are equal
+	bytesEqual := api.IsZero(api.Sub(a.Val, b.Val))
+	// Accumulate: if any byte doesn't match, allMatch becomes 0
+	allMatch = api.Mul(allMatch, bytesEqual)
+
+	return allMatch
+}
+
 // Len computes the array size
 func Len(api frontend.API, bytes []uints.U8) frontend.Variable {
 	length := frontend.Variable(0)
