@@ -1,10 +1,12 @@
-# ZK Circuits for eIDAS and EUDI
+# ZK Circuits for eIDAS and EUDI and other digital identity frameworks
 
 ## Overview
 
-This repository implements zero-knowledge proof circuits for the eIDAS
-(Electronic Identification, Authentication and Trust Services) and EUDI
-(European Digital Identity) ecosystems using
+This repository implements zero-knowledge proof circuits for the [eIDAS
+(electronic IDentification, Authentication and trust
+Services)](https://eur-lex.europa.eu/eli/reg/2014/910/oj/eng), [EUDI (European
+Digital Identity)](https://eur-lex.europa.eu/eli/reg/2024/1183/oj/eng)  and
+other digital identity ecosystems using
 [Gnark](https://docs.gnark.consensys.io/), a Go-based zk-SNARKs framework.
 
 **Why Gnark?** We chose Gnark for rapid prototyping due to its
@@ -48,6 +50,21 @@ Start exploring the circuits:
 - **All circuits:** [circuits/](./circuits/README.md)
 - **Simple circuits:** [circuits/compare-bytes/](./circuits/compare-bytes/README.md)
 - **EUDI/eIDAS circuits:** [circuits/eudi-vc/](./circuits/eudi-vc/README.md)
+
+Other tools and libraries
+
+- [CAdES](./CAdES/README.md) core implementation of the CAdES-BES signer. A
+[CAdES-BES signature](https://www.etsi.org/deliver/etsi_ts/103100_103199/103173/02.02.01_60/ts_103173v020201p.pdf) is a CMS/PKCS#7 signature that includes the signer's
+certificate additional  signed attributes and is encoded using DER. It's the
+minimal profile for an advanced electronic signature under eIDAS.
+
+Technical specifications
+
+- [Base64 comparison](./specs/base64-comparison.md) describes how to perform
+membership check without decoding base64(url) encoded payload. Useful when
+performing membership checks on JWS/JWT.
+- [DER encoding](./specs/der-encoding.md) contains notes on the DER encoding,
+structures, etc.
 
 ## Core Circuits
 

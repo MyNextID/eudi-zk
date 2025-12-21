@@ -7,7 +7,7 @@ verification for EU Digital Identity (EUDI) wallets and other digital identity
 systems. The system proves that a holder possesses a valid verifiable credential
 issued by a trusted authority, can authenticate themselves via
 challenge-response, and holds a certificate signed by a recognized Certificate
-Authority — all without revealing the actual credential, certificate, or
+Authority, all without revealing the actual credential, certificate, or
 cryptographic keys.
 
 ## What We Prove
@@ -24,15 +24,21 @@ public key embedded in their certificate, proven by signing a verifier-provided
 challenge
 
 3. **Credential Validity**: The holder possesses a verifiable credential (VC)
-issued by a legitimate issuer, signed using JSON Web Signature (JWS)
+issued by a legitimate issuer. In this implementation we consider JSON Web
+Signature (JWS) and CAdES signatures.
 
-4. **Identity Binding**: The credential is bound to the certificate holder
+4. **Identity Binding**: The credential is bound to the credential holder
 through a confirmation claim (cnf) that references the holders's public key
 
-5. **Privacy Preservation**: All of the above is proven without revealing: the
+5. **Non-revocation**: The certificate and the credential has not been revoked
+(by checking the CRL).
+
+6. **Privacy Preservation**: All of the above is proven without revealing: the
 holder's certificate, the holder's public key, the challenge signature (from
 which for elliptic curves we can derive the public key), the credential's
 signature protected header that contains all the credential metadata.
+
+You can find details of the circuit [EUDI ZK Circuit](../circuits/eudi-vc/README.md)
 
 ## Technical Implementation
 
@@ -102,7 +108,6 @@ Credential.
 
 ### Roadmap
 
-- Add CRL verification
 - Selective disclosure of claims
 
 ## Performance Analysis
