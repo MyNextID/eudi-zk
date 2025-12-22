@@ -53,3 +53,8 @@ Examples:
 
 - 0x81 0x85       = 133 bytes (1 length byte)
 - 0x82 0x01 0xF4  = 500 bytes (2 length bytes)
+
+## References
+
+- [A Layman's Guide to a Subset of ASN.1, BER, and DER](https://luca.ntop.org/Teaching/Appunti/asn1.html)
+- [A Warm Welcome to ASN.1 and DER](https://letsencrypt.org/docs/a-warm-welcome-to-asn1-and-der/)
