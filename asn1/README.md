@@ -1,6 +1,6 @@
 # ASN.1 DER Parser and Pretty Printer
 
-A simple Go package for parsing and visualizing ASN.1 DER-encoded data
+A simple Go package for parsing and visualizing DER-encoded ASN.1 data
 structures with a clean tree-based output.
 
 Inspired by [asn1js](https://lapo.it/asn1js/)
