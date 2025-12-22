@@ -101,10 +101,10 @@ func ExtractTBSCertificate(
 	certBytes []uints.U8,
 ) (start, length frontend.Variable) {
 	// Certificate structure:
-	// 30 [outer-len]           ← Outer Certificate SEQUENCE
-	//   30 [tbs-len] [content] ← TBSCertificate SEQUENCE (what we want)
-	//   30 [sig-alg-len]       ← Signature Algorithm
-	//   03 [sig-len]           ← Signature value
+	// 30 [outer-len]           <- Outer Certificate SEQUENCE
+	//   30 [tbs-len] [content] <- TBSCertificate SEQUENCE (what we want)
+	//   30 [sig-alg-len]       <- Signature Algorithm
+	//   03 [sig-len]           <- Signature value
 
 	index := frontend.Variable(0)
 

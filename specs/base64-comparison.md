@@ -55,17 +55,17 @@ Let $w = (i_{\text{start}}, i_{\text{end}})$ denote the byte positions of a targ
 
 ```bash
 function ALIGN(i_start, i_end)
-    r_start ← (i_start × 8) mod 6
-    r_end ← (i_end × 8) mod 6
+    r_start <- (i_start × 8) mod 6
+    r_end <- (i_end × 8) mod 6
     
-    i'_start ← i_start - ⌊r_start/2⌋
+    i'_start <- i_start - ⌊r_start/2⌋
     
     if r_end = 2 then
-        i'_end ← i_end + 2
+        i'_end <- i_end + 2
     else if r_end = 4 then
-        i'_end ← i_end + 1
+        i'_end <- i_end + 1
     else
-        i'_end ← i_end
+        i'_end <- i_end
     
     return (i'_start, i'_end)
 ```
