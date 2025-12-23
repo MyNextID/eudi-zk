@@ -587,9 +587,9 @@ func B64Align(start, end int) (startNew, endNew int) {
 	r := (start * 8) % 6
 	switch r {
 	case 2:
-		startNew = start + 1
+		startNew = start - 1
 	case 4:
-		startNew = start + 2
+		startNew = start - 2
 	default:
 		startNew = start
 	}
