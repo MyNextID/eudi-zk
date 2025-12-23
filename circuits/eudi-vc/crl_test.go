@@ -142,7 +142,7 @@ func TestCRLNotRevoked(t *testing.T) {
 
 	fmt.Println("[OK] Verified: Certificate is NOT in the CRL")
 
-	//  New circut template
+	//  New circuit template
 	maxSerialLen := 20 // maximum serial number length in bytes
 
 	circuitTemplate := &cdl.CircuitCRL{
@@ -303,7 +303,7 @@ func TestCRLRevoked(t *testing.T) {
 
 	fmt.Println("[OK] Verified: Certificate is in the CRL")
 
-	//  New circut template
+	//  New circuit template
 	maxSerialLen := 20 // maximum serial number length in bytes
 
 	circuitTemplate := &cdl.CircuitCRL{
