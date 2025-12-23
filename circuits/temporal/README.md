@@ -4,8 +4,9 @@ Version: draft
 
 ## What We Prove
 
-These circuits prove temporal validity of DER or base64url encoded certificates
-or credentials.
+These circuits prove temporal validity of X.509 certificates or credentials.
+
+We begin with: Over18 use case - comparing YYYY-MM-DD dates
 
 ## Date and time formats
 
