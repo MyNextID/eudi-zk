@@ -6,7 +6,7 @@ import (
 	"github.com/mynextid/eudi-zk/common"
 )
 
-// Circut checks whether the Subset is a subset of the Bytes
+// Circuit checks whether the Subset is a subset of the Bytes
 type CircuitCompareSubset struct {
 	// Secret input
 	Bytes         []uints.U8        `gnark:",secret"`

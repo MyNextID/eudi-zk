@@ -6,7 +6,7 @@ import (
 	"github.com/mynextid/eudi-zk/common"
 )
 
-// Circut checks:
+// Circuit checks:
 // - whether the base64url encoded cnf is in the base64url encoded protected JWS header
 // - decodes the cnf
 // - extracts the hex-encoded public key digest
