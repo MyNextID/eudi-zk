@@ -7,30 +7,35 @@ Version: 1
 CircuitJWS implements a zero-knowledge proof circuit for validating JWS (JSON
 Web Signature) signatures with X.509 certificate chain verification.
 
-Zero-Knowledge Properties:
-The circuit PROVES the following statements without revealing sensitive data:
+What the circuit proves? The prover demonstrates knowledge of certain
+cryptographic relationships without revealing the underlying secrets.
+Specifically, the circuit establishes three facts:
 
-1. A JWS signature is cryptographically valid for a given payload
-2. The signature was created using a private key whose public key is embedded in an X.509 certificate
-3. That X.509 certificate is validly signed by a Qualified Trust Service Provider (QTSP)
+- Signature validity - A JWS signature correctly authenticates a given payload
+under the standard JWS verification algorithm.
+- Public key certificate validity - The signature was created using a private key $sk$ whose
+corresponding public key $pk$ appears within an X.509 certificate.
+- Certificate authority - Said X.509 certificate bears a valid signature from a
+Qualified Trust Service Provider (QTSP), establishing the certificate's
+authenticity through the standard chain-of-trust mechanism.
 
-What remains PRIVATE (hidden from verifiers):
+**Private inputs** (known to the prover, hidden from the verifier):
 
-- JWS protected header (contains metadata like algorithm, key ID)
-- Signer's public key (the actual key used to create the JWS signature)
-- Complete X.509 certificate of the signer that contains signer's identity information
+- The JWS protected header, containing metadata such as algorithm identifiers and key identifiers;
+- The signer's public key $pk$ that produced the JWS signature;
+- The complete X.509 certificate embedding $pk$ and containing the signer's identity information.
 
-What is PUBLIC (visible to verifiers):
+**Public inputs** (known to both prover and verifier):
 
-- JWS Payload (the actual data being signed)
-- QTSP's public key (the trusted authority's public key used to verify the certificate chain)
+- The JWS payload—the actual data bearing the signature;
 
-Use Case Example:
+- The QTSP's public key, serving as the trust anchor for certificate verification.
 
-This allows proving "a document has been signed with a valid signature from
-using a secret key whose public key has a public key certificate issued by a
-QTSP" without revealing which specific entity signed it or their certificate
-details.
+Application: This construction enables a prover to establish that "a document
+carries a valid signature from an entity whose public key certificate was issued
+by a trusted QTSP," while simultaneously concealing the specific identity of the
+signing entity and the particulars of their certificate. This proves
+authenticity without sacrificing anonymity.
 
 ## Artefacts
 
