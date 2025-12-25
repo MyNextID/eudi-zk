@@ -16,12 +16,9 @@ type CircuitB64Url struct {
 
 func (c *CircuitB64Url) Define(api frontend.API) error {
 	// Decode base64url
-	decodedBytesHex, _ := common.DecodeBase64Url(api, c.BytesB64)
+	decodedBytes, _ := common.DecodeBase64Url(api, c.BytesB64)
 
-	// Decode hex
-	decodedBytes, _ := common.DecodeHex(api, decodedBytesHex)
-
-	_ = decodedBytes
+	// Compare the bytes
 	common.AssertIsEqualBytes(api, c.Bytes, decodedBytes)
 
 	return nil

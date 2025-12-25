@@ -41,18 +41,17 @@ func TestCompareB64Url(t *testing.T) {
 	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.PublicKey.X, signerKey.PublicKey.Y)
 
 	pubKeyBytesDigest := sha256.Sum256(pubKeyBytes)
-	pubKeyBytesDigestHex := hex.EncodeToString(pubKeyBytesDigest[:])
-	pubKeyBytesDigestHexB64 := []byte(base64.RawURLEncoding.EncodeToString([]byte(pubKeyBytesDigestHex)))
+	pubKeyBytesDigestB64 := []byte(base64.RawURLEncoding.EncodeToString([]byte(pubKeyBytesDigest[:])))
 
 	circuitTemplate := &ccb.CircuitB64Url{
 		Bytes:    make([]uints.U8, len(pubKeyBytesDigest)),
-		BytesB64: make([]uints.U8, len(pubKeyBytesDigestHexB64)),
+		BytesB64: make([]uints.U8, len(pubKeyBytesDigestB64)),
 	}
 
 	// Create witness assignment with actual values
 	assignment := &ccb.CircuitB64Url{
 		Bytes:    common.BytesToU8Array(pubKeyBytesDigest[:]),
-		BytesB64: common.BytesToU8Array(pubKeyBytesDigestHexB64),
+		BytesB64: common.BytesToU8Array(pubKeyBytesDigestB64),
 	}
 
 	// == Init the circuit ==
@@ -234,13 +233,13 @@ func TestCompareBytes(t *testing.T) {
 		t.Error(err)
 	}
 
-	circuitTemplate := &ccb.Circuit{
+	circuitTemplate := &ccb.CircuitBytes{
 		Bytes:    make([]uints.U8, byteSize),
 		PubBytes: make([]uints.U8, byteSize),
 	}
 
 	// Create witness assignment with actual values
-	assignment := &ccb.Circuit{
+	assignment := &ccb.CircuitBytes{
 		// Private inputs
 		Bytes: common.BytesToU8Array(randomBytes),
 		// Public inputs

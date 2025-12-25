@@ -53,6 +53,7 @@ Start exploring the circuits:
 
 Other tools and libraries
 
+- [ZKPI](./server/README.md) tool for easy Zero Knowledge Proof creation and validation
 - [CAdES](./CAdES/README.md) core implementation of the CAdES-BES signer. A
 [CAdES-BES signature](https://www.etsi.org/deliver/etsi_ts/103100_103199/103173/02.02.01_60/ts_103173v020201p.pdf) is a CMS/PKCS#7 signature that includes the signer's
 certificate additional  signed attributes and is encoded using DER. It's the
@@ -119,6 +120,13 @@ credential issuance.
 - Selective disclosure: Share specific attributes without revealing entire
 credentials.
 
+## Adding a New Circuit
+
+1. Define the circuit struct in `circuits/`
+2. Add circuit info to `CircuitList` in `api/circuit_config.go`
+3. Define input fields with metadata
+4. Recompile: `zkpi compile -o ./setup`
+
 ## Contributing
 
 We welcome contributions! Here's how to get involved:
@@ -128,6 +136,12 @@ We welcome contributions! Here's how to get involved:
 3. **Discuss ideas:** Start a discussion before major architectural changes
 
 Please ensure code follows existing patterns.
+
+## Acknowledgments
+
+- [gnark](https://github.com/Consensys/gnark) - Zero-knowledge proof framework
+- [Cobra](https://github.com/spf13/cobra) - CLI framework
+- [Chi](https://github.com/go-chi/chi) - HTTP router
 
 ## License
 

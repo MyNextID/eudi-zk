@@ -25,9 +25,23 @@ Public ZK circuit inputs MUST contain at least the following elements
 
 JOSE protected header MUST contain the following elements
 
-- typ: value MUST be `zkp+jwt`
-- alg: value MUST be `none`
+- `typ`: REQUIRED. Value MUST be `zkp+jwt`
+- `alg`: REQUIRED. Value SHOULD be `none`. Protocol can define own protection mechanism.
 
 Payload elements
 
+- `zkid`: REQUIRED. ZK Circuit identifier that resolves to the ZK Circuit. Type: string, format: URI
+- `zkid#integrity`: REQUIRED. ZK Circuit integrity protection. Default: SHA256
+hash of the ZK circuit. Type: string, format: `{hash identifier}:hex encoded hash value`
+- `zkpin`: OPTIONAL. Public ZK circuit inputs, if available.
+- `zkparams`: OPTIONAL. ZK Circuit-specific parameters, e.g., verification key, if applicable
+
+Signature
+
+- REQUIRED. Signature value MUST be base64url encoded zero knowledge proof.
+
 ## Examples
+
+## Security considerations
+
+`zkid` and `zkid#integrity` are not integrity protected.

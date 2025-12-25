@@ -411,7 +411,7 @@ func TestJWSCircuit(t *testing.T) {
 		panic("❌ Verification failed: " + err.Error())
 	}
 	verifyTime := time.Since(startVerify)
-	fmt.Printf("✅ Proof verified successfully! (took %v)\n", verifyTime)
+	fmt.Printf("[OK] Proof verified successfully! (took %v)\n", verifyTime)
 
 	// Summary
 	fmt.Println("\n=== Performance Summary ===")

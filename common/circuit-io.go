@@ -63,7 +63,6 @@ func SetupAndSave(circuitTemplate frontend.Circuit, ccsPath, pkPath, vkPath stri
 	return nil
 }
 
-// Load pre-compiled circuit and keys
 func LoadSetup(ccsPath, pkPath, vkPath string) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey, error) {
 	// Load constraint system
 	ccsFile, err := os.Open(ccsPath)

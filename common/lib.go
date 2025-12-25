@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/consensys/gnark/frontend"
@@ -635,4 +636,18 @@ func VerifyCnf(api frontend.API, HeaderB64, CnfB64 []uints.U8, CnfB64Position, P
 
 	return nil
 
+}
+
+func StructToMap(input any) (map[string]any, error) {
+	var result map[string]any
+	inputBytes, err := json.Marshal(input)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(inputBytes, &result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
