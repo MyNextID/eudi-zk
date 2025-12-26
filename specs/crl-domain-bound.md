@@ -1,103 +1,154 @@
-# Domain-Bound Certificate Revocation List (DB-CRL) <!-- omit in toc -->
+# Domain-Bound Credential Revocation List (DB-CRL) <!-- omit in toc -->
 
 Version: draft
 
 ## Table of Contents <!-- omit in toc -->
 
-- [0. Performance improvement](#0-performance-improvement)
-- [1. Introduction](#1-introduction)
-  - [1.1 Purpose](#11-purpose)
-  - [1.2 Goals](#12-goals)
-  - [1.3 Non-Goals](#13-non-goals)
-  - [1.4 Threat Model](#14-threat-model)
-    - [Trusted Entities](#trusted-entities)
-    - [Untrusted Entities](#untrusted-entities)
-    - [Out of Scope](#out-of-scope)
-- [2. Terminology](#2-terminology)
-  - [2.1 Definitions](#21-definitions)
-  - [2.2 Notation](#22-notation)
-- [3. System Overview](#3-system-overview)
-  - [3.1 Architecture](#31-architecture)
-  - [3.2 Workflow Overview](#32-workflow-overview)
-- [4. Cryptographic Primitive](#4-cryptographic-primitive)
-  - [4.1 Hash Function](#41-hash-function)
-  - [4.2 Domain-Bound Revocation ID Computation](#42-domain-bound-revocation-id-computation)
-  - [4.3 Random Value Generation](#43-random-value-generation)
-- [5. Domain Canonicalization](#5-domain-canonicalization)
-- [6. Protocol Specification](#6-protocol-specification)
-  - [6.1 Credential Issuance](#61-credential-issuance)
-  - [6.2 Credential Presentation](#62-credential-presentation)
-  - [6.3 Presentation Verification](#63-presentation-verification)
-  - [6.4 CRL Format](#64-crl-format)
-  - [6.5 Status Updates](#65-status-updates)
-- [7. Extension - time-dependent revocation id](#7-extension---time-dependent-revocation-id)
+- [1. Overview v2](#1-overview-v2)
+  - [1.1. The Revocation Problem in Zero-Knowledge Systems](#11-the-revocation-problem-in-zero-knowledge-systems)
+  - [1.2. Our Approach: Domain-Bound Revocation Identifiers](#12-our-approach-domain-bound-revocation-identifiers)
+  - [1.3. Document Scope](#13-document-scope)
+- [2. Introduction](#2-introduction)
+  - [2.1. Purpose](#21-purpose)
+  - [2.2. Goals](#22-goals)
+  - [2.3. Non-Goals](#23-non-goals)
+  - [2.4. Threat Model](#24-threat-model)
+    - [2.4.1. Trusted Entities](#241-trusted-entities)
+    - [2.4.2. Untrusted Entities](#242-untrusted-entities)
+    - [2.4.3. Out of Scope](#243-out-of-scope)
+- [3. Terminology](#3-terminology)
+  - [3.1. Definitions](#31-definitions)
+  - [3.2. Notation](#32-notation)
+- [4. System Overview](#4-system-overview)
+  - [4.1. Architecture](#41-architecture)
+  - [4.2. Workflow Overview](#42-workflow-overview)
+- [5. Cryptographic Primitive](#5-cryptographic-primitive)
+  - [5.1. Hash Function](#51-hash-function)
+  - [5.2. Domain-Bound Revocation ID Computation](#52-domain-bound-revocation-id-computation)
+  - [5.3. Random Value Generation](#53-random-value-generation)
+- [6. Domain Canonicalization](#6-domain-canonicalization)
+- [7. Protocol Specification](#7-protocol-specification)
+  - [7.1. Credential Issuance](#71-credential-issuance)
+  - [7.2. Credential Presentation](#72-credential-presentation)
+  - [7.3. Presentation Verification](#73-presentation-verification)
+  - [7.4. CRL Format](#74-crl-format)
+  - [7.5. Status Updates](#75-status-updates)
+- [8. Extension - time-dependent revocation id](#8-extension---time-dependent-revocation-id)
 
-## 0. Performance improvement
+## 1. Overview v2
 
-In the 1st proposal CRLs hold all credential revocation IDs, hence are fully populated.
+### 1.1. The Revocation Problem in Zero-Knowledge Systems
 
-Proposed simplification:
+Traditional credential revocation mechanisms publish a list mapping credential
+identifiers to their status (valid, suspended, revoked). While effective, this
+approach is incompatible with zero-knowledge systems where (metadata)
+unlinkability is essential: different verifiers must not be able to correlate
+presentations of the same credential by comparing identifiers.
 
-```text
-Circuit proves:
+Existing ZK-compatible solutions either:
 
-1. revocation_id and domain_rev_id are valid for this credential
-2. domain_rev_id = H(revocation_id || domain)
-3. CRL ID matches credential's assigned CRL
+1. Include entire revocation lists as circuit inputs (inefficient, scales poorly)
+2. Prove non-membership using cryptographic accumulators (requires holder to update witness data)
+3. Sacrifice verifier independence (require holder cooperation for status checks)
 
-CRL contains:
+### 1.2. Our Approach: Domain-Bound Revocation Identifiers
 
-- Only REVOKED domain_rev_ids (not valid/suspended)
-- Much smaller size (only revoked entries)
+We introduce Domain-Bound Certificate Revocation Lists (DB-CRL), which enables:
 
-Verification:
-IF domain_rev_id ∈ CRL.revoked_set:
-    REJECT
-ELSE:
-    ACCEPT (assuming proof is valid)
+- Unlinkability: Each verifier sees a different revocation identifier
+- Verifier Independence: Status checks require no holder cooperation  
+- Efficiency: Small revocation lists, simple lookups
+- Temporal Validity: Proofs remain valid; verifiers check current status independently at any point in time
+
+Core Mechanism:
+
+Each credential contains a secret `revocation_id`. When presenting to a verifier
+with domain `d`, the holder computes:
+
+```bash
+domain_rev_id = SHA256(revocation_id || d)
 ```
 
-## 1. Introduction
+The holder proves in zero-knowledge:
 
-### 1.1 Purpose
+1. Knowledge of `revocation_id` matching the credential
+2. Correct computation of `domain_rev_id` for domain `d`
+3. Credential satisfies requested validation policies
+
+The verifier:
+
+1. Validates the ZK proof
+2. Queries the issuer's CRL endpoint for domain `d`
+3. Checks if `domain_rev_id ∈ CRL.revoked`
+4. Accepts if not revoked; rejects otherwise
+
+Key Properties:
+
+- Different domains -> different identifiers: `SHA256(revocation_id || "verifier-a.com") != SHA256(revocation_id || "verifier-b.com")`
+- Verifiers cannot correlate: Even colluding verifiers cannot determine if two `domain_rev_id` values derive from the same credential
+- Issuer generates domain-specific CRLs: When queried, issuer computes `SHA256(revocation_id || requesting_domain)` for each revoked credential
+- Small CRLs: Only revoked credentials listed (approx. 1% of issued credentials)
+- No holder involvement in status checks: Verifier queries CRL directly; proof remains valid regardless of status changes
+- Verifier can check the status at any point in time
+
+Limitation: When a single credential is newly revoked, timing analysis could enable
+correlation. Mitigation: batch revocations or pad lists to minimum size.
+
+### 1.3. Document Scope
+
+This specification defines:
+
+- Cryptographic primitives for domain-bound identifier computation
+- Domain canonicalization to prevent validation errors
+- Complete issuance, presentation, and verification protocols
+- CRL format, generation, and distribution
+- Zero-knowledge circuit requirements
+
+Out of Scope: Temporal validity proofs enabling verification of credential
+validity at specific past or future timestamps. See separate specification:
+[Temporal Validation within ZKPs](./temporal-validation-zkp.md).
+
+## 2. Introduction
+
+### 2.1. Purpose
 
 This specification defines the Domain-Bound Certificate Revocation List (DB-CRL)
 system, which enables credential status verification in zero-knowledge proof
 systems while maintaining unlinkability across different verifiers.
 
-### 1.2 Goals
+### 2.2. Goals
 
 - Verifier Unlinkability: Prevent different verifiers from correlating credentials by comparing revocation identifiers
 - Independent Verification: Enable verifiers to check credential status without holder cooperation
 - Privacy-Preserving: Minimize information leakage about credential usage patterns
 - Practical: Maintain reasonable computational and operational costs
 
-### 1.3 Non-Goals
+### 2.3. Non-Goals
 
 - Holder Anonymity from Issuer: The issuer is expected to know which credentials are issued to which holders
 - Complete Verifier Anonymity: The issuer may observe which verifiers query which CRL lists
 
-### 1.4 Threat Model
+### 2.4. Threat Model
 
-#### Trusted Entities
+#### 2.4.1. Trusted Entities
 
 - Issuers: Trusted to generate valid credentials and maintain accurate CRLs
 - Cryptographic Primitives: Hash functions and ZKP systems operate as specified
 
-#### Untrusted Entities
+#### 2.4.2. Untrusted Entities
 
 - Holders: May attempt to present revoked credentials or manipulate domain bindings
 - Verifiers (individually): Assumed honest but may be curious
 - Colluding Verifiers: May attempt to correlate credentials across domains
 
-#### Out of Scope
+#### 2.4.3. Out of Scope
 
 - Compromise of cryptographic primitives
 - Issuer misbehavior or collusion with holders
 
-## 2. Terminology
+## 3. Terminology
 
-### 2.1 Definitions
+### 3.1. Definitions
 
 - Verifiable Credential: A digitally signed attestation containing claims about a holder.
 - Revocation Identifier (revocation_id): A secret, randomly generated value
@@ -115,7 +166,7 @@ management. Each credential belongs to exactly one CRL list.
 - Holder: An entity that possesses and presents credentials.
 - Issuer: An entity that issues credentials and maintains CRLs.
 
-### 2.2 Notation
+### 3.2. Notation
 
 - `||`: Byte concatenation
 - `H()`: Cryptographic hash function (defined in Section 4)
@@ -124,9 +175,9 @@ management. Each credential belongs to exactly one CRL list.
 - `[a, b, c]`: Array/list of elements
 - `{k: v}`: Key-value mapping
 
-## 3. System Overview
+## 4. System Overview
 
-### 3.1 Architecture
+### 4.1. Architecture
 
 Issuer issues credentials and and manages the CRL. Verifier can obtain the CRL
 directly from the issuer or via the holder's wallet.
@@ -155,7 +206,7 @@ directly from the issuer or via the holder's wallet.
             (domain_rev_id)
 ```
 
-### 3.2 Workflow Overview
+### 4.2. Workflow Overview
 
 1. Issuance: Issuer generates credential with secret `revocation_id` and assigns `list_index`
 2. Storage: Holder stores credential and associated cryptographic material
@@ -165,9 +216,9 @@ directly from the issuer or via the holder's wallet.
 6. Status Check: Verifier queries CRL for their domain to check credential status
 7. Decision: Verifier accepts or rejects credential based on status
 
-## 4. Cryptographic Primitive
+## 5. Cryptographic Primitive
 
-### 4.1 Hash Function
+### 5.1. Hash Function
 
 Algorithm: SHA-256
 
@@ -183,7 +234,7 @@ Implementation Notes:
 - Input encoding MUST be UTF-8 for strings
 - Output MUST be 32 bytes (256 bits)
 
-### 4.2 Domain-Bound Revocation ID Computation
+### 5.2. Domain-Bound Revocation ID Computation
 
 Design
 
@@ -224,13 +275,13 @@ Security Properties:
 - Different domains produce statistically independent `domain_rev_id` values
 - Cannot compute `domain_rev_id` for different status without `revocation_id`
 
-### 4.3 Random Value Generation
+### 5.3. Random Value Generation
 
 - MUST use cryptographically secure random number generator
 - MUST generate at least 256 bits of entropy
 - MUST be unique per credential
 
-## 5. Domain Canonicalization
+## 6. Domain Canonicalization
 
 Domain canonicalization ensures that different representations of the same
 verifier domain produce identical `domain_rev_id` values, preventing validation
@@ -269,9 +320,9 @@ Special Cases:
 
 IP addresses (IPv4, IPv6) and localhost are rejected (return ⊥).
 
-## 6. Protocol Specification
+## 7. Protocol Specification
 
-### 6.1 Credential Issuance
+### 7.1. Credential Issuance
 
 **Issuer generates:**
 
@@ -286,7 +337,7 @@ Issuer transmits to holder:
 - Issuer signature
 - `revocation_id` (via secure out-of-band channel)
 
-### 6.2 Credential Presentation
+### 7.2. Credential Presentation
 
 Input: Presentation request from verifier containing:
 
@@ -310,7 +361,7 @@ Holder computes:
 
 Holder transmits: `(zkp, domain_rev_id, listIndex, challenge, disclosed_claims)`
 
-### 6.3 Presentation Verification
+### 7.3. Presentation Verification
 
 Verifier validates:
 
@@ -342,7 +393,7 @@ CRITICAL: This check MUST NOT be skipped.
 - `status = "suspended"` -> ACCEPT or REJECT (policy-dependent)
 - `status = "revoked"` -> REJECT
 
-### 6.4 CRL Format
+### 7.4. CRL Format
 
 ```json
 {
@@ -364,7 +415,7 @@ with random values if needed) to prevent size-based correlation attacks.
 
 **Verifier caching:** Verifiers SHOULD cache CRLs until `nextUpdate` timestamp.
 
-### 6.5 Status Updates
+### 7.5. Status Updates
 
 **To revoke credential with `credential_id`:**
 
@@ -376,7 +427,7 @@ with random values if needed) to prevent size-based correlation attacks.
 
 Note: Holder cooperation not required; verifiers detect revocation on next CRL query.
 
-## 7. Extension - time-dependent revocation id
+## 8. Extension - time-dependent revocation id
 
 ```go
 // Circuit outputs (public)
