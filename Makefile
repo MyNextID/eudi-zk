@@ -1,4 +1,4 @@
-VERSION ?= "0.1.2-dev"
+VERSION ?= "0.2.0-dev"
 COMMIT  ?= $(shell git rev-parse --short HEAD)
 DATE    ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
@@ -8,8 +8,8 @@ LDFLAGS := -X main.version=$(VERSION) \
 
 .PHONY: build
 build:
-	go build -ldflags "$(LDFLAGS)" -o bin/zkpi ./server
+	go build -ldflags "$(LDFLAGS)" -o bin/zkpi ./cmd
 
 .PHONY: install
 install:
-	go install -ldflags "$(LDFLAGS)" ./server
+	go install -ldflags "$(LDFLAGS)" ./cmd
