@@ -44,3 +44,5 @@ archive
 sandbox
 output
 setup
+server/openapi.yaml
+scripts/verify_payload.json

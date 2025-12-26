@@ -26,9 +26,6 @@ func (c *CircuitBytes) Define(api frontend.API) error {
 	return nil
 }
 
-// CircuitBytesInputParser for CircuitB64Url
-type CircuitBytesInputParser struct{}
-
 type CircuitBytesPublicInput struct {
 	Bytes string `json:"bytes_b64url"`
 }
@@ -36,6 +33,9 @@ type CircuitBytesPublicInput struct {
 type CircuitBytesPrivateInput struct {
 	Bytes string `json:"bytes_b64url"`
 }
+
+// CircuitBytesInputParser for CircuitB64Url
+type CircuitBytesInputParser struct{}
 
 func (p *CircuitBytesInputParser) Parse(publicInput, privateInput []byte) (frontend.Circuit, error) {
 	var pub CircuitBytesPublicInput

@@ -1,12 +1,20 @@
 #!/bin/bash
 
-set -e  # Exit on error
+#
+# A simple script to test the endpoints
+#
 
+# Exit on error
+set -e
+
+# Simple call
+#
 # curl -X POST http://localhost:8080/prove/compare-bytes \
 #   -H "Content-Type: application/json" \
 #   -d @payload.json \
 #   | jq '.'
 
+# Proof creation and verification
 
 echo -e "=== ZK Proof Generation and Verification ===\n"
 
