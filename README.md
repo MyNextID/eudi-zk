@@ -1,4 +1,4 @@
-# ZK Circuits for eIDAS and EUDI and other digital identity frameworks
+# ZK Circuits for eIDAS, EUDI, and other digital identity frameworks
 
 ## Overview
 
@@ -68,6 +68,10 @@ membership check without decoding base64(url) encoded payload. Useful when
 performing membership checks on JWS/JWT.
 - [DER encoding](./specs/der-encoding.md) contains notes on the DER encoding,
 structures, etc.
+- [Lexicographical comparison algorithm](./specs/lexicographical-comparison.md)
+defines an algorithm that compares strings lexicographically within a circuit.
+- [Presentation KB-JWT](./specs/presentation-kb-jwt.md) profiles the verifiable
+presentation using the [KB-JWT](https://www.rfc-editor.org/rfc/rfc9901.html#name-key-binding-jwt) data model.
 
 ## Core Circuits
 
@@ -76,7 +80,7 @@ the eIDAS/EUDI context:
 
 ### 1. eIDAS Signature Verification
 
-Location: [circuits/signature-verification/](./circuits/verify-eidas-signature)
+Location: [circuits/signature-verification/](./circuits/verify-eidas-signature/README.md)
 
 Proves that a signed payload is valid without revealing the signature, public
 key, or the public key certificate, while proving that the certificate has been
@@ -91,7 +95,7 @@ Trust Service Provider)
 
 ### 2. Verifiable Credential Validation
 
-Location: [circuits/eudi-vc/](./circuits/eudi-vc/)
+Location: [circuits/eudi-vc/](./circuits/eudi-vc/README.md)
 
 Enables privacy-preserving verification of EUDI Wallet credentials.
 
