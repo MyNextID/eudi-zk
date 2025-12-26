@@ -26,20 +26,20 @@ func (c *CircuitBytes) Define(api frontend.API) error {
 	return nil
 }
 
-type CircuitBytesPublicInput struct {
+type PublicInput struct {
 	Bytes string `json:"bytes_b64url"`
 }
 
-type CircuitBytesPrivateInput struct {
+type PrivateInput struct {
 	Bytes string `json:"bytes_b64url"`
 }
 
-// CircuitBytesInputParser for CircuitB64Url
-type CircuitBytesInputParser struct{}
+// CircuitBytesAPI for CircuitB64Url
+type CircuitBytesAPI struct{}
 
-func (p *CircuitBytesInputParser) Parse(publicInput, privateInput []byte) (frontend.Circuit, error) {
-	var pub CircuitBytesPublicInput
-	var pvt CircuitBytesPrivateInput
+func (p *CircuitBytesAPI) Parse(publicInput, privateInput []byte) (frontend.Circuit, error) {
+	var pub PublicInput
+	var pvt PrivateInput
 
 	if err := json.Unmarshal(publicInput, &pub); err != nil {
 		return nil, fmt.Errorf("failed to parse public input: %w", err)

@@ -30,7 +30,7 @@ var CircuitList = map[string]CircuitInfo{
 		},
 		Name:        "compare-bytes",
 		Version:     1,
-		InputParser: &ccb.CircuitBytesInputParser{},
+		InputParser: &ccb.CircuitBytesAPI{},
 	},
 	// "compare-bytes-cnf": {
 	// 	Circuit: &ccb.CircuitCompareCnf{
