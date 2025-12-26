@@ -46,3 +46,4 @@ output
 setup
 server/openapi.yaml
 scripts/verify_payload.json
+.DS_Store
