@@ -1,9 +1,11 @@
-package common
+// Package common contains common ZK circuit functions
+package zkcore
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -14,7 +16,7 @@ import (
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 )
 
-// Save compiled circuit and keys
+// SetupAndSave compiles and stores a circuit
 func SetupAndSave(circuitTemplate frontend.Circuit, ccsPath, pkPath, vkPath string) error {
 	fmt.Println("\n--- Compiling Circuit ---")
 	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, circuitTemplate)
@@ -63,6 +65,7 @@ func SetupAndSave(circuitTemplate frontend.Circuit, ccsPath, pkPath, vkPath stri
 	return nil
 }
 
+// LoadSetup loads compiled ZK files
 func LoadSetup(ccsPath, pkPath, vkPath string) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey, error) {
 	// Load constraint system
 	ccsFile, err := os.Open(ccsPath)
@@ -148,7 +151,7 @@ func validatePath(path string) error {
 func ensureDirectories(paths ...string) error {
 	for _, path := range paths {
 		dir := filepath.Dir(path)
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0750); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
@@ -201,11 +204,15 @@ func safeRemove(path string) error {
 		return fmt.Errorf("refusing to remove special file: %s", path)
 	}
 
-	//Check file ownership/permissions
-	stat, ok := info.Sys().(*syscall.Stat_t)
-	if ok && stat.Uid != uint32(os.Getuid()) {
-		// Only remove files owned by current user
-		return fmt.Errorf("refusing to remove file not owned by process: %s", path)
+	// Check file ownership/permissions
+	if runtime.GOOS != "windows" {
+		stat, ok := info.Sys().(*syscall.Stat_t)
+		uid := os.Getuid()
+		// #nosec G115 -- uid is always >= 0 on Unix systems where this code runs
+		if uid >= 0 && ok && stat.Uid != uint32(uid) {
+			// Only remove files owned by current user
+			return fmt.Errorf("refusing to remove file not owned by process: %s", path)
+		}
 	}
 
 	// Final validation right before removal

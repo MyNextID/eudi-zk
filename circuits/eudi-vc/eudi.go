@@ -5,7 +5,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/consensys/gnark/std/signature/ecdsa"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // CircuitEUDI proves:
@@ -81,7 +81,7 @@ func (c *CircuitEUDI) Define(api frontend.API) error {
 
 	// ===== STEP 4: Verify extracted key matches the claimed public key =====
 	// common.CompareBytes(api, extractedPubKey, circuit.SignerPubKeyBytes)
-	common.ComparePublicKeys(api, c.SubjectPubKeyX, c.SubjectPubKeyY, extractedPubKey)
+	zkcore.ComparePublicKeys(api, c.SubjectPubKeyX, c.SubjectPubKeyY, extractedPubKey)
 
 	// ===== STEP 5: Verify signature on challenge =====
 	publicKey := ecdsa.PublicKey[Secp256r1Fp, Secp256r1Fr]{
@@ -94,7 +94,7 @@ func (c *CircuitEUDI) Define(api frontend.API) error {
 		S: c.ChallengeSignatureS,
 	}
 
-	common.VerifyES256(api, c.Challenge, publicKey, signature)
+	zkcore.VerifyES256(api, c.Challenge, publicKey, signature)
 
 	// ==== STEP 6: Verify the Certificate Signature ====
 	caPublicKey := ecdsa.PublicKey[Secp256r1Fp, Secp256r1Fr]{
@@ -107,7 +107,7 @@ func (c *CircuitEUDI) Define(api frontend.API) error {
 		S: c.CertSigS,
 	}
 
-	common.VerifyES256(api, c.CertBytes, caPublicKey, certSignature)
+	zkcore.VerifyES256(api, c.CertBytes, caPublicKey, certSignature)
 
 	// ===== STEP 7: Verify the VC (JWS) signature =====
 	issuerPublicKey := ecdsa.PublicKey[Secp256r1Fp, Secp256r1Fr]{
@@ -120,12 +120,12 @@ func (c *CircuitEUDI) Define(api frontend.API) error {
 		S: c.JWSS,
 	}
 
-	common.VerifyJWS(api, c.JWSProtected, c.JWSPayload, issuerPublicKey, jws)
+	zkcore.VerifyJWS(api, c.JWSProtected, c.JWSPayload, issuerPublicKey, jws)
 
 	// ===== STEP 8: Verify that the subject key == confirmation key ==
-	subjectPublicKeyDigest := common.PublicKeyDigest(api, c.SubjectPubKeyX, c.SubjectPubKeyY)
+	subjectPublicKeyDigest := zkcore.PublicKeyDigest(api, c.SubjectPubKeyX, c.SubjectPubKeyY)
 
-	common.VerifyCnf(api, c.JWSProtected, c.CnfB64, c.CnfB64Position, c.CnfKeyHexPosition, subjectPublicKeyDigest)
+	zkcore.VerifyCnf(api, c.JWSProtected, c.CnfB64, c.CnfB64Position, c.CnfKeyHexPosition, subjectPublicKeyDigest)
 
 	return nil
 }

@@ -1,4 +1,4 @@
-package common
+package zkcore
 
 import (
 	"bytes"
@@ -14,7 +14,9 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
-// Initializes a circuit. If forceCompile is true, it ignores the local cache and overwrites it. Make sure you set `forceRecompile = true` if you're making any changes to the circuit.
+// InitCircuit initializes a circuit. If forceCompile is true, it ignores the
+// local cache and overwrites it. Make sure you set `forceRecompile = true` if
+// you're making any changes to the circuit.
 func InitCircuit(ccsPath, pkPath, vkPath string, forceCompile bool, circuitTemplate frontend.Circuit) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey, error) {
 	// Validate paths to prevent directory traversal attacks
 	if err := validatePath(ccsPath); err != nil {
@@ -148,7 +150,7 @@ func DefaultTestOptions() *CircuitTestOptions {
 	}
 }
 
-// TestCircuit executes witness and proof creation, and verification with detailed timing
+// TestCircuitV2 executes witness and proof creation, and verification with detailed timing
 func TestCircuitV2(
 	assignment frontend.Circuit,
 	ccs constraint.ConstraintSystem,
@@ -165,17 +167,16 @@ func TestCircuitV2(
 
 	logf := func(format string, args ...any) {
 		if opts.Verbose && opts.Writer != nil {
-			fmt.Fprintf(opts.Writer, format, args...)
+			_, _ = fmt.Fprintf(opts.Writer, format, args...)
 		}
 	}
 
-	handleError := func(stage string, err error) bool {
+	handleError := func(stage string, err error) {
 		result.Error = fmt.Errorf("%s failed: %w", stage, err)
 		if opts.FailOnError {
 			log.Fatal(result.Error)
 		}
 		logf("[FAIL] %v\n", result.Error)
-		return false
 	}
 
 	// Create witness

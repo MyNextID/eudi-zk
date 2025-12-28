@@ -1,0 +1,29 @@
+version: 2
+
+run:
+  timeout: 5m
+  tests: true
+
+output:
+  formats:
+    line-number: stdout
+
+linters:
+  enable:
+    - gosec
+    - errcheck
+    - staticcheck
+    - govet
+    - revive
+    - unused
+    - unparam
+
+settings:
+  unused:
+    check-exported: false
+  unparam:
+    check-exported: false
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

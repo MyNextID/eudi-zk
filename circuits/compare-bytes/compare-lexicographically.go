@@ -3,7 +3,7 @@ package ccb
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 type CircuitLex struct {
@@ -23,22 +23,22 @@ type CircuitLex struct {
 
 func (c *CircuitLex) Define(api frontend.API) error {
 
-	r, _ := common.IsSmaller(api, c.StringSmallerBytes, c.StringReferenceBytes)
+	r, _ := zkcore.IsSmaller(api, c.StringSmallerBytes, c.StringReferenceBytes)
 	api.AssertIsEqual(r, frontend.Variable(1))
 
-	r, _ = common.IsSmaller(api, c.StringGreaterBytes, c.StringReferenceBytes)
+	r, _ = zkcore.IsSmaller(api, c.StringGreaterBytes, c.StringReferenceBytes)
 	api.AssertIsEqual(r, frontend.Variable(0))
 
-	r, _ = common.IsSmaller(api, c.StringEqualBytes, c.StringReferenceBytes)
+	r, _ = zkcore.IsSmaller(api, c.StringEqualBytes, c.StringReferenceBytes)
 	api.AssertIsEqual(r, frontend.Variable(0))
 
-	r, _ = common.IsGreater(api, c.StringSmallerBytes, c.StringReferenceBytes)
+	r, _ = zkcore.IsGreater(api, c.StringSmallerBytes, c.StringReferenceBytes)
 	api.AssertIsEqual(r, frontend.Variable(0))
 
-	r, _ = common.IsGreater(api, c.StringGreaterBytes, c.StringReferenceBytes)
+	r, _ = zkcore.IsGreater(api, c.StringGreaterBytes, c.StringReferenceBytes)
 	api.AssertIsEqual(r, frontend.Variable(1))
 
-	r, _ = common.IsGreater(api, c.StringEqualBytes, c.StringReferenceBytes)
+	r, _ = zkcore.IsGreater(api, c.StringEqualBytes, c.StringReferenceBytes)
 	api.AssertIsEqual(r, frontend.Variable(0))
 
 	return nil

@@ -1,4 +1,4 @@
-package common
+package zkcore
 
 import (
 	"encoding/json"
@@ -12,10 +12,13 @@ import (
 	"github.com/consensys/gnark/std/signature/ecdsa"
 )
 
-// Secp256r1 field parameters
+// Secp256r1Fp field parameters
 type Secp256r1Fp = emulated.P256Fp
+
+// Secp256r1Fr field parameters
 type Secp256r1Fr = emulated.P256Fr
 
+// AssertIsEqualBytes is a ZK circuit logic that compares two byte arrays
 func AssertIsEqualBytes(api frontend.API, a, b []uints.U8) {
 	lenA := Len(api, a)
 	lenB := Len(api, b)
@@ -67,7 +70,7 @@ func Len(api frontend.API, bytes []uints.U8) frontend.Variable {
 	return length
 }
 
-// Convert lowercase hex characters to bytes
+// DecodeHex decodes lowercase hex characters to bytes
 func DecodeHex(api frontend.API, hexChars []uints.U8) ([]uints.U8, error) {
 	// Ensure even number of hex characters
 	if len(hexChars)%2 != 0 {
@@ -132,7 +135,7 @@ func DecodeBase64Url(api frontend.API, base64Chars []uints.U8) ([]uints.U8, erro
 	outputSize := numCompleteGroups * 3
 	switch remainingChars {
 	case 2:
-		outputSize += 1
+		outputSize++
 	case 3:
 		outputSize += 2
 	case 1:
@@ -165,20 +168,20 @@ func DecodeBase64Url(api frontend.API, base64Chars []uints.U8) ([]uints.U8, erro
 
 		// byte1 = v1[5:0] << 2 | v2[5:4]
 		// byte1 = v1 * 4 + v2 / 16
-		byte1_v1 := api.Mul(v1, 4)      // v1 << 2
-		byte1_v2 := divideBy16(api, v2) // v2 >> 4 (upper 2 bits)
-		byte1 := api.Add(byte1_v1, byte1_v2)
+		byte1V1 := api.Mul(v1, 4)      // v1 << 2
+		byte1V2 := divideBy16(api, v2) // v2 >> 4 (upper 2 bits)
+		byte1 := api.Add(byte1V1, byte1V2)
 
 		// byte2 = v2[3:0] << 4 | v3[5:2]
-		v2_lower := moduloBy16(api, v2)   // v2 & 0xF (lower 4 bits)
-		byte2_v2 := api.Mul(v2_lower, 16) // v2_lower << 4
-		byte2_v3 := divideBy4(api, v3)    // v3 >> 2 (upper 4 bits)
-		byte2 := api.Add(byte2_v2, byte2_v3)
+		v2Lower := moduloBy16(api, v2)  // v2 & 0xF (lower 4 bits)
+		byte2V2 := api.Mul(v2Lower, 16) // v2_lower << 4
+		byte2V3 := divideBy4(api, v3)   // v3 >> 2 (upper 4 bits)
+		byte2 := api.Add(byte2V2, byte2V3)
 
 		// byte3 = v3[1:0] << 6 | v4[5:0]
-		v3_lower := moduloBy4(api, v3)    // v3 & 0x3 (lower 2 bits)
-		byte3_v3 := api.Mul(v3_lower, 64) // v3_lower << 6
-		byte3 := api.Add(byte3_v3, v4)    // v4 is already 6 bits
+		v3Lower := moduloBy4(api, v3)   // v3 & 0x3 (lower 2 bits)
+		byte3V3 := api.Mul(v3Lower, 64) // v3_lower << 6
+		byte3 := api.Add(byte3V3, v4)   // v4 is already 6 bits
 
 		bytes[outputIdx] = bf.ValueOf(byte1)
 		bytes[outputIdx+1] = bf.ValueOf(byte2)
@@ -195,9 +198,9 @@ func DecodeBase64Url(api frontend.API, base64Chars []uints.U8) ([]uints.U8, erro
 		v1 := base64UrlCharToValue(api, c1)
 		v2 := base64UrlCharToValue(api, c2)
 
-		byte1_v1 := api.Mul(v1, 4)
-		byte1_v2 := divideBy16(api, v2)
-		byte1 := api.Add(byte1_v1, byte1_v2)
+		byte1V1 := api.Mul(v1, 4)
+		byte1V2 := divideBy16(api, v2)
+		byte1 := api.Add(byte1V1, byte1V2)
 
 		bytes[outputIdx] = bf.ValueOf(byte1)
 	case 3:
@@ -209,14 +212,14 @@ func DecodeBase64Url(api frontend.API, base64Chars []uints.U8) ([]uints.U8, erro
 		v2 := base64UrlCharToValue(api, c2)
 		v3 := base64UrlCharToValue(api, c3)
 
-		byte1_v1 := api.Mul(v1, 4)
-		byte1_v2 := divideBy16(api, v2)
-		byte1 := api.Add(byte1_v1, byte1_v2)
+		byte1V1 := api.Mul(v1, 4)
+		byte1V2 := divideBy16(api, v2)
+		byte1 := api.Add(byte1V1, byte1V2)
 
-		v2_lower := moduloBy16(api, v2)
-		byte2_v2 := api.Mul(v2_lower, 16)
-		byte2_v3 := divideBy4(api, v3)
-		byte2 := api.Add(byte2_v2, byte2_v3)
+		v2Lower := moduloBy16(api, v2)
+		byte2V2 := api.Mul(v2Lower, 16)
+		byte2V3 := divideBy4(api, v3)
+		byte2 := api.Add(byte2V2, byte2V3)
 
 		bytes[outputIdx] = bf.ValueOf(byte1)
 		bytes[outputIdx+1] = bf.ValueOf(byte2)
@@ -339,7 +342,7 @@ func Sha256ToP256Fr(api frontend.API, hash []uints.U8) (*emulated.Element[emulat
 	// hash[16..23] -> limb[2]
 	// hash[24..31] -> limb[3] (most significant)
 	for i := range nbLimbs {
-		var limbVal frontend.Variable = 0
+		var limbVal frontend.Variable
 
 		// Process 8 bytes for this limb (little-endian within limb)
 		for j := range bytesPerLimb {
@@ -404,6 +407,7 @@ func PublicKeyDigest(api frontend.API, PubKeyX, PubKeyY emulated.Element[Secp256
 	return
 }
 
+// EmulatedElementToBytes32 maps an emulated element to uints.U8
 func EmulatedElementToBytes32(api frontend.API, elem emulated.Element[Secp256r1Fp]) []uints.U8 {
 	field, err := emulated.NewField[Secp256r1Fp](api)
 	if err != nil {
@@ -492,7 +496,7 @@ func VerifyJWS(api frontend.API, protected []uints.U8, payload []uints.U8, publi
 
 }
 
-// Verifies if the subset is a subset of bytes
+// IsSubset verifies if the subset is a subset of bytes
 func IsSubset(api frontend.API, bytes, subset []uints.U8, positionStart frontend.Variable) error {
 	bytesAPI, err := uints.NewBytes(api)
 	if err != nil {
@@ -583,6 +587,7 @@ func GetSubset(api frontend.API, bytes []uints.U8, start frontend.Variable, leng
 	return result
 }
 
+// B64Align aligns b64 payload to get the correct encoding alignment
 func B64Align(start, end int) (startNew, endNew int) {
 
 	r := (start * 8) % 6
@@ -608,6 +613,7 @@ func B64Align(start, end int) (startNew, endNew int) {
 	return
 }
 
+// VerifyCnf verifies withet cnf claim is within a base64url encoded header
 func VerifyCnf(api frontend.API, HeaderB64, CnfB64 []uints.U8, CnfB64Position, PubKeyHexPosition frontend.Variable, PublicKeyDigest []uints.U8) error {
 	// Verify whether cnfB64 is a subset of headerB64
 	err := IsSubset(api, HeaderB64, CnfB64, CnfB64Position)
@@ -638,6 +644,7 @@ func VerifyCnf(api frontend.API, HeaderB64, CnfB64 []uints.U8, CnfB64Position, P
 
 }
 
+// StructToMap transforms a GO struct to a map
 func StructToMap(input any) (map[string]any, error) {
 	var result map[string]any
 	inputBytes, err := json.Marshal(input)

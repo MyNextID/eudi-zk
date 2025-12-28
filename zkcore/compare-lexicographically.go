@@ -1,4 +1,4 @@
-package common
+package zkcore
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 // Returns 1 if A < B, 0 if A >= B
 func IsSmaller(api frontend.API, A []uints.U8, B []uints.U8) (frontend.Variable, error) {
 	if len(A) != len(B) {
-		return nil, errors.New("A and B must be of the same length")
+		return nil, errors.New("params A and B must be of the same length")
 	}
 
 	isSmaller := frontend.Variable(0)
@@ -41,7 +41,7 @@ func IsSmaller(api frontend.API, A []uints.U8, B []uints.U8) (frontend.Variable,
 // Returns 1 if A > B, 0 if A <= B
 func IsGreater(api frontend.API, A []uints.U8, B []uints.U8) (frontend.Variable, error) {
 	if len(A) != len(B) {
-		return nil, errors.New("A and B must be of the same length")
+		return nil, errors.New("params A and B must be of the same length")
 	}
 
 	isGreater := frontend.Variable(0)
@@ -55,10 +55,10 @@ func IsGreater(api frontend.API, A []uints.U8, B []uints.U8) (frontend.Variable,
 		diffExists := api.Sub(1, api.IsZero(cmpResult))
 
 		// Check if A[i] > B[i] (cmpResult == 1)
-		isGreater_i := api.IsZero(api.Sub(cmpResult, 1))
+		isGreaterI := api.IsZero(api.Sub(cmpResult, 1))
 
 		// Update isGreater only if we haven't found a difference yet
-		isGreater = api.Select(isDifferent, isGreater, isGreater_i)
+		isGreater = api.Select(isDifferent, isGreater, isGreaterI)
 
 		// Mark that we found a difference
 		isDifferent = api.Or(isDifferent, diffExists)

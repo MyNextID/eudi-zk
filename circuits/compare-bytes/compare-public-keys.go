@@ -4,7 +4,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // Define Secp256r1 field parameters
@@ -27,8 +27,8 @@ func (c *CircuitPK) Define(api frontend.API) error {
 	yBytes := EmulatedElementToBytes32(api, c.SignerPubKeyY)
 
 	// Compare the digests byte by byte using the Val() method to access the underlying variable
-	common.AssertIsEqualBytes(api, xBytes, c.SignerPubKeyXBytes)
-	common.AssertIsEqualBytes(api, yBytes, c.SignerPubKeyYBytes)
+	zkcore.AssertIsEqualBytes(api, xBytes, c.SignerPubKeyXBytes)
+	zkcore.AssertIsEqualBytes(api, yBytes, c.SignerPubKeyYBytes)
 
 	return nil
 }

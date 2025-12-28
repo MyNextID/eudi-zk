@@ -1,12 +1,13 @@
+// Package ct ontains temporal validation zk circuits
 package ct
 
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
-// Circuit functions
+// Over18 circuit functions
 // - check that the VC is of the correct type -> IsSubset
 // - check that the date of birth is part of the VC payload -> IsSubset
 // - extract the date of birth -> Decode
@@ -27,10 +28,11 @@ type Over18 struct {
 	MinDateOfBirth []uints.U8 `gnark:",public"` // person's date of birth must be < MinDateOfBirth
 }
 
+// Define defines the over18 ZK circuit
 func (c *Over18) Define(api frontend.API) error {
 
 	// Verify that the date is member of the payload
-	err := common.IsSubset(api, c.Payload, c.DateB64, c.DateB64Position)
+	err := zkcore.IsSubset(api, c.Payload, c.DateB64, c.DateB64Position)
 	if err != nil {
 		return err
 	}
@@ -42,15 +44,15 @@ func (c *Over18) Define(api frontend.API) error {
 	// }
 
 	// Decode the date
-	dateJSON, err := common.DecodeBase64Url(api, c.DateB64)
+	dateJSON, err := zkcore.DecodeBase64Url(api, c.DateB64)
 	if err != nil {
 		return err
 	}
 
 	size := 10 // size of the date/time element in bytes (YYYY-MM-DD: 10 characters == 10 bytes)
-	dateOfBirth := common.GetSubset(api, dateJSON, c.DatePosition, size)
+	dateOfBirth := zkcore.GetSubset(api, dateJSON, c.DatePosition, size)
 
-	r, _ := common.IsSmaller(api, dateOfBirth, c.MinDateOfBirth)
+	r, _ := zkcore.IsSmaller(api, dateOfBirth, c.MinDateOfBirth)
 	api.AssertIsEqual(r, frontend.Variable(1))
 
 	return nil

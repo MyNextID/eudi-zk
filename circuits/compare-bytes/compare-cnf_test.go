@@ -15,7 +15,7 @@ import (
 
 	"github.com/consensys/gnark/std/math/uints"
 	ccb "github.com/mynextid/eudi-zk/circuits/compare-bytes"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 func TestCircuitCompareCnf(t *testing.T) {
@@ -80,7 +80,7 @@ func TestCircuitCompareCnf(t *testing.T) {
 	cnfLen := len(cnfStr)
 	cnfEnd := cnfStart + cnfLen
 
-	cnfStartNew, cnfEndNew := common.B64Align(cnfStart, cnfEnd)
+	cnfStartNew, cnfEndNew := zkcore.B64Align(cnfStart, cnfEnd)
 
 	cnfAligned := protectedJSON[cnfStartNew:cnfEndNew]
 	fmt.Println(string(cnfJSON))
@@ -101,10 +101,10 @@ func TestCircuitCompareCnf(t *testing.T) {
 		t.Fatal("public key not found in JSON")
 	}
 
-	circuitTemplate := &ccb.CircuitCompareCnf{
-		HeaderB64:       make([]uints.U8, len(protectedB64)),
-		CnfB64:          make([]uints.U8, len(cnfAlignedB64)),
-		PublicKeyDigest: make([]uints.U8, len(pubKeyBytesDigest)),
+	circuitTemplate := &ccb.CompareCnfCircuit{
+		ProtectedHeaderB64: make([]uints.U8, len(protectedB64)),
+		CnfClaimB64:        make([]uints.U8, len(cnfAlignedB64)),
+		PublicKeyDigest:    make([]uints.U8, len(pubKeyBytesDigest)),
 	}
 
 	cnfB64Index := strings.Index(protectedB64, cnfAlignedB64)
@@ -116,19 +116,19 @@ func TestCircuitCompareCnf(t *testing.T) {
 	fmt.Println("pubkeyhexposition", pubKeyIndex)
 
 	// Create witness assignment with actual values
-	assignment := &ccb.CircuitCompareCnf{
-		HeaderB64:         common.StringToU8Array(protectedB64),
-		CnfB64:            common.StringToU8Array(cnfAlignedB64),
-		CnfB64Position:    cnfB64Index,
-		PubKeyHexPosition: pubKeyIndex,
-		PublicKeyDigest:   common.BytesToU8Array(pubKeyBytesDigest[:]),
+	assignment := &ccb.CompareCnfCircuit{
+		ProtectedHeaderB64:      zkcore.StringToU8Array(protectedB64),
+		CnfClaimB64:             zkcore.StringToU8Array(cnfAlignedB64),
+		CnfClaimPosition:        cnfB64Index,
+		PubKeyDigestHexPosition: pubKeyIndex,
+		PublicKeyDigest:         zkcore.BytesToU8Array(pubKeyBytesDigest[:]),
 	}
 
 	// == Init the circuit ==
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -137,6 +137,6 @@ func TestCircuitCompareCnf(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuitSimple(assignment, ccs, pk, vk)
+	zkcore.TestCircuitSimple(assignment, ccs, pk, vk)
 
 }

@@ -17,7 +17,7 @@ func NewVersionCmd() *cobra.Command {
   
   The version command displays the ZKPI version, build commit, build date, and
   Go runtime information.`,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Printf("  Version:    %s\n", api.Version)
 			fmt.Printf("  Commit:     %s\n", api.Commit)
 			fmt.Printf("  Built:      %s\n", api.BuildDate)

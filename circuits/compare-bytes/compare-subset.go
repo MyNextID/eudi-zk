@@ -3,7 +3,7 @@ package ccb
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // Circuit checks whether the Subset is a subset of the Bytes
@@ -18,5 +18,5 @@ type CircuitCompareSubset struct {
 
 func (c *CircuitCompareSubset) Define(api frontend.API) error {
 
-	return common.IsSubset(api, c.Bytes, c.Subset, c.PositionStart)
+	return zkcore.IsSubset(api, c.Bytes, c.Subset, c.PositionStart)
 }

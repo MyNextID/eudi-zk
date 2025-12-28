@@ -1,3 +1,4 @@
+// Package csv defines eIDAS signature validation functions within ZK circuits
 package csv
 
 import (
@@ -88,7 +89,7 @@ type CircuitJWS struct {
 	QTSPPubKeyY emulated.Element[Secp256r1Fp] `gnark:",public"`
 }
 
-// The circuit performs three critical verification steps in sequence:
+// Define defines a circuit that performs three critical verification steps in sequence:
 //
 // Step 1: Verify the JWS signature is valid for the given payload
 // Step 2: Verify the X.509 certificate signature is valid (signed by QTSP)
@@ -104,7 +105,10 @@ func (c *CircuitJWS) Define(api frontend.API) error {
 	//
 	// This establishes: "Someone with the private key corresponding to
 	// SignerPubKey created a valid signature over this specific payload."
-	c.VerifyJWS(api)
+	err := c.VerifyJWS(api)
+	if err != nil {
+		return err
+	}
 
 	// Step 2: Verify X.509 Certificate Signature
 	// Proves: The certificate signature (CertSigR, CertSigS) is a valid ECDSA
@@ -113,7 +117,10 @@ func (c *CircuitJWS) Define(api frontend.API) error {
 	//
 	// This establishes: "The QTSP (trusted authority) has certified this
 	// certificate by signing it with their private key."
-	c.VerifyX509Signature(api)
+	err = c.VerifyX509Signature(api)
+	if err != nil {
+		return err
+	}
 
 	// Step 3: Verify Public Key Binding
 	// Proves: The public key embedded in the X.509 certificate (extracted from

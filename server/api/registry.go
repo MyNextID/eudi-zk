@@ -2,12 +2,9 @@ package api
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark/backend/groth16"
 	"github.com/mynextid/eudi-zk/circuits"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // CircuitRegistry stores compiled circuits by name
@@ -16,11 +13,13 @@ type CircuitRegistry struct {
 	circuits map[string]*Circuit
 }
 
+// Circuit holds information about circuits
 type Circuit struct {
-	Instance *CircuitInstance
+	Instance *circuits.CircuitInstance
 	Info     *circuits.CircuitInfo
 }
 
+// LoadAll loads all the registered circuits. Note: the circuits must be compiled to be loaded correctly
 func (cr CircuitRegistry) LoadAll() error {
 	for _, v := range CircuitList {
 		err := cr.LoadCircuit(v)
@@ -38,16 +37,16 @@ func (cr CircuitRegistry) LoadCircuit(ci *circuits.CircuitInfo) error {
 	// TODO: if circuits are not loaded, circuit path info will be incorrect
 	ci.Dir = cr.dir
 	csPath, pkPath, vkPath := ci.FilePaths()
-	fmt.Println("path:", csPath)
+	fmt.Println("[INIT] loading circuit:", csPath)
 
 	// load the setup
-	cs, pk, vk, err := common.LoadSetup(csPath, pkPath, vkPath)
+	cs, pk, vk, err := zkcore.LoadSetup(csPath, pkPath, vkPath)
 	if err != nil {
 		return fmt.Errorf("failed to load the circuit: %v", err)
 	}
 
 	return cr.Register(ci.Name, &Circuit{
-		Instance: &CircuitInstance{
+		Instance: &circuits.CircuitInstance{
 			CS:           cs,
 			ProvingKey:   pk,
 			VerifyingKey: vk,
@@ -92,55 +91,56 @@ func (cr *CircuitRegistry) Register(name string, circuit *Circuit) error {
 }
 
 // LoadSetup loads a pre-compiled circuit setup
-func (cr *CircuitRegistry) LoadSetup(name, ccsPath, pkPath, vkPath string) error {
-	// Load constraint system
-	ccsFile, err := os.Open(ccsPath)
-	if err != nil {
-		return fmt.Errorf("failed to open constraint system: %w", err)
-	}
-	defer ccsFile.Close()
-
-	ccs := groth16.NewCS(ecc.BN254)
-	if _, err := ccs.ReadFrom(ccsFile); err != nil {
-		return fmt.Errorf("failed to read constraint system: %w", err)
-	}
-
-	// Load proving key
-	pkFile, err := os.Open(pkPath)
-	if err != nil {
-		return fmt.Errorf("failed to open proving key: %w", err)
-	}
-	defer pkFile.Close()
-
-	pk := groth16.NewProvingKey(ecc.BN254)
-	if _, err := pk.ReadFrom(pkFile); err != nil {
-		return fmt.Errorf("failed to read proving key: %w", err)
-	}
-
-	// Load verification key
-	vkFile, err := os.Open(vkPath)
-	if err != nil {
-		return fmt.Errorf("failed to open verification key: %w", err)
-	}
-	defer vkFile.Close()
-
-	vk := groth16.NewVerifyingKey(ecc.BN254)
-	if _, err := vk.ReadFrom(vkFile); err != nil {
-		return fmt.Errorf("failed to read verification key: %w", err)
-	}
-
-	info, ok := CircuitList[name]
-	if !ok {
-		return fmt.Errorf("circuit not on the list")
-	}
-	fmt.Printf("[OK] Loaded pre-compiled setup for %s\n", name)
-	return cr.Register(name, &Circuit{
-		Instance: &CircuitInstance{
-			CS:           ccs,
-			ProvingKey:   pk,
-			VerifyingKey: vk,
-			InputParser:  info.InputParser,
-		},
-		Info: info,
-	})
-}
+// func (cr *CircuitRegistry) LoadSetup(name, ccsPath, pkPath, vkPath string) error {
+// 	// Load constraint system
+// 	ccsFile, err := os.Open(ccsPath)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to open constraint system: %w", err)
+// 	}
+// 	defer ccsFile.Close()
+//
+// 	ccs := groth16.NewCS(ecc.BN254)
+// 	if _, err := ccs.ReadFrom(ccsFile); err != nil {
+// 		return fmt.Errorf("failed to read constraint system: %w", err)
+// 	}
+//
+// 	// Load proving key
+// 	pkFile, err := os.Open(pkPath)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to open proving key: %w", err)
+// 	}
+// 	defer pkFile.Close()
+//
+// 	pk := groth16.NewProvingKey(ecc.BN254)
+// 	if _, err := pk.ReadFrom(pkFile); err != nil {
+// 		return fmt.Errorf("failed to read proving key: %w", err)
+// 	}
+//
+// 	// Load verification key
+// 	vkFile, err := os.Open(vkPath)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to open verification key: %w", err)
+// 	}
+// 	defer vkFile.Close()
+//
+// 	vk := groth16.NewVerifyingKey(ecc.BN254)
+// 	if _, err := vk.ReadFrom(vkFile); err != nil {
+// 		return fmt.Errorf("failed to read verification key: %w", err)
+// 	}
+//
+// 	info, ok := CircuitList[name]
+// 	if !ok {
+// 		return fmt.Errorf("circuit not on the list")
+// 	}
+// 	fmt.Printf("[OK] Loaded pre-compiled setup for %s\n", name)
+// 	return cr.Register(name, &Circuit{
+// 		Instance: &circuits.CircuitInstance{
+// 			CS:           ccs,
+// 			ProvingKey:   pk,
+// 			VerifyingKey: vk,
+// 			InputParser:  info.InputParser,
+// 		},
+// 		Info: info,
+// 	})
+// }
+//

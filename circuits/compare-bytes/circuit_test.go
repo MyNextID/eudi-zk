@@ -14,7 +14,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	ccb "github.com/mynextid/eudi-zk/circuits/compare-bytes"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // Define Secp256r1 field parameters
@@ -43,22 +43,22 @@ func TestCompareB64Url(t *testing.T) {
 	pubKeyBytesDigest := sha256.Sum256(pubKeyBytes)
 	pubKeyBytesDigestB64 := []byte(base64.RawURLEncoding.EncodeToString([]byte(pubKeyBytesDigest[:])))
 
-	circuitTemplate := &ccb.CircuitB64Url{
+	circuitTemplate := &ccb.CBB64UrlCircuit{
 		Bytes:    make([]uints.U8, len(pubKeyBytesDigest)),
 		BytesB64: make([]uints.U8, len(pubKeyBytesDigestB64)),
 	}
 
 	// Create witness assignment with actual values
-	assignment := &ccb.CircuitB64Url{
-		Bytes:    common.BytesToU8Array(pubKeyBytesDigest[:]),
-		BytesB64: common.BytesToU8Array(pubKeyBytesDigestB64),
+	assignment := &ccb.CBB64UrlCircuit{
+		Bytes:    zkcore.BytesToU8Array(pubKeyBytesDigest[:]),
+		BytesB64: zkcore.BytesToU8Array(pubKeyBytesDigestB64),
 	}
 
 	// == Init the circuit ==
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestCompareB64Url(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuit(assignment, ccs, pk, vk)
+	zkcore.TestCircuit(assignment, ccs, pk, vk)
 }
 
 func TestCompareHex(t *testing.T) {
@@ -97,15 +97,15 @@ func TestCompareHex(t *testing.T) {
 
 	// Create witness assignment with actual values
 	assignment := &ccb.CircuitHex{
-		Bytes:    common.BytesToU8Array(pubKeyBytes),
-		BytesHex: common.BytesToU8Array(pubKeyBytesHex),
+		Bytes:    zkcore.BytesToU8Array(pubKeyBytes),
+		BytesHex: zkcore.BytesToU8Array(pubKeyBytesHex),
 	}
 
 	// == Init the circuit ==
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestCompareHex(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuit(assignment, ccs, pk, vk)
+	zkcore.TestCircuit(assignment, ccs, pk, vk)
 
 }
 
@@ -134,7 +134,7 @@ func TestCompareDigestPubKeys(t *testing.T) {
 
 	// Properly encode the public key in uncompressed format
 	// This ensures X and Y are always 32 bytes each
-	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.PublicKey.X, signerKey.PublicKey.Y)
+	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.X, signerKey.Y)
 
 	pubKeyBytesDigest := sha256.Sum256(pubKeyBytes)
 
@@ -146,16 +146,16 @@ func TestCompareDigestPubKeys(t *testing.T) {
 
 	// Create witness assignment with actual values
 	assignment := &ccb.CircuitPKDigest{
-		SignerPubKeyX:      emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
-		SignerPubKeyY:      emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.Y),
-		SignerPubKeyBytes:  common.BytesToU8Array(pubKeyBytes),
-		SignerPubKeyDigest: common.BytesToU8Array(pubKeyBytesDigest[:]),
+		SignerPubKeyX:      emulated.ValueOf[Secp256r1Fp](signerKey.X),
+		SignerPubKeyY:      emulated.ValueOf[Secp256r1Fp](signerKey.Y),
+		SignerPubKeyBytes:  zkcore.BytesToU8Array(pubKeyBytes),
+		SignerPubKeyDigest: zkcore.BytesToU8Array(pubKeyBytesDigest[:]),
 	}
 	// == Init the circuit ==
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestCompareDigestPubKeys(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuit(assignment, ccs, pk, vk)
+	zkcore.TestCircuit(assignment, ccs, pk, vk)
 }
 
 func TestComparePublicKeys(t *testing.T) {
@@ -183,8 +183,8 @@ func TestComparePublicKeys(t *testing.T) {
 
 	// Properly encode the public key in uncompressed format
 	// This ensures X and Y are always 32 bytes each
-	publicKeyXBytes := signerKey.PublicKey.X.Bytes()
-	publicKeyYBytes := signerKey.PublicKey.Y.Bytes()
+	publicKeyXBytes := signerKey.X.Bytes()
+	publicKeyYBytes := signerKey.Y.Bytes()
 
 	circuitTemplate := &ccb.CircuitPK{
 
@@ -193,17 +193,17 @@ func TestComparePublicKeys(t *testing.T) {
 	}
 	// Create witness assignment with actual values
 	assignment := &ccb.CircuitPK{
-		SignerPubKeyX:      emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
-		SignerPubKeyY:      emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.Y),
-		SignerPubKeyXBytes: common.BytesToU8Array(publicKeyXBytes),
-		SignerPubKeyYBytes: common.BytesToU8Array(publicKeyYBytes),
+		SignerPubKeyX:      emulated.ValueOf[Secp256r1Fp](signerKey.X),
+		SignerPubKeyY:      emulated.ValueOf[Secp256r1Fp](signerKey.Y),
+		SignerPubKeyXBytes: zkcore.BytesToU8Array(publicKeyXBytes),
+		SignerPubKeyYBytes: zkcore.BytesToU8Array(publicKeyYBytes),
 	}
 
 	// == Init the circuit ==
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestComparePublicKeys(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuit(assignment, ccs, pk, vk)
+	zkcore.TestCircuit(assignment, ccs, pk, vk)
 }
 
 func TestCompareBytes(t *testing.T) {
@@ -224,26 +224,26 @@ func TestCompareBytes(t *testing.T) {
 
 	byteSize := 1024
 
-	randomBytes, err := common.GenerateRandomBytes(byteSize)
+	randomBytes, err := zkcore.GenerateRandomBytes(byteSize)
 	if err != nil {
 		t.Error(err)
 	}
-	randomBytes2, err := common.GenerateRandomBytes(byteSize)
+	randomBytes2, err := zkcore.GenerateRandomBytes(byteSize)
 	if err != nil {
 		t.Error(err)
 	}
 
 	circuitTemplate := &ccb.CBCircuit{
-		Bytes:    make([]uints.U8, byteSize),
-		PubBytes: make([]uints.U8, byteSize),
+		SecretBytes: make([]uints.U8, byteSize),
+		PublicBytes: make([]uints.U8, byteSize),
 	}
 
 	// Create witness assignment with actual values
 	assignment := &ccb.CBCircuit{
 		// Private inputs
-		Bytes: common.BytesToU8Array(randomBytes),
+		SecretBytes: zkcore.BytesToU8Array(randomBytes),
 		// Public inputs
-		PubBytes: common.BytesToU8Array(randomBytes),
+		PublicBytes: zkcore.BytesToU8Array(randomBytes),
 	}
 	_ = randomBytes2
 
@@ -251,7 +251,7 @@ func TestCompareBytes(t *testing.T) {
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -260,6 +260,6 @@ func TestCompareBytes(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuit(assignment, ccs, pk, vk)
+	zkcore.TestCircuit(assignment, ccs, pk, vk)
 
 }

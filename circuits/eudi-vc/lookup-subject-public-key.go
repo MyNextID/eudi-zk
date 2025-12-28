@@ -4,7 +4,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // Define Secp256r1 field parameters
@@ -47,7 +47,7 @@ func (c *CircuitSPK) Define(api frontend.API) error {
 	)
 
 	// ===== STEP 4: Verify extracted key matches the claimed public key =====
-	common.AssertIsEqualBytes(api, extractedPubKey, c.SignerPubKeyBytes)
+	zkcore.AssertIsEqualBytes(api, extractedPubKey, c.SignerPubKeyBytes)
 
 	return nil
 }

@@ -25,7 +25,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	csv "github.com/mynextid/eudi-zk/circuits/verify-eidas-signature"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 const (
@@ -34,11 +34,13 @@ const (
 	vkPath  = "compiled/verifying.key"
 )
 
-// Define Secp256r1 field parameters
+// Secp256r1Fp field parameters
 type Secp256r1Fp = emulated.P256Fp
+
+// Secp256r1Fr field parameters
 type Secp256r1Fr = emulated.P256Fr
 
-func TestCompareHex(t *testing.T) {
+func TestCompareHex(_ *testing.T) {
 	// == create dummy data ==
 	// 1. Generate ES256 (P-256) key pair
 	signerKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -84,7 +86,7 @@ func TestCompareHex(t *testing.T) {
 	}
 }
 
-func TestCompareB64(t *testing.T) {
+func TestCompareB64(_ *testing.T) {
 	// == create dummy data ==
 	// 1. Generate ES256 (P-256) key pair
 	signerKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -219,7 +221,7 @@ func CircuitB64Kid(pk ecdsa.PublicKey, headerB64 string, kidValueStart, kidValue
 
 }
 
-func TestJWSCircuit(t *testing.T) {
+func TestJWSCircuit(_ *testing.T) {
 	// == create dummy data ==
 	// 1. Generate ES256 (P-256) key pair
 	signerKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -263,7 +265,7 @@ func TestJWSCircuit(t *testing.T) {
 	}
 
 	// 7. Create the complete JWS
-	signatureBytes := append(common.PadTo32Bytes(r.Bytes()), common.PadTo32Bytes(s.Bytes())...)
+	signatureBytes := append(zkcore.PadTo32Bytes(r.Bytes()), zkcore.PadTo32Bytes(s.Bytes())...)
 	signatureB64 := base64.RawURLEncoding.EncodeToString(signatureBytes)
 	jwtToken := signingInput + "." + signatureB64
 
@@ -336,17 +338,17 @@ func TestJWSCircuit(t *testing.T) {
 			JWSPayload:   make([]uints.U8, len(payloadB64)),
 			CertTBSDER:   make([]uints.U8, len(tbsCert)),
 		}
-		if err := common.SetupAndSave(circuitTemplate, ccsPath, pkPath, vkPath); err != nil {
+		if err := zkcore.SetupAndSave(circuitTemplate, ccsPath, pkPath, vkPath); err != nil {
 			panic(err)
 		}
 		// Load what we just saved
-		ccs, pk, vk, err = common.LoadSetup(ccsPath, pkPath, vkPath)
+		ccs, pk, vk, err = zkcore.LoadSetup(ccsPath, pkPath, vkPath)
 		if err != nil {
 			panic(err)
 		}
 	} else {
 		// Subsequent runs: just load
-		ccs, pk, vk, err = common.LoadSetup(ccsPath, pkPath, vkPath)
+		ccs, pk, vk, err = zkcore.LoadSetup(ccsPath, pkPath, vkPath)
 		if err != nil {
 			panic(err)
 		}
@@ -355,19 +357,19 @@ func TestJWSCircuit(t *testing.T) {
 	// Create witness assignment with actual values
 	assignment := &csv.CircuitJWS{
 		// Private inputs
-		JWSProtected:  common.StringToU8Array(headerB64),
+		JWSProtected:  zkcore.StringToU8Array(headerB64),
 		JWSSigR:       emulated.ValueOf[Secp256r1Fr](r),
 		JWSSigS:       emulated.ValueOf[Secp256r1Fr](s),
-		SignerPubKeyX: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
-		SignerPubKeyY: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.Y),
-		CertTBSDER:    common.BytesToU8Array(tbsCert),
+		SignerPubKeyX: emulated.ValueOf[Secp256r1Fp](signerKey.X),
+		SignerPubKeyY: emulated.ValueOf[Secp256r1Fp](signerKey.Y),
+		CertTBSDER:    zkcore.BytesToU8Array(tbsCert),
 		CertSigR:      emulated.ValueOf[Secp256r1Fr](certSig.R),
 		CertSigS:      emulated.ValueOf[Secp256r1Fr](certSig.S),
 
 		// Public input
-		JWSPayload:  common.StringToU8Array(payloadB64),
-		QTSPPubKeyX: emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.X),
-		QTSPPubKeyY: emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.Y),
+		JWSPayload:  zkcore.StringToU8Array(payloadB64),
+		QTSPPubKeyX: emulated.ValueOf[Secp256r1Fp](qtspKey.X),
+		QTSPPubKeyY: emulated.ValueOf[Secp256r1Fp](qtspKey.Y),
 	}
 
 	circuitTime := time.Since(startCircuit)

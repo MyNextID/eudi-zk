@@ -3,7 +3,7 @@ package ccb
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 type CircuitHex struct {
@@ -17,10 +17,10 @@ type CircuitHex struct {
 func (c *CircuitHex) Define(api frontend.API) error {
 
 	// decode hex
-	bytes, _ := common.DecodeHex(api, c.BytesHex)
+	bytes, _ := zkcore.DecodeHex(api, c.BytesHex)
 
 	// compare the decoded and provided bytes
-	common.AssertIsEqualBytes(api, c.Bytes, bytes)
+	zkcore.AssertIsEqualBytes(api, c.Bytes, bytes)
 
 	return nil
 }

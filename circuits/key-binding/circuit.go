@@ -1,3 +1,4 @@
+// Package ckb defines key-binding verification zk circuit functions
 package ckb
 
 import (
@@ -6,8 +7,10 @@ import (
 	"github.com/consensys/gnark/std/math/uints"
 )
 
-// Define Secp256r1 field parameters
+// Secp256r1Fp field parameters
 type Secp256r1Fp = emulated.P256Fp
+
+// Secp256r1Fr field parameters
 type Secp256r1Fr = emulated.P256Fr
 
 // JWSCircuit defines the ZK circuit for JWS with X.509 certificate verification
@@ -33,7 +36,13 @@ type JWSCircuit struct {
 
 // Define verifies the ES256 JWS signature in-circuit
 func (c *JWSCircuit) Define(api frontend.API) error {
-	c.VerifyJWS(api)
-	c.VerifyX509(api)
+	err := c.VerifyJWS(api)
+	if err != nil {
+		return err
+	}
+	err = c.VerifyX509(api)
+	if err != nil {
+		return err
+	}
 	return nil
 }

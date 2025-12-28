@@ -1,4 +1,4 @@
-package common
+package zkcore
 
 import (
 	"crypto/rand"
@@ -6,7 +6,7 @@ import (
 	"github.com/consensys/gnark/std/math/uints"
 )
 
-// Helper function to convert string to []uints.U8
+// StringToU8Array is helper function to convert string to []uints.U8
 func StringToU8Array(s string) []uints.U8 {
 	result := make([]uints.U8, len(s))
 	for i, b := range []byte(s) {
@@ -15,7 +15,7 @@ func StringToU8Array(s string) []uints.U8 {
 	return result
 }
 
-// Helper function to convert string to []uints.U8
+// BytesToU8Array is a helper function to convert string to []uints.U8
 func BytesToU8Array(s []byte) []uints.U8 {
 	result := make([]uints.U8, len(s))
 	for i, b := range s {
@@ -24,7 +24,7 @@ func BytesToU8Array(s []byte) []uints.U8 {
 	return result
 }
 
-// Helper function to pad bytes to 32 bytes (needed for P-256 signature components)
+// PadTo32Bytes is a helper function to pad bytes to 32 bytes (needed for P-256 signature components)
 func PadTo32Bytes(b []byte) []byte {
 	if len(b) >= 32 {
 		return b

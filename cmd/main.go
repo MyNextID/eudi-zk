@@ -1,3 +1,4 @@
+// Package main implements the command line and the API service
 package main
 
 import (

@@ -3,7 +3,7 @@ package csv
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // verifyPubKeyInCertificateSimplified searches for the public key X coordinate in the DER certificate. Note: this simplified version is insecure as it will try to match ANY public key in the certificate.
@@ -21,7 +21,7 @@ func (circuit *CircuitJWS) verifyPubKeyInCertificateSimplified(api frontend.API)
 	*/
 
 	// Convert public key X to bytes (32 bytes for P-256)
-	pubKeyXBytes := common.EmulatedElementToBytes32(api, circuit.SignerPubKeyX)
+	pubKeyXBytes := zkcore.EmulatedElementToBytes32(api, circuit.SignerPubKeyX)
 
 	derLen := len(circuit.CertTBSDER)
 	matchCount := frontend.Variable(0)
@@ -47,7 +47,7 @@ func (circuit *CircuitJWS) verifyPubKeyInCertificateSimplified(api frontend.API)
 			for j := 0; j < 32; j++ {
 				certSlice[j] = circuit.CertTBSDER[i+1+j]
 			}
-			xMatch = common.IsEqualBytes(api, certSlice, pubKeyXBytes)
+			xMatch = zkcore.IsEqualBytes(api, certSlice, pubKeyXBytes)
 		} else {
 			xMatch = 0
 		}

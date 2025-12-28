@@ -1,3 +1,4 @@
+// Package circuits manages information about ZK circuits
 package circuits
 
 import (
@@ -5,19 +6,21 @@ import (
 	"path/filepath"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
+// Byte array sizes
 const (
-	BYTE_SIZE32     = 32
-	BYTE_SIZE64     = 64
-	BYTE_SIZE64_B64 = 86
-	BYTE_SIZE128    = 128
-	BYTE_SIZE1024   = 1024
-	BYTE_SIZE64_HEX = 128
+	ByteSize32    = 32
+	ByteSize64    = 64
+	ByteSizeB64   = 86
+	ByteSize128   = 128
+	ByteSize256   = 256
+	ByteSize1024  = 1024
+	ByteSize64Hex = 128
 )
 
-// contains a list of circuits
+// CircuitInfo contains a list of circuits
 type CircuitInfo struct {
 	Circuit      frontend.Circuit
 	Dir          string
@@ -33,7 +36,7 @@ func (ci CircuitInfo) Compile() error {
 
 	csPath, pkPath, vkPath := ci.FilePaths()
 
-	return common.SetupAndSave(ci.Circuit, csPath, pkPath, vkPath)
+	return zkcore.SetupAndSave(ci.Circuit, csPath, pkPath, vkPath)
 }
 
 // FilePaths returns the circuit file paths
@@ -46,11 +49,13 @@ func (ci CircuitInfo) FilePaths() (csPath, pkPath, vkPath string) {
 	return
 }
 
+// EndpointInfo contains information about the endpoints
 type EndpointInfo struct {
 	Prove  Endpoints `json:"prove"`
 	Verify Endpoints `json:"verify"`
 }
 
+// Endpoints contains information about the endpoint requests/responses
 type Endpoints struct {
 	Request  *SchemaInfo `json:"request"`
 	Response *SchemaInfo `json:"response"`

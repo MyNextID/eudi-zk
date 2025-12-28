@@ -7,7 +7,7 @@ import (
 
 	"github.com/consensys/gnark/std/math/uints"
 	ccb "github.com/mynextid/eudi-zk/circuits/compare-bytes"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 func TestCircuitLex(t *testing.T) {
@@ -35,10 +35,10 @@ func TestCircuitLex(t *testing.T) {
 
 	// Create witness assignment with actual values
 	assignment := &ccb.CircuitLex{
-		StringReferenceBytes: common.BytesToU8Array(reference),
-		StringSmallerBytes:   common.BytesToU8Array(smaller),
-		StringGreaterBytes:   common.BytesToU8Array(greater),
-		StringEqualBytes:     common.BytesToU8Array(equal),
+		StringReferenceBytes: zkcore.BytesToU8Array(reference),
+		StringSmallerBytes:   zkcore.BytesToU8Array(smaller),
+		StringGreaterBytes:   zkcore.BytesToU8Array(greater),
+		StringEqualBytes:     zkcore.BytesToU8Array(equal),
 		Positive:             1,
 		Negative:             -2,
 		Zero:                 0,
@@ -48,7 +48,7 @@ func TestCircuitLex(t *testing.T) {
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -57,6 +57,6 @@ func TestCircuitLex(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuit(assignment, ccs, pk, vk)
+	zkcore.TestCircuit(assignment, ccs, pk, vk)
 
 }

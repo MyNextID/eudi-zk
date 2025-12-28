@@ -7,7 +7,7 @@ import (
 
 	"github.com/consensys/gnark/std/math/uints"
 	ccb "github.com/mynextid/eudi-zk/circuits/compare-bytes"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 func TestCircuitCompareSubset(t *testing.T) {
@@ -22,11 +22,11 @@ func TestCircuitCompareSubset(t *testing.T) {
 	subsetSize := 32
 	position := 13
 
-	randomBytes, err := common.GenerateRandomBytes(byteSize)
+	randomBytes, err := zkcore.GenerateRandomBytes(byteSize)
 	if err != nil {
 		t.Error(err)
 	}
-	randomBytes2, err := common.GenerateRandomBytes(byteSize)
+	randomBytes2, err := zkcore.GenerateRandomBytes(byteSize)
 	if err != nil {
 		t.Error(err)
 	}
@@ -43,10 +43,10 @@ func TestCircuitCompareSubset(t *testing.T) {
 	// Create witness assignment with actual values
 	assignment := &ccb.CircuitCompareSubset{
 		// Private inputs
-		Bytes:         common.BytesToU8Array(randomBytes),
+		Bytes:         zkcore.BytesToU8Array(randomBytes),
 		PositionStart: position,
 		// Public inputs
-		Subset: common.BytesToU8Array(subset),
+		Subset: zkcore.BytesToU8Array(subset),
 	}
 	_ = randomBytes2
 
@@ -54,7 +54,7 @@ func TestCircuitCompareSubset(t *testing.T) {
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -63,6 +63,6 @@ func TestCircuitCompareSubset(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuitSimple(assignment, ccs, pk, vk)
+	zkcore.TestCircuitSimple(assignment, ccs, pk, vk)
 
 }

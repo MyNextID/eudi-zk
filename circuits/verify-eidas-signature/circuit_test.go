@@ -18,7 +18,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	csv "github.com/mynextid/eudi-zk/circuits/verify-eidas-signature"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 const (
@@ -75,7 +75,7 @@ func TestJWSCircuit(t *testing.T) {
 	}
 
 	// Create the complete JWS
-	signatureBytes := append(common.PadTo32Bytes(r.Bytes()), common.PadTo32Bytes(s.Bytes())...)
+	signatureBytes := append(zkcore.PadTo32Bytes(r.Bytes()), zkcore.PadTo32Bytes(s.Bytes())...)
 	signatureB64 := base64.RawURLEncoding.EncodeToString(signatureBytes)
 	jwtToken := signingInput + "." + signatureB64
 
@@ -141,19 +141,19 @@ func TestJWSCircuit(t *testing.T) {
 	// create witness assignment with actual values
 	assignment := &csv.CircuitJWS{
 		// Private inputs
-		JWSProtected:  common.StringToU8Array(headerB64),
+		JWSProtected:  zkcore.StringToU8Array(headerB64),
 		JWSSigR:       emulated.ValueOf[Secp256r1Fr](r),
 		JWSSigS:       emulated.ValueOf[Secp256r1Fr](s),
-		SignerPubKeyX: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
-		SignerPubKeyY: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.Y),
-		CertTBSDER:    common.BytesToU8Array(tbsCert),
+		SignerPubKeyX: emulated.ValueOf[Secp256r1Fp](signerKey.X),
+		SignerPubKeyY: emulated.ValueOf[Secp256r1Fp](signerKey.Y),
+		CertTBSDER:    zkcore.BytesToU8Array(tbsCert),
 		CertSigR:      emulated.ValueOf[Secp256r1Fr](certSig.R),
 		CertSigS:      emulated.ValueOf[Secp256r1Fr](certSig.S),
 
 		// Public input
-		JWSPayload:  common.StringToU8Array(payloadB64),
-		QTSPPubKeyX: emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.X),
-		QTSPPubKeyY: emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.Y),
+		JWSPayload:  zkcore.StringToU8Array(payloadB64),
+		QTSPPubKeyX: emulated.ValueOf[Secp256r1Fp](qtspKey.X),
+		QTSPPubKeyY: emulated.ValueOf[Secp256r1Fp](qtspKey.Y),
 	}
 
 	// == Init the circuit ==
@@ -161,7 +161,7 @@ func TestJWSCircuit(t *testing.T) {
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -170,6 +170,6 @@ func TestJWSCircuit(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuitSimple(assignment, ccs, pk, vk)
+	zkcore.TestCircuitSimple(assignment, ccs, pk, vk)
 
 }

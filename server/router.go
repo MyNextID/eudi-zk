@@ -8,7 +8,7 @@ import (
 )
 
 // Router Setup
-func setupRouter(server *api.Server, cfg *ServerConfig, logger Logger) *chi.Mux {
+func setupRouter(server *api.Server, cfg *Config, logger Logger) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Core middleware

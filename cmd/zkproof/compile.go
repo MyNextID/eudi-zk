@@ -1,3 +1,4 @@
+// Package zkproof contains main command definitions
 package zkproof
 
 import (
@@ -17,6 +18,7 @@ type compileConfig struct {
 	force     bool
 }
 
+// NewCompileCmd defines the compilation command
 func NewCompileCmd() *cobra.Command {
 	cfg := &compileConfig{}
 
@@ -34,7 +36,7 @@ func NewCompileCmd() *cobra.Command {
   zkpi compile -o ./circuits -c compare-bytes-b64url,compare-bytes
 
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return runCompile(cfg)
 		},
 	}
@@ -52,7 +54,7 @@ func NewCompileCmd() *cobra.Command {
 
 func runCompile(cfg *compileConfig) error {
 	// Create output directory
-	if err := os.MkdirAll(cfg.outputDir, 0755); err != nil {
+	if err := os.MkdirAll(cfg.outputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 

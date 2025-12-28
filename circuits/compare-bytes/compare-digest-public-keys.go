@@ -4,9 +4,10 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
+// CircuitPKDigest is a circuit that computes and compares public key digests for EC secp256r1
 type CircuitPKDigest struct {
 	// Secret inputs
 	SignerPubKeyX emulated.Element[Secp256r1Fp] `gnark:",secret"`
@@ -16,6 +17,7 @@ type CircuitPKDigest struct {
 	SignerPubKeyDigest []uints.U8 `gnark:",public"`
 }
 
+// Define defines the ZK Circuit
 func (c *CircuitPKDigest) Define(api frontend.API) error {
 
 	// public key to bytes
@@ -29,10 +31,10 @@ func (c *CircuitPKDigest) Define(api frontend.API) error {
 	pubKeyBytes := append(xBytes, yBytes...)
 	pubKeyBytes = append([]uints.U8{prefix}, pubKeyBytes...)
 
-	digest, _ := common.SHA256(api, pubKeyBytes)
+	digest, _ := zkcore.SHA256(api, pubKeyBytes)
 
-	common.AssertIsEqualBytes(api, pubKeyBytes, c.SignerPubKeyBytes)
-	common.AssertIsEqualBytes(api, digest, c.SignerPubKeyDigest)
+	zkcore.AssertIsEqualBytes(api, pubKeyBytes, c.SignerPubKeyBytes)
+	zkcore.AssertIsEqualBytes(api, digest, c.SignerPubKeyDigest)
 
 	return nil
 }

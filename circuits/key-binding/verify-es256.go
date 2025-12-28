@@ -7,9 +7,10 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/consensys/gnark/std/signature/ecdsa"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
+// VerifyJWS defines JWS signature verification ZK Circuit logic
 func (c *JWSCircuit) VerifyJWS(api frontend.API) error {
 	// Initialize SHA256 hasher
 	hasher, err := sha2.New(api)
@@ -33,7 +34,7 @@ func (c *JWSCircuit) VerifyJWS(api frontend.API) error {
 	// Compute SHA256 hash of header.payload
 	messageHash := hasher.Sum()
 
-	mHash, err := common.Sha256ToP256Fr(api, messageHash)
+	mHash, err := zkcore.Sha256ToP256Fr(api, messageHash)
 	if err != nil {
 		return err
 	}

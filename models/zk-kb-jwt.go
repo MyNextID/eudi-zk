@@ -14,6 +14,7 @@ import (
 	"github.com/consensys/gnark/backend/witness"
 )
 
+// Common error definitions
 var (
 	ErrInvalidProof          = errors.New("invalid proof")
 	ErrInvalidSignature      = errors.New("invalid signature")

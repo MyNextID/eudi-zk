@@ -19,7 +19,7 @@ type ZKCircuitRegistry interface {
 	RegisterVerifyingKey(vk groth16.VerifyingKey, circuitID string) (string, error)
 }
 
-// Circuits provides information about the ZK Circuit
+// Circuit defines an interface for the ZK circuits
 type Circuit interface {
 	// Returns circuit information
 	Info() CircuitInfo
@@ -31,6 +31,7 @@ type Circuit interface {
 	GetSecretInputs()
 }
 
+// CircuitInfo provides information about ZK circuit
 type CircuitInfo struct {
 	Name      string `json:"name"`
 	ID        string `json:"id"`

@@ -5,8 +5,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewServeCmd creates the serve command
 func NewServeCmd() *cobra.Command {
-	cfg := &server.ServerConfig{}
+	cfg := &server.Config{}
 
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -25,7 +26,7 @@ func NewServeCmd() *cobra.Command {
 
   # Load specific circuits only
   zkpi serve --circuits compare-bytes-b64url,compare-bytes`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return server.Run(cfg)
 		},
 	}

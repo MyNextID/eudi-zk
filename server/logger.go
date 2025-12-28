@@ -1,3 +1,4 @@
+// Package server implements an HTTP API server to create and verify ZK proofs
 package server
 
 import (
@@ -7,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 // Logger interface for structured logging

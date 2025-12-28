@@ -5,7 +5,17 @@ import (
 	ccb "github.com/mynextid/eudi-zk/circuits/compare-bytes"
 )
 
-// List of registered circuits
-var CircuitList = map[string]*circuits.CircuitInfo{
-	"compare-bytes": ccb.CBInfo,
+// CircuitList holds all the registered circuits
+var CircuitList = make(map[string]*circuits.CircuitInfo)
+
+func init() {
+
+	circuitList := []*circuits.CircuitInfo{ccb.CBInfo,
+		ccb.CBB64UrlInfo,
+		ccb.CompareCnfInfo}
+
+	for _, c := range circuitList {
+		CircuitList[c.Name] = c
+
+	}
 }

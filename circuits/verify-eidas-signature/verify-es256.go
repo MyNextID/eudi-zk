@@ -7,7 +7,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/consensys/gnark/std/signature/ecdsa"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // VerifyJWS combines a protected JWS header with the payload and verifies the
@@ -40,7 +40,7 @@ func (c *CircuitJWS) VerifyJWS(api frontend.API) error {
 	messageHash := hash.Sum()
 
 	// Convert to P256Fr
-	mHash, err := common.Sha256ToP256Fr(api, messageHash)
+	mHash, err := zkcore.Sha256ToP256Fr(api, messageHash)
 	if err != nil {
 		return err
 	}

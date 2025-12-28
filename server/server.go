@@ -14,16 +14,16 @@ import (
 
 // Constants
 const (
-	MAX_REQUEST_SIZE = 10 * 1024 * 1024
-	MAX_HEADER_SIZE  = 1 * 1024 * 1024
-	READ_TIMEOUT     = 15 * time.Second
-	WRITE_TIMEOUT    = 120 * time.Second
-	IDLE_TIMEOUT     = 120 * time.Second
-	SHUTDOWN_TIMEOUT = 30 * time.Second
+	MaxRequestSize  = 10 * 1024 * 1024
+	MaxHeaderSize   = 1 * 1024 * 1024
+	ReadTimeout     = 15 * time.Second
+	WriteTimeout    = 120 * time.Second
+	IdleTimeout     = 120 * time.Second
+	ShutdownTimeout = 30 * time.Second
 )
 
-// ServerConfig contains the server configuration parameters
-type ServerConfig struct {
+// Config contains the server configuration parameters
+type Config struct {
 	// Server settings
 	Host string
 	Port int
@@ -55,17 +55,17 @@ type ServerConfig struct {
 }
 
 // DefaultServerConfig returns default server configuration
-func DefaultServerConfig() *ServerConfig {
-	return &ServerConfig{
+func DefaultServerConfig() *Config {
+	return &Config{
 		Host:            "localhost",
 		Port:            8080,
 		CircuitsDir:     "setup",
 		Circuits:        []string{},
-		MaxRequestSize:  MAX_REQUEST_SIZE,
-		ReadTimeout:     READ_TIMEOUT,
-		WriteTimeout:    WRITE_TIMEOUT,
-		IdleTimeout:     IDLE_TIMEOUT,
-		ShutdownTimeout: SHUTDOWN_TIMEOUT,
+		MaxRequestSize:  MaxRequestSize,
+		ReadTimeout:     ReadTimeout,
+		WriteTimeout:    WriteTimeout,
+		IdleTimeout:     IdleTimeout,
+		ShutdownTimeout: ShutdownTimeout,
 		EnableCORS:      true,
 		CorsOrigins:     []string{"localhost"},
 		EnablePprof:     false,
@@ -78,7 +78,7 @@ func DefaultServerConfig() *ServerConfig {
 }
 
 // Run validates the configuration and starts the HTTP server
-func Run(cfg *ServerConfig) error {
+func Run(cfg *Config) error {
 	// Validate server configuration
 	if err := validateServerConfig(cfg); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
@@ -107,7 +107,7 @@ func Run(cfg *ServerConfig) error {
 		ReadTimeout:    cfg.ReadTimeout,
 		WriteTimeout:   cfg.WriteTimeout,
 		IdleTimeout:    cfg.IdleTimeout,
-		MaxHeaderBytes: MAX_HEADER_SIZE,
+		MaxHeaderBytes: MaxHeaderSize,
 	}
 
 	// Start server in goroutine
@@ -153,7 +153,7 @@ func Run(cfg *ServerConfig) error {
 }
 
 // validateServe
-func validateServerConfig(cfg *ServerConfig) error {
+func validateServerConfig(cfg *Config) error {
 	if cfg.Port < 1 || cfg.Port > 65535 {
 		return fmt.Errorf("invalid port: %d", cfg.Port)
 	}

@@ -74,6 +74,10 @@ type CircuitListResponse struct {
 
 // HandleHealth handles health check requests
 func (s *Server) HandleHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	respondJSON(w, http.StatusOK, map[string]string{
 		"status": "healthy",
 		"time":   time.Now().Format(time.RFC3339),
@@ -82,10 +86,18 @@ func (s *Server) HandleHealth(w http.ResponseWriter, r *http.Request) {
 
 // HandleListCircuits lists all available circuits
 func (s *Server) HandleListCircuits(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	circuits := make([]CircuitInfoResponse, 0)
 
 	for name, info := range CircuitList {
 		_, err := s.registry.Get(name)
+		if err != nil {
+			fmt.Println("[ERROR]", err)
+		}
 		circuits = append(circuits, CircuitInfoResponse{
 			Name:        info.Name,
 			Description: info.Description,
@@ -154,7 +166,6 @@ func (s *Server) HandleProve(w http.ResponseWriter, r *http.Request) {
 			"failed to read request body")
 		return
 	}
-	defer r.Body.Close()
 
 	var req ProveRequest
 	if err := json.Unmarshal(body, &req); err != nil {
@@ -171,7 +182,7 @@ func (s *Server) HandleProve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate proof
-	proofBytes, err := circuit.Instance.ProveWithJSON(circuitName, req.PublicInput, req.PrivateInput)
+	proofBytes, err := circuit.Instance.ProveWithJSON(req.PublicInput, req.PrivateInput)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "proof_generation_failed",
 			fmt.Sprintf("failed to generate proof: %v", err))
@@ -215,7 +226,6 @@ func (s *Server) HandleVerify(w http.ResponseWriter, r *http.Request) {
 			"failed to read request body")
 		return
 	}
-	defer r.Body.Close()
 
 	var req VerifyRequest
 	if err := json.Unmarshal(body, &req); err != nil {
@@ -240,7 +250,7 @@ func (s *Server) HandleVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify proof
-	err = circuit.Instance.Public().VerifyWithJSON(circuitName, req.PublicInput, proofBytes)
+	err = circuit.Instance.Public().VerifyWithJSON(req.PublicInput, proofBytes)
 
 	duration := time.Since(start).String()
 	response := VerifyResponse{
@@ -258,7 +268,6 @@ func (s *Server) HandleVerify(w http.ResponseWriter, r *http.Request) {
 }
 
 // ==== Helper Functions ====
-
 // respondJSON writes a JSON response
 func respondJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")

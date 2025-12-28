@@ -5,16 +5,16 @@ import (
 	"github.com/consensys/gnark/std/algebra/emulated/sw_emulated"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/signature/ecdsa"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // VerifyX509Signature verifies a signature of a DER encoded X.509 certificate
 // CertTBSDER is the DER encoded certificate signature payload, aka Certificate To Be Signed (TBS) payload.
 func (c *CircuitJWS) VerifyX509Signature(api frontend.API) error {
 
-	messageHash, _ := common.SHA256(api, c.CertTBSDER)
+	messageHash, _ := zkcore.SHA256(api, c.CertTBSDER)
 
-	mHash, err := common.Sha256ToP256Fr(api, messageHash)
+	mHash, err := zkcore.Sha256ToP256Fr(api, messageHash)
 	if err != nil {
 		return err
 	}

@@ -1,3 +1,4 @@
+// Package api implements the REST endpoints
 package api
 
 import (
@@ -71,6 +72,12 @@ var serverStartTime = time.Now()
 
 // HandleDiscovery handles endpoint discovery information
 func (s *Server) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	// Calculate circuits summary
 	totalCircuits := len(CircuitList)
 	loadedCircuits := len(s.registry.circuits)

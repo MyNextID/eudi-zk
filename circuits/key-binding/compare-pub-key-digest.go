@@ -5,9 +5,10 @@ import (
 	"github.com/consensys/gnark/std/hash/sha2"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
+// PubKeyHashCircuit defines the params for the circuit
 type PubKeyHashCircuit struct {
 	// Secret inputs - the actual public key coordinates
 	SignerPubKeyX emulated.Element[Secp256r1Fp] `gnark:",secret"`
@@ -17,10 +18,11 @@ type PubKeyHashCircuit struct {
 	PubKeyHex []uints.U8 `gnark:",public"`
 }
 
+// Define defines the ZK circuit logic
 func (c *PubKeyHashCircuit) Define(api frontend.API) error {
 	// Convert the public key coordinates to bytes using the helper function
-	xBytes := common.EmulatedElementToBytes32(api, c.SignerPubKeyX)
-	yBytes := common.EmulatedElementToBytes32(api, c.SignerPubKeyY)
+	xBytes := zkcore.EmulatedElementToBytes32(api, c.SignerPubKeyX)
+	yBytes := zkcore.EmulatedElementToBytes32(api, c.SignerPubKeyY)
 
 	// Create the uncompressed public key format: 0x04 || X || Y
 	// Total: 1 + 32 + 32 = 65 bytes

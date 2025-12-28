@@ -10,8 +10,8 @@ import (
 
 	"github.com/consensys/gnark/std/math/uints"
 	ct "github.com/mynextid/eudi-zk/circuits/temporal"
-	"github.com/mynextid/eudi-zk/common"
 	"github.com/mynextid/eudi-zk/models"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // minimal over 18 test
@@ -39,18 +39,18 @@ func TestOver18(t *testing.T) {
 
 	// Create witness assignment with actual values
 	assignment := &ct.Over18{
-		Payload:         common.BytesToU8Array(data.Payload),
-		DateB64:         common.BytesToU8Array(data.DateB64),
+		Payload:         zkcore.BytesToU8Array(data.Payload),
+		DateB64:         zkcore.BytesToU8Array(data.DateB64),
 		DateB64Position: data.DateB64Position,
 		DatePosition:    data.DatePosition,
-		MinDateOfBirth:  common.StringToU8Array(data.MinDateOfBirth),
+		MinDateOfBirth:  zkcore.StringToU8Array(data.MinDateOfBirth),
 	}
 
 	// == Init the circuit ==
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestOver18(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuit(assignment, ccs, pk, vk)
+	zkcore.TestCircuit(assignment, ccs, pk, vk)
 }
 
 type Over18Payload struct {
@@ -118,8 +118,14 @@ func MockOver18Data(minDateOfBirth string) (*Over18Payload, error) {
 
 	// == find the position of the elements ==
 	payloadMap, err := StructToMap(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert struct to map: %v", err)
+	}
 	dateIndexStart, dateIndexEnd, err := GetClaimRange(payloadMap, payloadBytes, "birthdate")
-	birthdateB64 := GetClaimB64(payloadBytes, dateIndexStart, dateIndexEnd, "birthdate")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get a claim range: %v", err)
+	}
+	birthdateB64 := GetClaimB64(payloadBytes, dateIndexStart, dateIndexEnd)
 
 	fmt.Println("birthdateB64", birthdateB64)
 	bd, _ := base64.URLEncoding.DecodeString(birthdateB64)
@@ -171,13 +177,13 @@ func GetClaimRange(obj map[string]any, objJSON []byte, claim string) (start, end
 	// Length of the cnf variable
 	indexEnd := indexStart + len(elementString)
 
-	start, end = common.B64Align(indexStart, indexEnd)
+	start, end = zkcore.B64Align(indexStart, indexEnd)
 	fmt.Println(indexStart, indexEnd)
 	fmt.Println(start, end)
 	return start, end, nil
 }
 
-func GetClaimB64(objJSON []byte, indexStart, indexEnd int, claim string) string {
+func GetClaimB64(objJSON []byte, indexStart, indexEnd int) string {
 	data := objJSON[indexStart:indexEnd]
 
 	return base64.RawURLEncoding.EncodeToString(data)
