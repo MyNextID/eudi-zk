@@ -113,6 +113,7 @@ func Run(cfg *ServerConfig) error {
 	// Start server in goroutine
 	serverErr := make(chan error, 1)
 	go func() {
+		fmt.Println("[HTTP Server] server starting at:", addr)
 		logger.Info("Server listening", "addr", addr, "tls", cfg.EnableTLS)
 
 		var err error
