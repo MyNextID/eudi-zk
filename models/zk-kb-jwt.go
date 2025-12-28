@@ -42,7 +42,7 @@ type CircuitPublicInputs struct {
 
 	// Additional circuit-specific outputs
 	// e.g., "age_over_18": true, "citizenship_hash": "0x123..."
-	Attributes map[string]interface{} `json:"attributes,omitempty"`
+	Attributes map[string]any `json:"attributes,omitempty"`
 }
 
 // ZkPresentation represents a complete zero-knowledge proof presentation
@@ -276,7 +276,7 @@ type VerificationOptions struct {
 	AllowExpired bool      // Allow expired credentials (for testing)
 
 	// Additional constraints
-	RequiredAttributes map[string]interface{} // Attributes that must be present
+	RequiredAttributes map[string]any // Attributes that must be present
 }
 
 // VerificationResult contains the verified presentation data

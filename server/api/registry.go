@@ -3,16 +3,22 @@ package api
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
+	"github.com/mynextid/eudi-zk/circuits"
 	"github.com/mynextid/eudi-zk/common"
 )
 
 // CircuitRegistry stores compiled circuits by name
 type CircuitRegistry struct {
-	Circuits map[string]*Circuit
+	dir      string // circuit directory
+	circuits map[string]*Circuit
+}
+
+type Circuit struct {
+	Instance *CircuitInstance
+	Info     *circuits.CircuitInfo
 }
 
 func (cr CircuitRegistry) LoadAll() error {
@@ -26,35 +32,51 @@ func (cr CircuitRegistry) LoadAll() error {
 	return nil
 }
 
-func (cr CircuitRegistry) LoadCircuit(ci CircuitInfo) error {
+// LoadCircuit loads the circuit from a file
+func (cr CircuitRegistry) LoadCircuit(ci *circuits.CircuitInfo) error {
 
-	csPath := filepath.Join(ci.Dir, fmt.Sprintf("%s-%d.ccs", ci.Name, ci.Version))
-	pkPath := filepath.Join(ci.Dir, fmt.Sprintf("%s-%d.pk", ci.Name, ci.Version))
-	vkPath := filepath.Join(ci.Dir, fmt.Sprintf("%s-%d.vk", ci.Name, ci.Version))
+	// TODO: if circuits are not loaded, circuit path info will be incorrect
+	ci.Dir = cr.dir
+	csPath, pkPath, vkPath := ci.FilePaths()
+	fmt.Println("path:", csPath)
 
+	// load the setup
 	cs, pk, vk, err := common.LoadSetup(csPath, pkPath, vkPath)
 	if err != nil {
 		return fmt.Errorf("failed to load the circuit: %v", err)
 	}
 
 	return cr.Register(ci.Name, &Circuit{
-		CS:           cs,
-		ProvingKey:   pk,
-		VerifyingKey: vk,
-		InputParser:  ci.InputParser,
+		Instance: &CircuitInstance{
+			CS:           cs,
+			ProvingKey:   pk,
+			VerifyingKey: vk,
+			InputParser:  ci.InputParser,
+		},
+		Info: ci,
 	})
 }
 
 // NewCircuitRegistry creates a new registry
-func NewCircuitRegistry() *CircuitRegistry {
-	return &CircuitRegistry{
-		Circuits: make(map[string]*Circuit),
+func NewCircuitRegistry(dir string) (*CircuitRegistry, error) {
+	// Create a new circuit
+	cr := &CircuitRegistry{
+		dir:      dir,
+		circuits: make(map[string]*Circuit),
 	}
+
+	// load known circuits
+	err := cr.LoadAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load circuits: %v", err)
+	}
+
+	return cr, nil
 }
 
 // Get returns a circuit by name
 func (cr *CircuitRegistry) Get(name string) (*Circuit, error) {
-	if c, ok := cr.Circuits[name]; ok {
+	if c, ok := cr.circuits[name]; ok {
 		return c, nil
 	}
 	return nil, fmt.Errorf("circuit %s not found", name)
@@ -62,10 +84,10 @@ func (cr *CircuitRegistry) Get(name string) (*Circuit, error) {
 
 // Register registers a new circuit by user-defined name
 func (cr *CircuitRegistry) Register(name string, circuit *Circuit) error {
-	if _, ok := cr.Circuits[name]; ok {
+	if _, ok := cr.circuits[name]; ok {
 		return fmt.Errorf("circuit with name %s already exists", name)
 	}
-	cr.Circuits[name] = circuit
+	cr.circuits[name] = circuit
 	return nil
 }
 
@@ -107,10 +129,18 @@ func (cr *CircuitRegistry) LoadSetup(name, ccsPath, pkPath, vkPath string) error
 		return fmt.Errorf("failed to read verification key: %w", err)
 	}
 
+	info, ok := CircuitList[name]
+	if !ok {
+		return fmt.Errorf("circuit not on the list")
+	}
 	fmt.Printf("[OK] Loaded pre-compiled setup for %s\n", name)
 	return cr.Register(name, &Circuit{
-		CS:           ccs,
-		ProvingKey:   pk,
-		VerifyingKey: vk,
+		Instance: &CircuitInstance{
+			CS:           ccs,
+			ProvingKey:   pk,
+			VerifyingKey: vk,
+			InputParser:  info.InputParser,
+		},
+		Info: info,
 	})
 }

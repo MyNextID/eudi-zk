@@ -12,7 +12,18 @@ import (
 	"github.com/mynextid/eudi-zk/server/api"
 )
 
-type ServeConfig struct {
+// Constants
+const (
+	MAX_REQUEST_SIZE = 10 * 1024 * 1024
+	MAX_HEADER_SIZE  = 1 * 1024 * 1024
+	READ_TIMEOUT     = 15 * time.Second
+	WRITE_TIMEOUT    = 120 * time.Second
+	IDLE_TIMEOUT     = 120 * time.Second
+	SHUTDOWN_TIMEOUT = 30 * time.Second
+)
+
+// ServerConfig contains the server configuration parameters
+type ServerConfig struct {
 	// Server settings
 	Host string
 	Port int
@@ -43,9 +54,33 @@ type ServeConfig struct {
 	KeyFile   string
 }
 
-func Run(cfg *ServeConfig) error {
-	// Validate configuration
-	if err := validateServeConfig(cfg); err != nil {
+// DefaultServerConfig returns default server configuration
+func DefaultServerConfig() *ServerConfig {
+	return &ServerConfig{
+		Host:            "localhost",
+		Port:            8080,
+		CircuitsDir:     "setup",
+		Circuits:        []string{},
+		MaxRequestSize:  MAX_REQUEST_SIZE,
+		ReadTimeout:     READ_TIMEOUT,
+		WriteTimeout:    WRITE_TIMEOUT,
+		IdleTimeout:     IDLE_TIMEOUT,
+		ShutdownTimeout: SHUTDOWN_TIMEOUT,
+		EnableCORS:      true,
+		CorsOrigins:     []string{"localhost"},
+		EnablePprof:     false,
+		LogLevel:        "info",
+		LogFormat:       "text",
+		EnableTLS:       false,
+		CertFile:        "",
+		KeyFile:         "",
+	}
+}
+
+// Run validates the configuration and starts the HTTP server
+func Run(cfg *ServerConfig) error {
+	// Validate server configuration
+	if err := validateServerConfig(cfg); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
@@ -53,14 +88,12 @@ func Run(cfg *ServeConfig) error {
 	logger := SetupLogger(cfg.LogLevel, cfg.LogFormat)
 
 	// Initialize circuit registry
-	registry := api.NewCircuitRegistry()
-
-	// Load circuits
-	if err := loadCircuits(registry, cfg, logger); err != nil {
-		return fmt.Errorf("failed to load circuits: %w", err)
+	registry, err := api.NewCircuitRegistry(cfg.CircuitsDir)
+	if err != nil {
+		return err
 	}
 
-	// Create server
+	// Initialize HTTP server
 	server := api.NewServer(registry)
 
 	// Setup router with middleware
@@ -74,7 +107,7 @@ func Run(cfg *ServeConfig) error {
 		ReadTimeout:    cfg.ReadTimeout,
 		WriteTimeout:   cfg.WriteTimeout,
 		IdleTimeout:    cfg.IdleTimeout,
-		MaxHeaderBytes: 1 << 20, // 1 MB
+		MaxHeaderBytes: MAX_HEADER_SIZE,
 	}
 
 	// Start server in goroutine
@@ -118,37 +151,8 @@ func Run(cfg *ServeConfig) error {
 	return nil
 }
 
-func loadCircuits(registry *api.CircuitRegistry, cfg *ServeConfig, logger Logger) error {
-	circuitsToLoad := cfg.Circuits
-	if len(circuitsToLoad) == 0 {
-		// Load all circuits
-		for name := range api.CircuitList {
-			circuitsToLoad = append(circuitsToLoad, name)
-		}
-	}
-
-	loaded := 0
-	for _, name := range circuitsToLoad {
-		ci := api.CircuitList[name]
-		ci.Dir = cfg.CircuitsDir
-
-		if err := registry.LoadCircuit(ci); err != nil {
-			logger.Warn("Failed to load circuit", "circuit", name, "error", err)
-			continue
-		}
-		loaded++
-		logger.Info("Loaded circuit", "circuit", name)
-	}
-
-	if loaded == 0 {
-		return fmt.Errorf("no circuits loaded from %s", cfg.CircuitsDir)
-	}
-
-	logger.Info("Circuit loading complete", "loaded", loaded, "total", len(circuitsToLoad))
-	return nil
-}
-
-func validateServeConfig(cfg *ServeConfig) error {
+// validateServe
+func validateServerConfig(cfg *ServerConfig) error {
 	if cfg.Port < 1 || cfg.Port > 65535 {
 		return fmt.Errorf("invalid port: %d", cfg.Port)
 	}

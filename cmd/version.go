@@ -2,28 +2,27 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 
+	"github.com/mynextid/eudi-zk/server/api"
 	"github.com/spf13/cobra"
 )
 
-// version and commit info
-// DO NOT EDIT - information is update by the Makefile
-var (
-	version   = ""
-	commit    = "none"
-	buildDate = "unknown"
-)
-
-// NewVersionCmd returns a version information cmd
 func NewVersionCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "version",
-		Aliases: []string{"v"},
-		Short:   "Print version information",
+		Use:   "version",
+		Short: "Print version information",
+		Long: `
+  Print detailed version and build information
+  
+  The version command displays the ZKPI version, build commit, build date, and
+  Go runtime information.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("  version: %s\n", version)
-			fmt.Printf("  commit:  %s\n", commit)
-			fmt.Printf("  built:   %s\n", buildDate)
+			fmt.Printf("  Version:    %s\n", api.Version)
+			fmt.Printf("  Commit:     %s\n", api.Commit)
+			fmt.Printf("  Built:      %s\n", api.BuildDate)
+			fmt.Printf("  Go version: %s\n", runtime.Version())
+			fmt.Printf("  OS/Arch:    %s/%s\n", runtime.GOOS, runtime.GOARCH)
 		},
 	}
 }

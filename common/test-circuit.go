@@ -163,7 +163,7 @@ func TestCircuitV2(
 	result := &CircuitTestResult{Success: false}
 	startTotal := time.Now()
 
-	logf := func(format string, args ...interface{}) {
+	logf := func(format string, args ...any) {
 		if opts.Verbose && opts.Writer != nil {
 			fmt.Fprintf(opts.Writer, format, args...)
 		}

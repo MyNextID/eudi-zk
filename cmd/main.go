@@ -5,10 +5,15 @@ import (
 	"os"
 )
 
-// ZKPI - simple CLI tool and API service for Zero-Knowledge proof generation
+// ZKPI - a simple CLI tool and API service for Zero-Knowledge proof creation
 // and validation
 func main() {
-	if err := newRootCmd().Execute(); err != nil {
+	rootCmd := newRootCmd()
+
+	// Optional: Add footer to help output
+	addFooter(rootCmd)
+
+	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

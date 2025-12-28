@@ -1,63 +1,65 @@
 package zkproof
 
 import (
-	"time"
-
 	"github.com/mynextid/eudi-zk/server"
 	"github.com/spf13/cobra"
 )
 
 func NewServeCmd() *cobra.Command {
-	cfg := &server.ServeConfig{}
+	cfg := &server.ServerConfig{}
 
 	cmd := &cobra.Command{
 		Use:   "serve",
-		Short: "Start the ZK proof API server",
-		Long:  `Start the HTTP API server for generating and verifying zero-knowledge proofs.`,
-		Example: `  # Start server on default port zkproof serve
+		Short: "Start the ZKPI server",
+		Long: `
+  Starts HTTP API server for creating and verifying zero-knowledge proofs`,
+		Example: `  # Start ZKPI on localhost and default port 8080
+  zkpi serve
 
   # Start with custom settings
-  zkproof serve --host 0.0.0.0 --port 9090 --circuits-dir ./setup
+  zkpi serve --host 0.0.0.0 --port 9090 --circuits-dir circuits
 
   # Production deployment with TLS
-  zkproof serve --host 0.0.0.0 --port 443 --enable-tls \
+  zkpi serve --host 0.0.0.0 --port 443 --enable-tls \
     --cert-file /etc/ssl/cert.pem --key-file /etc/ssl/key.pem
 
   # Load specific circuits only
-  zkproof serve --circuits compare-bytes-b64url,compare-bytes`,
+  zkpi serve --circuits compare-bytes-b64url,compare-bytes`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return server.Run(cfg)
 		},
 	}
 
+	defaultCfg := server.DefaultServerConfig()
+
 	// Server flags
-	cmd.Flags().StringVar(&cfg.Host, "host", "localhost", "Host to bind to")
-	cmd.Flags().IntVarP(&cfg.Port, "port", "p", 8080, "Port to listen on")
+	cmd.Flags().StringVar(&cfg.Host, "host", defaultCfg.Host, "Host to bind to")
+	cmd.Flags().IntVarP(&cfg.Port, "port", "p", defaultCfg.Port, "Port to listen on")
 
 	// Circuit flags
-	cmd.Flags().StringVarP(&cfg.CircuitsDir, "circuits-dir", "d", "./setup", "Directory containing compiled circuits")
-	cmd.Flags().StringSliceVarP(&cfg.Circuits, "circuits", "c", []string{}, "Specific circuits to load (comma-separated, empty = all)")
+	cmd.Flags().StringVarP(&cfg.CircuitsDir, "circuits-dir", "d", defaultCfg.CircuitsDir, "Directory containing compiled circuits")
+	cmd.Flags().StringSliceVarP(&cfg.Circuits, "circuits", "c", defaultCfg.Circuits, "Specific circuits to load (comma-separated, empty = all)")
 
 	// Performance flags
-	cmd.Flags().Int64Var(&cfg.MaxRequestSize, "max-request-size", 10*1024*1024, "Maximum request body size in bytes")
-	cmd.Flags().DurationVar(&cfg.ReadTimeout, "read-timeout", 15*time.Second, "HTTP read timeout")
-	cmd.Flags().DurationVar(&cfg.WriteTimeout, "write-timeout", 120*time.Second, "HTTP write timeout (proof generation can be slow)")
-	cmd.Flags().DurationVar(&cfg.IdleTimeout, "idle-timeout", 120*time.Second, "HTTP idle timeout")
-	cmd.Flags().DurationVar(&cfg.ShutdownTimeout, "shutdown-timeout", 30*time.Second, "Graceful shutdown timeout")
+	cmd.Flags().Int64Var(&cfg.MaxRequestSize, "max-request-size", defaultCfg.MaxRequestSize, "Maximum request body size in bytes")
+	cmd.Flags().DurationVar(&cfg.ReadTimeout, "read-timeout", defaultCfg.ReadTimeout, "HTTP read timeout")
+	cmd.Flags().DurationVar(&cfg.WriteTimeout, "write-timeout", defaultCfg.WriteTimeout, "HTTP write timeout (proof generation can be slow)")
+	cmd.Flags().DurationVar(&cfg.IdleTimeout, "idle-timeout", defaultCfg.IdleTimeout, "HTTP idle timeout")
+	cmd.Flags().DurationVar(&cfg.ShutdownTimeout, "shutdown-timeout", cfg.ShutdownTimeout, "Graceful shutdown timeout")
 
 	// Security flags
-	cmd.Flags().BoolVar(&cfg.EnableCORS, "enable-cors", true, "Enable CORS middleware")
-	cmd.Flags().StringSliceVar(&cfg.CorsOrigins, "cors-origins", []string{"*"}, "Allowed CORS origins")
+	cmd.Flags().BoolVar(&cfg.EnableCORS, "enable-cors", defaultCfg.EnableCORS, "Enable CORS middleware")
+	cmd.Flags().StringSliceVar(&cfg.CorsOrigins, "cors-origins", defaultCfg.CorsOrigins, "Allowed CORS origins")
 
 	// Observability flags
-	cmd.Flags().BoolVar(&cfg.EnablePprof, "enable-pprof", false, "Enable pprof endpoints (debug only)")
-	cmd.Flags().StringVar(&cfg.LogLevel, "log-level", "info", "Log level (debug, info, warn, error)")
-	cmd.Flags().StringVar(&cfg.LogFormat, "log-format", "text", "Log format (text, json)")
+	// cmd.Flags().BoolVar(&cfg.EnablePprof, "enable-pprof", false, "Enable pprof endpoints (debug only)")
+	cmd.Flags().StringVar(&cfg.LogLevel, "log-level", defaultCfg.LogLevel, "Log level (debug, info, warn, error)")
+	cmd.Flags().StringVar(&cfg.LogFormat, "log-format", defaultCfg.LogFormat, "Log format (text, json)")
 
 	// TLS flags
-	cmd.Flags().BoolVar(&cfg.EnableTLS, "enable-tls", false, "Enable TLS/HTTPS")
-	cmd.Flags().StringVar(&cfg.CertFile, "cert-file", "", "TLS certificate file")
-	cmd.Flags().StringVar(&cfg.KeyFile, "key-file", "", "TLS private key file")
+	cmd.Flags().BoolVar(&cfg.EnableTLS, "enable-tls", defaultCfg.EnableTLS, "Enable TLS/HTTPS")
+	cmd.Flags().StringVar(&cfg.CertFile, "cert-file", defaultCfg.CertFile, "TLS certificate file")
+	cmd.Flags().StringVar(&cfg.KeyFile, "key-file", defaultCfg.KeyFile, "TLS private key file")
 
 	return cmd
 }

@@ -7,7 +7,8 @@ import (
 	"github.com/mynextid/eudi-zk/server/api"
 )
 
-func setupRouter(server *api.Server, cfg *ServeConfig, logger Logger) *chi.Mux {
+// Router Setup
+func setupRouter(server *api.Server, cfg *ServerConfig, logger Logger) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Core middleware
@@ -22,7 +23,7 @@ func setupRouter(server *api.Server, cfg *ServeConfig, logger Logger) *chi.Mux {
 	if cfg.EnableCORS {
 		r.Use(cors.Handler(cors.Options{
 			AllowedOrigins:   cfg.CorsOrigins,
-			AllowedMethods:   []string{"GET", "POST"},
+			AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
 			AllowedHeaders:   []string{"Accept", "Content-Type"},
 			ExposedHeaders:   []string{"X-Request-ID"},
 			AllowCredentials: false,
@@ -32,6 +33,9 @@ func setupRouter(server *api.Server, cfg *ServeConfig, logger Logger) *chi.Mux {
 
 	// Compression
 	r.Use(middleware.Compress(5))
+
+	// Discovery information
+	r.Get("/", server.HandleDiscovery)
 
 	// Health and readiness
 	r.Get("/health", server.HandleHealth)
@@ -44,13 +48,10 @@ func setupRouter(server *api.Server, cfg *ServeConfig, logger Logger) *chi.Mux {
 	r.Post("/prove/{circuit}", server.HandleProve)
 	r.Post("/verify/{circuit}", server.HandleVerify)
 
-	// OpenAPI spec
-	// r.Get("/openapi.json", server.HandleOpenAPI)
-
 	// Pprof (debug only)
-	if cfg.EnablePprof {
-		r.Mount("/debug", middleware.Profiler())
-	}
+	// if cfg.EnablePprof {
+	// 	r.Mount("/debug", middleware.Profiler())
+	// }
 
 	return r
 }

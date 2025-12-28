@@ -233,13 +233,13 @@ func TestCompareBytes(t *testing.T) {
 		t.Error(err)
 	}
 
-	circuitTemplate := &ccb.CircuitBytes{
+	circuitTemplate := &ccb.CBCircuit{
 		Bytes:    make([]uints.U8, byteSize),
 		PubBytes: make([]uints.U8, byteSize),
 	}
 
 	// Create witness assignment with actual values
-	assignment := &ccb.CircuitBytes{
+	assignment := &ccb.CBCircuit{
 		// Private inputs
 		Bytes: common.BytesToU8Array(randomBytes),
 		// Public inputs

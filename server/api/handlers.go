@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/mynextid/eudi-zk/circuits"
 )
 
 // Server handles HTTP requests for ZK proof operations
@@ -33,8 +34,8 @@ type ProveRequest struct {
 
 // ProveResponse represents a proof generation response
 type ProveResponse struct {
-	Proof     string    `json:"proof"` // base64 encoded
-	Timestamp time.Time `json:"timestamp"`
+	Proof         string `json:"proof"` // base64 encoded
+	ExecutionTime string `json:"executionTime"`
 }
 
 // VerifyRequest represents a proof verification request
@@ -45,23 +46,24 @@ type VerifyRequest struct {
 
 // VerifyResponse represents a proof verification response
 type VerifyResponse struct {
-	Valid     bool      `json:"valid"`
-	Timestamp time.Time `json:"timestamp"`
-	Message   string    `json:"message,omitempty"`
+	Valid         bool   `json:"valid"`
+	Message       string `json:"message,omitempty"`
+	ExecutionTime string `json:"executionTime"`
 }
 
 // ErrorResponse represents an error response
 type ErrorResponse struct {
-	Error     string    `json:"error"`
-	Code      string    `json:"code,omitempty"`
-	Timestamp time.Time `json:"timestamp"`
+	Error string `json:"error"`
+	Code  string `json:"code,omitempty"`
 }
 
 // CircuitInfoResponse represents circuit information
 type CircuitInfoResponse struct {
-	Name    string `json:"name"`
-	Version uint   `json:"version"`
-	Loaded  bool   `json:"loaded"`
+	Name         string                 `json:"name"`
+	Description  string                 `json:"description"`
+	Version      uint                   `json:"version"`
+	Loaded       bool                   `json:"loaded"`
+	EndpointInfo *circuits.EndpointInfo `json:"methods,omitempty"`
 }
 
 // CircuitListResponse represents a list of circuits
@@ -69,8 +71,6 @@ type CircuitListResponse struct {
 	Circuits []CircuitInfoResponse `json:"circuits"`
 	Count    int                   `json:"count"`
 }
-
-// ==== Handlers ====
 
 // HandleHealth handles health check requests
 func (s *Server) HandleHealth(w http.ResponseWriter, r *http.Request) {
@@ -85,11 +85,12 @@ func (s *Server) HandleListCircuits(w http.ResponseWriter, r *http.Request) {
 	circuits := make([]CircuitInfoResponse, 0)
 
 	for name, info := range CircuitList {
-		_, loaded := s.registry.Circuits[name]
+		_, err := s.registry.Get(name)
 		circuits = append(circuits, CircuitInfoResponse{
-			Name:    info.Name,
-			Version: info.Version,
-			Loaded:  loaded,
+			Name:        info.Name,
+			Description: info.Description,
+			Version:     info.Version,
+			Loaded:      err == nil,
 		})
 	}
 
@@ -103,6 +104,11 @@ func (s *Server) HandleListCircuits(w http.ResponseWriter, r *http.Request) {
 func (s *Server) HandleGetCircuit(w http.ResponseWriter, r *http.Request) {
 	circuitName := chi.URLParam(r, "circuit")
 
+	if circuitName == "" {
+		respondError(w, http.StatusBadRequest, "invalid_request", "circuit name is required")
+		return
+	}
+
 	info, ok := CircuitList[circuitName]
 	if !ok {
 		respondError(w, http.StatusNotFound, "circuit_not_found",
@@ -110,12 +116,14 @@ func (s *Server) HandleGetCircuit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, loaded := s.registry.Circuits[circuitName]
+	_, err := s.registry.Get(circuitName)
 
 	respondJSON(w, http.StatusOK, CircuitInfoResponse{
-		Name:    info.Name,
-		Version: info.Version,
-		Loaded:  loaded,
+		Name:         info.Name,
+		Description:  info.Description,
+		Version:      info.Version,
+		Loaded:       err == nil,
+		EndpointInfo: info.EndpointInfo,
 	})
 }
 
@@ -123,6 +131,7 @@ func (s *Server) HandleGetCircuit(w http.ResponseWriter, r *http.Request) {
 func (s *Server) HandleProve(w http.ResponseWriter, r *http.Request) {
 	circuitName := chi.URLParam(r, "circuit")
 
+	start := time.Now()
 	// Check if circuit exists
 	if _, ok := CircuitList[circuitName]; !ok {
 		respondError(w, http.StatusNotFound, "circuit_not_found",
@@ -162,7 +171,7 @@ func (s *Server) HandleProve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate proof
-	proofBytes, err := circuit.ProveWithJSON(circuitName, req.PublicInput, req.PrivateInput)
+	proofBytes, err := circuit.Instance.ProveWithJSON(circuitName, req.PublicInput, req.PrivateInput)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "proof_generation_failed",
 			fmt.Sprintf("failed to generate proof: %v", err))
@@ -172,9 +181,10 @@ func (s *Server) HandleProve(w http.ResponseWriter, r *http.Request) {
 	// Encode proof as base64
 	proofB64 := base64.StdEncoding.EncodeToString(proofBytes)
 
+	duration := time.Since(start).String()
 	respondJSON(w, http.StatusOK, ProveResponse{
-		Proof:     proofB64,
-		Timestamp: time.Now(),
+		Proof:         proofB64,
+		ExecutionTime: duration,
 	})
 }
 
@@ -182,6 +192,7 @@ func (s *Server) HandleProve(w http.ResponseWriter, r *http.Request) {
 func (s *Server) HandleVerify(w http.ResponseWriter, r *http.Request) {
 	circuitName := chi.URLParam(r, "circuit")
 
+	start := time.Now()
 	// Check if circuit exists
 	if _, ok := CircuitList[circuitName]; !ok {
 		respondError(w, http.StatusNotFound, "circuit_not_found",
@@ -229,11 +240,12 @@ func (s *Server) HandleVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify proof
-	err = circuit.Public().VerifyWithJSON(circuitName, req.PublicInput, proofBytes)
+	err = circuit.Instance.Public().VerifyWithJSON(circuitName, req.PublicInput, proofBytes)
 
+	duration := time.Since(start).String()
 	response := VerifyResponse{
-		Valid:     err == nil,
-		Timestamp: time.Now(),
+		Valid:         err == nil,
+		ExecutionTime: duration,
 	}
 
 	if err != nil {
@@ -248,7 +260,7 @@ func (s *Server) HandleVerify(w http.ResponseWriter, r *http.Request) {
 // ==== Helper Functions ====
 
 // respondJSON writes a JSON response
-func respondJSON(w http.ResponseWriter, status int, data interface{}) {
+func respondJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
@@ -259,8 +271,7 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 // respondError writes an error response
 func respondError(w http.ResponseWriter, status int, code, message string) {
 	respondJSON(w, status, ErrorResponse{
-		Error:     message,
-		Code:      code,
-		Timestamp: time.Now(),
+		Error: message,
+		Code:  code,
 	})
 }

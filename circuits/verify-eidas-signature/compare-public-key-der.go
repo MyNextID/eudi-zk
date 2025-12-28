@@ -195,6 +195,6 @@ func readByteAt(api frontend.API, data []uints.U8, index frontend.Variable) uint
 	return result
 }
 
-func incrementIndex(api frontend.API, index frontend.Variable, amount interface{}) frontend.Variable {
+func incrementIndex(api frontend.API, index frontend.Variable, amount any) frontend.Variable {
 	return api.Add(index, amount)
 }

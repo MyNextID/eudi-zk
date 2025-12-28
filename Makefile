@@ -1,10 +1,10 @@
-VERSION ?= "0.2.0-dev"
+VERSION ?= "0.3.0-dev"
 COMMIT  ?= $(shell git rev-parse --short HEAD)
 DATE    ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-LDFLAGS := -X main.version=$(VERSION) \
-           -X main.commit=$(COMMIT) \
-           -X main.buildDate=$(DATE)
+LDFLAGS := -X github.com/mynextid/eudi-zk/server/api.Version=$(VERSION) \
+           -X github.com/mynextid/eudi-zk/server/api.Commit=$(COMMIT) \
+           -X github.com/mynextid/eudi-zk/server/api.BuildDate=$(DATE)
 
 .PHONY: build
 build:

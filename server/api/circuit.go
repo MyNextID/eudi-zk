@@ -10,8 +10,8 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
-// Circuit with loaded constraint system and proving and public verifying keys
-type Circuit struct {
+// CircuitInstance with loaded constraint system and proving and public verifying keys
+type CircuitInstance struct {
 	CS           constraint.ConstraintSystem
 	ProvingKey   groth16.ProvingKey
 	VerifyingKey groth16.VerifyingKey
@@ -23,22 +23,26 @@ type InputParser interface {
 	Parse(publicInput, privateInput []byte) (frontend.Circuit, error)
 }
 
-// PublicCircuit with the constraint system and public verifying keys
-type PublicCircuit struct {
+// PublicCircuitParams with the constraint system and public verifying keys
+type PublicCircuitParams struct {
 	CS           constraint.ConstraintSystem
 	VerifyingKey groth16.VerifyingKey
 	InputParser  InputParser
 }
 
-func (c Circuit) Public() PublicCircuit {
-	return PublicCircuit{
+func (c CircuitInstance) Parser() InputParser {
+	return c.InputParser
+}
+
+func (c CircuitInstance) Public() PublicCircuitParams {
+	return PublicCircuitParams{
 		CS:           c.CS,
 		InputParser:  c.InputParser,
 		VerifyingKey: c.VerifyingKey,
 	}
 }
 
-func (c Circuit) Prove(assignment frontend.Circuit) ([]byte, error) {
+func (c CircuitInstance) Prove(assignment frontend.Circuit) ([]byte, error) {
 	// Create witness
 	witness, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
 	if err != nil {
@@ -61,7 +65,7 @@ func (c Circuit) Prove(assignment frontend.Circuit) ([]byte, error) {
 }
 
 // Verify verifies a proof
-func (c PublicCircuit) Verify(assignment frontend.Circuit, proof groth16.Proof) error {
+func (c PublicCircuitParams) Verify(assignment frontend.Circuit, proof groth16.Proof) error {
 
 	pw, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
 	if err != nil {
@@ -76,7 +80,7 @@ func (c PublicCircuit) Verify(assignment frontend.Circuit, proof groth16.Proof) 
 }
 
 // ProveWithJSON generates a proof from JSON inputs
-func (c *Circuit) ProveWithJSON(circuitName string, publicInput, privateInput []byte) ([]byte, error) {
+func (c *CircuitInstance) ProveWithJSON(circuitName string, publicInput, privateInput []byte) ([]byte, error) {
 
 	assignment, err := c.InputParser.Parse(publicInput, privateInput)
 	if err != nil {
@@ -87,7 +91,7 @@ func (c *Circuit) ProveWithJSON(circuitName string, publicInput, privateInput []
 }
 
 // VerifyWithJSON verifies a proof using JSON public input
-func (c PublicCircuit) VerifyWithJSON(circuitName string, publicInput, proofBytes []byte) error {
+func (c PublicCircuitParams) VerifyWithJSON(circuitName string, publicInput, proofBytes []byte) error {
 
 	// Parse only public input (pass empty private input)
 	assignment, err := c.InputParser.Parse(publicInput, []byte("{}"))

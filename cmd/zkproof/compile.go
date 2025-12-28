@@ -3,9 +3,9 @@ package zkproof
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
+	"github.com/mynextid/eudi-zk/server"
 	"github.com/mynextid/eudi-zk/server/api"
 	"github.com/spf13/cobra"
 )
@@ -23,12 +23,15 @@ func NewCompileCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compile",
 		Short: "Compile circuits and generate setup files",
-		Long:  `Compile zero-knowledge circuits and generate constraint systems, proving keys, and verification keys. Compiling all circuits might take some time. List of circuits is available available at server/api/list.go`,
+		Long: `
+  Compile zero-knowledge circuits and generate constraint systems, proving keys,
+  and verification keys. Compiling all circuits might take some time. List of
+  circuits is available available in server/api/list.go`,
 		Example: `  # Compile all circuits
-  zkproof compile -o ./setup
+  zkpi compile -o ./circuits
 
   # Compile specific circuits
-  zkproof compile -o ./setup -c compare-bytes-b64url,compare-bytes
+  zkpi compile -o ./circuits -c compare-bytes-b64url,compare-bytes
 
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -36,9 +39,12 @@ func NewCompileCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&cfg.outputDir, "output", "o", "./setup", "Output directory for compiled circuits")
-	cmd.Flags().StringSliceVarP(&cfg.circuits, "circuits", "c", []string{}, "Specific circuits to compile (comma-separated, empty = all)")
-	cmd.Flags().StringVar(&cfg.curve, "curve", "bn254", "Elliptic curve (bn254)")
+	defaultCfg := server.DefaultServerConfig()
+
+	cmd.Flags().StringVarP(&cfg.outputDir, "output", "o", defaultCfg.CircuitsDir, "Output directory for compiled circuits")
+	cmd.Flags().StringSliceVarP(&cfg.circuits, "circuits", "c", defaultCfg.Circuits, "Specific circuits to compile (comma-separated, empty = all)")
+	// cmd.Flags().StringVar(&cfg.curve, "curve", "bn254", "Elliptic curve (bn254)")
+	cfg.curve = "bn254"
 	cmd.Flags().BoolVarP(&cfg.force, "force", "f", false, "Overwrite existing files")
 
 	return cmd
@@ -60,7 +66,7 @@ func runCompile(cfg *compileConfig) error {
 	fmt.Printf("\n==== Compiling %d circuits to %s====\n", len(circuitsToCompile), cfg.outputDir)
 
 	for _, name := range circuitsToCompile {
-		info, ok := api.CircuitList[name]
+		ci, ok := api.CircuitList[name]
 		if !ok {
 			fmt.Printf("Circuit %s not found, skipping\n", name)
 			continue
@@ -69,13 +75,11 @@ func runCompile(cfg *compileConfig) error {
 		start := time.Now()
 		fmt.Printf("Compiling %s...\n", name)
 
-		ccsPath := filepath.Join(cfg.outputDir, fmt.Sprintf("%s.ccs", name))
-		pkPath := filepath.Join(cfg.outputDir, fmt.Sprintf("%s.pk", name))
-		vkPath := filepath.Join(cfg.outputDir, fmt.Sprintf("%s.vk", name))
+		csPath, pkPath, vkPath := ci.FilePaths()
 
 		// Check if files exist
 		if !cfg.force {
-			if _, err := os.Stat(ccsPath); err == nil {
+			if _, err := os.Stat(csPath); err == nil {
 				fmt.Printf("%s already exists, skipping (use --force to overwrite)\n", name)
 				continue
 			}
@@ -90,10 +94,10 @@ func runCompile(cfg *compileConfig) error {
 		}
 
 		// set the output dir
-		info.Dir = cfg.outputDir
+		ci.Dir = cfg.outputDir
 
 		// compile the circuit
-		if err := info.Compile(); err != nil {
+		if err := ci.Compile(); err != nil {
 			fmt.Printf("[X] Failed to compile %s: %v\n", name, err)
 			continue
 		}

@@ -239,7 +239,7 @@ func TestJWSCircuit(t *testing.T) {
 	headerB64 := base64.RawURLEncoding.EncodeToString(headerJSON)
 
 	// 3. Create JWS payload
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"sub":  "1234567890",
 		"name": "John Doe",
 		"iat":  1516239022,
@@ -408,7 +408,7 @@ func TestJWSCircuit(t *testing.T) {
 	startVerify := time.Now()
 	err = groth16.Verify(proof, vk, publicWitness)
 	if err != nil {
-		panic("❌ Verification failed: " + err.Error())
+		panic("[X] Verification failed: " + err.Error())
 	}
 	verifyTime := time.Since(startVerify)
 	fmt.Printf("[OK] Proof verified successfully! (took %v)\n", verifyTime)
