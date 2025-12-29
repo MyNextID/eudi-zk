@@ -17,13 +17,18 @@ import (
 )
 
 // Compile compiles a circuit and returns the constraint system
-func Compile(circuit *frontend.Circuit, opts ...frontend.CompileOption) (*constraint.ConstraintSystem, error) {
+func Compile(circuit *frontend.Circuit, opts ...frontend.CompileOption) (*constraint.ConstraintSystem, *groth16.ProvingKey, *groth16.VerifyingKey, error) {
 
 	cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, *circuit, opts...)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
-	return &cs, nil
+
+	pk, vk, err := groth16.Setup(cs)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return &cs, &pk, &vk, nil
 }
 
 // SetupAndSave compiles and stores a circuit

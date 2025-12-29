@@ -47,9 +47,9 @@ func (cr CircuitRegistry) LoadCircuit(ci *circuits.CircuitInfo) error {
 
 	return cr.Register(ci.Name, &Circuit{
 		Instance: &circuits.CircuitInstance{
-			CS:           cs,
-			ProvingKey:   pk,
-			VerifyingKey: vk,
+			CS:           &cs,
+			ProvingKey:   &pk,
+			VerifyingKey: &vk,
 			InputParser:  ci.InputParser,
 		},
 		Info: ci,
