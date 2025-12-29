@@ -48,7 +48,10 @@ func InitCircuit(ccsPath, pkPath, vkPath string, forceCompile bool, circuitTempl
 	}
 
 	// Check if all files exist
-	allFilesExist := fileExists(ccsPath) && fileExists(pkPath) && fileExists(vkPath)
+	ccsOk, _ := fileExists(ccsPath)
+	pkOk, _ := fileExists(pkPath)
+	vkOk, _ := fileExists(vkPath)
+	allFilesExist := ccsOk && pkOk && vkOk
 
 	if !allFilesExist || forceCompile {
 		fmt.Println("compiling the circuit")

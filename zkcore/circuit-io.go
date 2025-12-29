@@ -36,7 +36,7 @@ func SetupAndSave(circuitTemplate frontend.Circuit, ccsPath, pkPath, vkPath stri
 	fmt.Printf("[OK] Circuit compiled: %d constraints\n", ccs.GetNbConstraints())
 
 	// Save compiled circuit
-	ccsFile, err := os.Create(ccsPath)
+	ccsFile, err := SecureCreate(ccsPath)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func SetupAndSave(circuitTemplate frontend.Circuit, ccsPath, pkPath, vkPath stri
 	}
 
 	// Save proving key
-	pkFile, err := os.Create(pkPath)
+	pkFile, err := SecureCreate(pkPath)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func SetupAndSave(circuitTemplate frontend.Circuit, ccsPath, pkPath, vkPath stri
 	}
 
 	// Save verification key
-	vkFile, err := os.Create(vkPath)
+	vkFile, err := SecureCreate(vkPath)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func SetupAndSave(circuitTemplate frontend.Circuit, ccsPath, pkPath, vkPath stri
 // LoadSetup loads compiled ZK files
 func LoadSetup(ccsPath, pkPath, vkPath string) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey, error) {
 	// Load constraint system
-	ccsFile, err := os.Open(ccsPath)
+	ccsFile, err := SecureOpen(ccsPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -90,7 +90,7 @@ func LoadSetup(ccsPath, pkPath, vkPath string) (constraint.ConstraintSystem, gro
 	}
 
 	// Load proving key
-	pkFile, err := os.Open(pkPath)
+	pkFile, err := SecureOpen(pkPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -102,7 +102,7 @@ func LoadSetup(ccsPath, pkPath, vkPath string) (constraint.ConstraintSystem, gro
 	}
 
 	// Load verification key
-	vkFile, err := os.Open(vkPath)
+	vkFile, err := SecureOpen(vkPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -117,11 +117,21 @@ func LoadSetup(ccsPath, pkPath, vkPath string) (constraint.ConstraintSystem, gro
 	return ccs, pk, vk, nil
 }
 
+// validatePath validates that a path is safe to use (stays within working directory)
 func validatePath(path string) error {
 	// Get the current working directory (execution directory)
 	baseDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+	return validatePathWithBase(path, baseDir)
+}
+
+// validatePathWithBase validates a path against a specific base directory
+func validatePathWithBase(path, baseDir string) error {
+	// Check for empty path
+	if path == "" {
+		return fmt.Errorf("path cannot be empty")
 	}
 
 	// Clean the input path
@@ -132,11 +142,17 @@ func validatePath(path string) error {
 		return fmt.Errorf("absolute paths not allowed: %s", path)
 	}
 
+	// Get absolute base directory
+	absBase, err := filepath.Abs(baseDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve base directory: %w", err)
+	}
+
 	// Resolve to absolute path within base directory
-	absPath := filepath.Join(baseDir, cleanPath)
+	absPath := filepath.Join(absBase, cleanPath)
 
 	// Verify the path is still within base directory
-	relPath, err := filepath.Rel(baseDir, absPath)
+	relPath, err := filepath.Rel(absBase, absPath)
 	if err != nil {
 		return fmt.Errorf("failed to compute relative path: %w", err)
 	}
@@ -148,7 +164,7 @@ func validatePath(path string) error {
 
 	// Optional but recommended: Check symlinks
 	if evalPath, err := filepath.EvalSymlinks(absPath); err == nil {
-		evalRel, err := filepath.Rel(baseDir, evalPath)
+		evalRel, err := filepath.Rel(absBase, evalPath)
 		if err != nil || strings.HasPrefix(evalRel, ".."+string(filepath.Separator)) || evalRel == ".." {
 			return fmt.Errorf("path escapes via symlink: %s", path)
 		}
@@ -157,11 +173,35 @@ func validatePath(path string) error {
 	return nil
 }
 
+// getValidatedPath returns the validated absolute path
+func getValidatedPath(path string) (string, error) {
+	if err := validatePath(path); err != nil {
+		return "", err
+	}
+
+	baseDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	return filepath.Join(baseDir, filepath.Clean(path)), nil
+}
+
 // ensureDirectories creates all parent directories for the given file paths
 func ensureDirectories(paths ...string) error {
 	for _, path := range paths {
+		if err := validatePath(path); err != nil {
+			return fmt.Errorf("invalid path %s: %w", path, err)
+		}
+
 		dir := filepath.Dir(path)
-		if err := os.MkdirAll(dir, 0750); err != nil {
+		validDir, err := getValidatedPath(dir)
+		if err != nil {
+			return err
+		}
+
+		// #nosec G301 -- 0750 is intentionally chosen for directory permissions
+		if err := os.MkdirAll(validDir, 0750); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
@@ -169,12 +209,24 @@ func ensureDirectories(paths ...string) error {
 }
 
 // fileExists checks if a file exists and is not a directory
-func fileExists(path string) bool {
-	info, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false
+func fileExists(path string) (bool, error) {
+	if err := validatePath(path); err != nil {
+		return false, err
 	}
-	return err == nil && !info.IsDir()
+
+	validPath, err := getValidatedPath(path)
+	if err != nil {
+		return false, err
+	}
+
+	info, err := os.Stat(validPath)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return !info.IsDir(), nil
 }
 
 // safeRemove removes a file only if it exists and after thorough validation
@@ -184,14 +236,11 @@ func safeRemove(path string) error {
 		return err
 	}
 
-	// Get working directory for joining
-	baseDir, err := os.Getwd()
+	// Get validated full path
+	fullPath, err := getValidatedPath(path)
 	if err != nil {
-		return fmt.Errorf("failed to get working directory: %w", err)
+		return err
 	}
-
-	// Create full path
-	fullPath := filepath.Join(baseDir, filepath.Clean(path))
 
 	// Lstat (don't follow symlinks) to check what we're actually removing
 	info, err := os.Lstat(fullPath)
@@ -214,7 +263,7 @@ func safeRemove(path string) error {
 		return fmt.Errorf("refusing to remove special file: %s", path)
 	}
 
-	// Check file ownership/permissions
+	// Check file ownership/permissions on Unix systems
 	if runtime.GOOS != "windows" {
 		stat, ok := info.Sys().(*syscall.Stat_t)
 		uid := os.Getuid()
@@ -225,15 +274,116 @@ func safeRemove(path string) error {
 		}
 	}
 
-	// Final validation right before removal
-	if err := validatePath(path); err != nil {
-		return err
-	}
-
 	// Remove the file
 	if err := os.Remove(fullPath); err != nil {
 		return fmt.Errorf("failed to remove file %s: %w", path, err)
 	}
 
 	return nil
+}
+
+// SecureOpen opens a file for reading with path validation
+func SecureOpen(path string) (*os.File, error) {
+	if err := validatePath(path); err != nil {
+		return nil, err
+	}
+
+	validPath, err := getValidatedPath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// #nosec G304 -- path validated by validatePath
+	return os.Open(validPath)
+}
+
+// SecureCreate creates a file for writing with path validation and secure permissions
+func SecureCreate(path string) (*os.File, error) {
+	if err := validatePath(path); err != nil {
+		return nil, err
+	}
+
+	// Ensure parent directories exist
+	if err := ensureDirectories(path); err != nil {
+		return nil, err
+	}
+
+	validPath, err := getValidatedPath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create with secure permissions (0600 = rw-------)
+	// #nosec G304 -- path validated by validatePath
+	return os.OpenFile(validPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+}
+
+// SecureOpenFile opens a file with custom flags and permissions after validation
+func SecureOpenFile(path string, flag int, perm os.FileMode) (*os.File, error) {
+	if err := validatePath(path); err != nil {
+		return nil, err
+	}
+
+	validPath, err := getValidatedPath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// #nosec G304 -- path validated by validatePath
+	return os.OpenFile(validPath, flag, perm)
+}
+
+// SecureWriteFile writes data to a file with path validation
+func SecureWriteFile(path string, data []byte, perm os.FileMode) error {
+	if err := validatePath(path); err != nil {
+		return err
+	}
+
+	// Ensure parent directories exist
+	if err := ensureDirectories(path); err != nil {
+		return err
+	}
+
+	validPath, err := getValidatedPath(path)
+	if err != nil {
+		return err
+	}
+
+	// #nosec G306 -- caller controls permissions intentionally
+	return os.WriteFile(validPath, data, perm)
+}
+
+// SecureReadFile reads data from a file with path validation
+func SecureReadFile(path string) ([]byte, error) {
+	if err := validatePath(path); err != nil {
+		return nil, err
+	}
+
+	validPath, err := getValidatedPath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// #nosec G304 -- path validated by validatePath
+	return os.ReadFile(validPath)
+}
+
+// SecureAppend opens a file for appending with path validation
+func SecureAppend(path string) (*os.File, error) {
+	if err := validatePath(path); err != nil {
+		return nil, err
+	}
+
+	// Ensure parent directories exist
+	if err := ensureDirectories(path); err != nil {
+		return nil, err
+	}
+
+	validPath, err := getValidatedPath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// #nosec G304 -- path validated by validatePath
+	return os.OpenFile(validPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 }
