@@ -221,10 +221,10 @@ func TestPoP(t *testing.T) {
 		t.Fatalf("failed to create a challenge %v", err)
 	}
 
-	cDdigest := sha256.Sum256(challenge)
+	cDigest := sha256.Sum256(challenge)
 
 	// Sign the digest of the challenge
-	r, s, err := ecdsa.Sign(rand.Reader, signerKey, cDdigest[:])
+	r, s, err := ecdsa.Sign(rand.Reader, signerKey, cDigest[:])
 	if err != nil {
 		t.Fatalf("failed to sign the challenge %v", err)
 	}

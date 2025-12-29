@@ -13,7 +13,7 @@ type Secp256r1Fp = emulated.P256Fp
 // Secp256r1Fr field parameters
 type Secp256r1Fr = emulated.P256Fr
 
-// CircuitPK defines a ciruit that converts public key elements to octet strings
+// CircuitPK defines a circuit that converts public key elements to octet strings
 // and asserts equality with the provided octet string representation
 type CircuitPK struct {
 	// Secret inputs
