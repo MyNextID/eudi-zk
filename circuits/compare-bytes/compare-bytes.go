@@ -110,46 +110,6 @@ type CBVerifyResponse struct {
 }
 
 // ========================================================================
-// CIRCUIT REGISTRATION - Metadata for the framework
-// ========================================================================
-
-// CBInfo contains all metadata needed to register this circuit with the framework
-// This enables automatic API endpoint generation
-var CBInfo = &circuits.CircuitInfo{
-	// Circuit is a template instance with properly sized arrays
-	// BYTE_SIZE64 indicates this circuit handles up to 64 bytes
-	Circuit: &CBCircuit{
-		SecretBytes: make([]uints.U8, circuits.ByteSize64),
-		PublicBytes: make([]uints.U8, circuits.ByteSize64),
-	},
-
-	// Name is the circuit identifier used in API routes
-	// Typically becomes: POST /circuits/compare-bytes/prove
-	Name: "compare-bytes",
-
-	// Description explains what this circuit proves in plain language
-	Description: "Proves equality between a secret byte array and a public byte array without revealing the secret. Both inputs are decoded from base64url before comparison.",
-
-	// Version enables API versioning and backward compatibility
-	Version: 1,
-
-	// InputParser converts JSON API requests into circuit inputs
-	InputParser: &CBAPI{},
-
-	// EndpointInfo defines OpenAPI/Swagger documentation for auto-generated docs
-	EndpointInfo: &circuits.EndpointInfo{
-		Prove: circuits.Endpoints{
-			Request:  circuits.CreateSchemaInfo("application/json", CBProveRequest{}, nil),
-			Response: circuits.CreateSchemaInfo("application/json", CBProveResponse{}, nil),
-		},
-		Verify: circuits.Endpoints{
-			Request:  circuits.CreateSchemaInfo("application/json", CBVerifyRequest{}, nil),
-			Response: circuits.CreateSchemaInfo("application/json", CBVerifyResponse{}, nil),
-		},
-	},
-}
-
-// ========================================================================
 // INPUT PARSER - Converts API JSON to circuit format
 // ========================================================================
 
@@ -197,4 +157,44 @@ func (api *CBAPI) Parse(publicInputJSON, privateInputJSON []byte) (frontend.Circ
 		SecretBytes: zkcore.BytesToU8Array(privateBytesDecoded),
 		PublicBytes: zkcore.BytesToU8Array(publicBytesDecoded),
 	}, nil
+}
+
+// ========================================================================
+// CIRCUIT REGISTRATION - Metadata for the framework
+// ========================================================================
+
+// CBInfo contains all metadata needed to register this circuit with the framework
+// This enables automatic API endpoint generation
+var CBInfo = &circuits.CircuitInfo{
+	// Name is the circuit identifier used in API routes
+	// e.g., GET /circuits/compare-bytes, POST /prove/compare-bytes
+	Name: "compare-bytes",
+
+	// Circuit is a template instance with properly sized arrays
+	// BYTE_SIZE64 indicates this circuit handles up to 64 bytes
+	Circuit: &CBCircuit{
+		SecretBytes: make([]uints.U8, circuits.ByteSize64),
+		PublicBytes: make([]uints.U8, circuits.ByteSize64),
+	},
+
+	// Description explains what this circuit proves in plain language
+	Description: "Proves equality between a secret byte array and a public byte array without revealing the secret. Both inputs are decoded from base64url before comparison.",
+
+	// Version enables API versioning and backward compatibility
+	Version: 1,
+
+	// InputParser converts JSON API requests into circuit inputs
+	InputParser: &CBAPI{},
+
+	// EndpointInfo defines OpenAPI/Swagger documentation for auto-generated docs
+	EndpointInfo: &circuits.EndpointInfo{
+		Prove: circuits.Endpoints{
+			Request:  circuits.CreateSchemaInfo("application/json", CBProveRequest{}, nil),
+			Response: circuits.CreateSchemaInfo("application/json", CBProveResponse{}, nil),
+		},
+		Verify: circuits.Endpoints{
+			Request:  circuits.CreateSchemaInfo("application/json", CBVerifyRequest{}, nil),
+			Response: circuits.CreateSchemaInfo("application/json", CBVerifyResponse{}, nil),
+		},
+	},
 }
