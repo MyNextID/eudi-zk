@@ -1,16 +1,13 @@
 #!/bin/bash
-
 #
 # A simple script to test the endpoints
-#
+# Version: 2
 
 # Exit on error
 set -e
 
 # Proof creation and verification
-
 echo -e "=== ZK Proof Generation and Verification ===\n"
-
 
 # Validate input argument
 if [ -z "$1" ]; then
@@ -33,11 +30,18 @@ if ! jq empty "$input" 2>/dev/null; then
     exit 1
 fi
 
-echo "Input file: $input"
-echo -e "\n--- Generating Proof ---"
+# Extract circuit name from file path
+# Removes directory path and .json extension
+circuit_name=$(basename "$input" .json)
 
-# Generate proof
-prove_response=$(curl -s -X POST http://localhost:8080/prove/compare-bytes \
+echo "Input file: $input"
+echo "Circuit name: $circuit_name"
+echo
+
+echo -e "--- Generating Proof ---"
+
+# Generate proof using extracted circuit name
+prove_response=$(curl -s -X POST "http://localhost:8080/prove/${circuit_name}" \
   -H "Content-Type: application/json" \
   -d @"${input}")
 
@@ -61,7 +65,7 @@ echo
 echo -e "Step 2: Verifying proof..."
 
 # extract the public input
-public_input=$(jq .public payload.json)
+public_input=$(jq -c .public "${input}")
 echo $public_input
 
 cat > verify_payload.json <<EOF
@@ -75,8 +79,8 @@ echo "Verification payload:"
 cat verify_payload.json | jq '.'
 echo
 
-# Verify proof
-verify_response=$(curl -s -X POST http://localhost:8080/verify/compare-bytes \
+# Verify proof using extracted circuit name
+verify_response=$(curl -s -X POST "http://localhost:8080/verify/${circuit_name}" \
   -H "Content-Type: application/json" \
   -d @verify_payload.json)
 

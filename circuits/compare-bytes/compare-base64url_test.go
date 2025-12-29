@@ -1,6 +1,10 @@
 package ccb_test
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -14,37 +18,38 @@ import (
 	"github.com/mynextid/eudi-zk/zkcore"
 )
 
-func TestCompareBytes(t *testing.T) {
-	ccsPath := "compiled/cb-circuit-v1.ccs"
-	pkPath := "compiled/cb-proving-v1.key"
-	vkPath := "compiled/cb-verifying-v1.key"
-
+func TestCompareB64Url(t *testing.T) {
+	// == Circuit data ==
+	ccsPath := "compiled/cb-circuit-b64url-v1.ccs"
+	pkPath := "compiled/cb-proving-b64url-v1.key"
+	vkPath := "compiled/cb-verifying-b64url-v1.key"
+	// true: recompile, false: load circuit if exists
 	forceCompile := true
 
-	byteSize := 1024
-
-	randomBytes, err := zkcore.GenerateRandomBytes(byteSize)
+	// == Prepare the inputs ==
+	// Generate ES256 (P-256) key pair
+	signerKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		t.Error(err)
-	}
-	randomBytes2, err := zkcore.GenerateRandomBytes(byteSize)
-	if err != nil {
-		t.Error(err)
+		panic(fmt.Sprintf("Failed to generate key: %v", err))
 	}
 
-	circuitTemplate := &ccb.CBCircuit{
-		SecretBytes: make([]uints.U8, byteSize),
-		PublicBytes: make([]uints.U8, byteSize),
+	// Properly encode the public key in uncompressed format
+	// This ensures X and Y are always 32 bytes each
+	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.X, signerKey.Y)
+
+	pubKeyBytesDigest := sha256.Sum256(pubKeyBytes)
+	pubKeyBytesDigestB64 := []byte(base64.RawURLEncoding.EncodeToString([]byte(pubKeyBytesDigest[:])))
+
+	circuitTemplate := &ccb.CBB64UrlCircuit{
+		SecretBytes: make([]uints.U8, len(pubKeyBytesDigest)),
+		PublicBytes: make([]uints.U8, len(pubKeyBytesDigestB64)),
 	}
 
 	// Create witness assignment with actual values
-	assignment := &ccb.CBCircuit{
-		// Private inputs
-		SecretBytes: zkcore.BytesToU8Array(randomBytes),
-		// Public inputs
-		PublicBytes: zkcore.BytesToU8Array(randomBytes),
+	assignment := &ccb.CBB64UrlCircuit{
+		SecretBytes: zkcore.BytesToU8Array(pubKeyBytesDigest[:]),
+		PublicBytes: zkcore.BytesToU8Array(pubKeyBytesDigestB64),
 	}
-	_ = randomBytes2
 
 	// == Init the circuit ==
 	fmt.Println("\n--- Init the circuit ---")
@@ -60,10 +65,9 @@ func TestCompareBytes(t *testing.T) {
 
 	// == Run the circuit ==
 	zkcore.TestCircuit(assignment, ccs, pk, vk)
-
 }
 
-func TestCompareBytesV2(t *testing.T) {
+func TestCompareB64(t *testing.T) {
 
 	// TODO: the limit is set within the circuit but we don't check it explicitly
 	byteSize := 64
@@ -72,18 +76,20 @@ func TestCompareBytesV2(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	randomBytesB64 := make([]byte, base64.RawURLEncoding.EncodedLen(byteSize))
+	base64.RawURLEncoding.Encode(randomBytesB64, randomBytes)
 
-	zkc, err := circuits.Compile(ccb.CBInfo)
+	zkc, err := circuits.Compile(ccb.CBB64UrlInfo)
 	if err != nil {
 		t.Fatalf("zk circuit compilation failed: %v", err)
 	}
 
 	// Create witness assignment with actual values
-	assignment := &ccb.CBCircuit{
+	assignment := &ccb.CBB64UrlCircuit{
 		// Private inputs
 		SecretBytes: zkcore.BytesToU8Array(randomBytes),
 		// Public inputs
-		PublicBytes: zkcore.BytesToU8Array(randomBytes),
+		PublicBytes: zkcore.BytesToU8Array(randomBytesB64),
 	}
 
 	proof, err := zkc.Prove(assignment)
@@ -92,9 +98,9 @@ func TestCompareBytesV2(t *testing.T) {
 	}
 
 	// Create public witness assignment with actual values
-	assignmentPublic := &ccb.CBCircuit{
+	assignmentPublic := &ccb.CBB64UrlCircuit{
 		// Public inputs
-		PublicBytes: zkcore.BytesToU8Array(randomBytes),
+		PublicBytes: zkcore.BytesToU8Array(randomBytesB64),
 	}
 
 	err = zkc.Verify(assignmentPublic, proof)
@@ -104,7 +110,7 @@ func TestCompareBytesV2(t *testing.T) {
 
 }
 
-func TestCompareBytesAPI(t *testing.T) {
+func TestCompareB64API(t *testing.T) {
 
 	// TODO: the limit is set within the circuit but we don't check it explicitly
 	byteSize := 64
@@ -116,19 +122,19 @@ func TestCompareBytesAPI(t *testing.T) {
 		t.Error(err)
 	}
 
-	zkc, err := circuits.Compile(ccb.CBInfo)
+	zkc, err := circuits.Compile(ccb.CBB64UrlInfo)
 	if err != nil {
 		t.Fatalf("zk circuit compilation failed: %v", err)
 	}
 
 	randomBytesB64 := base64.RawURLEncoding.EncodeToString(randomBytes)
 
-	pvtIn := ccb.CBPrivateInput{
-		BytesB64Url: randomBytesB64,
+	pvtIn := ccb.CBB64UrlPrivateInput{
+		Bytes: randomBytesB64,
 	}
 	pvtInBuf, _ := json.Marshal(pvtIn)
-	pubIn := ccb.CBPublicInput{
-		BytesB64Url: randomBytesB64,
+	pubIn := ccb.CBB64UrlPublicInput{
+		Bytes: randomBytesB64,
 	}
 	pubInBuf, _ := json.Marshal(pubIn)
 

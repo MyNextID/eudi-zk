@@ -60,7 +60,7 @@ type CBPublicInput struct {
 }
 
 // CBPrivateInput defines the JSON structure for private inputs sent via API
-// This data is used only during proof generation and is NOT included in the proof
+// This data is known only to the prover
 type CBPrivateInput struct {
 	// BytesB64Url contains base64url encoded bytes that remain secret
 	// This is the witness - the secret value we're proving we know
@@ -163,7 +163,8 @@ func (api *CBAPI) Parse(publicInputJSON, privateInputJSON []byte) (frontend.Circ
 // CIRCUIT REGISTRATION - Metadata for the framework
 // ========================================================================
 
-// CBInfo contains all metadata needed to register this circuit with the framework
+// CBInfo contains all metadata needed to register this circuit with the
+// framework
 // This enables automatic API endpoint generation
 var CBInfo = &circuits.CircuitInfo{
 	// Name is the circuit identifier used in API routes
