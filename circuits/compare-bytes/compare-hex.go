@@ -6,6 +6,8 @@ import (
 	"github.com/mynextid/eudi-zk/zkcore"
 )
 
+// CircuitHex decodes a public hex encoded octet string and asserts equality
+// with the private octet string
 type CircuitHex struct {
 	// Secret input
 	Bytes []uints.U8 `gnark:",secret"`
@@ -14,6 +16,9 @@ type CircuitHex struct {
 	BytesHex []uints.U8 `gnark:",public"`
 }
 
+// Define defines the logic of the circuit
+// Step 1: Decode the hex encoded public input
+// Step 2: Assert equality between the decoded and secret octet string
 func (c *CircuitHex) Define(api frontend.API) error {
 
 	// decode hex

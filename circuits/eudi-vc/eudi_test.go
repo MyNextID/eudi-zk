@@ -49,7 +49,7 @@ func TestEUDI(t *testing.T) {
 
 	// Properly encode the public key in uncompressed format
 	// This ensures X and Y are always 32 bytes each
-	subPubKeyBytes := elliptic.Marshal(elliptic.P256(), subjectKey.PublicKey.X, subjectKey.PublicKey.Y)
+	subPubKeyBytes := elliptic.Marshal(elliptic.P256(), subjectKey.X, subjectKey.Y)
 
 	// Hash the encoded public key
 	pkDigest := sha256.Sum256(subPubKeyBytes)
@@ -218,10 +218,10 @@ func TestEUDI(t *testing.T) {
 		t.Fatalf("failed to create a challenge %v", err)
 	}
 
-	c_digest := sha256.Sum256(challenge)
+	cDigest := sha256.Sum256(challenge)
 
 	// Sign the digest of the challenge
-	r, s, err := ecdsa.Sign(rand.Reader, subjectKey, c_digest[:])
+	r, s, err := ecdsa.Sign(rand.Reader, subjectKey, cDigest[:])
 	if err != nil {
 		t.Fatalf("failed to sign the challenge %v", err)
 	}
@@ -242,8 +242,8 @@ func TestEUDI(t *testing.T) {
 		CertSigR:            emulated.ValueOf[Secp256r1Fr](certSig.R),
 		CertSigS:            emulated.ValueOf[Secp256r1Fr](certSig.S),
 		SubjectPubKeyPos:    frontend.Variable(pubKeyPosition),
-		SubjectPubKeyX:      emulated.ValueOf[Secp256r1Fp](subjectKey.PublicKey.X),
-		SubjectPubKeyY:      emulated.ValueOf[Secp256r1Fp](subjectKey.PublicKey.Y),
+		SubjectPubKeyX:      emulated.ValueOf[Secp256r1Fp](subjectKey.X),
+		SubjectPubKeyY:      emulated.ValueOf[Secp256r1Fp](subjectKey.Y),
 		ChallengeSignatureR: emulated.ValueOf[Secp256r1Fr](r),
 		ChallengeSignatureS: emulated.ValueOf[Secp256r1Fr](s),
 		JWSR:                emulated.ValueOf[Secp256r1Fr](jwsR),
@@ -253,10 +253,10 @@ func TestEUDI(t *testing.T) {
 		CnfB64Position:      cnfB64Index,
 		CnfKeyHexPosition:   pubKeyIndex,
 		Challenge:           zkcore.BytesToU8Array(challenge),
-		CAPubKeyX:           emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.X),
-		CAPubKeyY:           emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.Y),
-		IssuerPubKeyX:       emulated.ValueOf[Secp256r1Fp](issuerKey.PublicKey.X),
-		IssuerPubKeyY:       emulated.ValueOf[Secp256r1Fp](issuerKey.PublicKey.Y),
+		CAPubKeyX:           emulated.ValueOf[Secp256r1Fp](qtspKey.X),
+		CAPubKeyY:           emulated.ValueOf[Secp256r1Fp](qtspKey.Y),
+		IssuerPubKeyX:       emulated.ValueOf[Secp256r1Fp](issuerKey.X),
+		IssuerPubKeyY:       emulated.ValueOf[Secp256r1Fp](issuerKey.Y),
 		JWSPayload:          zkcore.StringToU8Array(payloadB64),
 	}
 

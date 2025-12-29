@@ -21,8 +21,8 @@ type CircuitPKDigest struct {
 func (c *CircuitPKDigest) Define(api frontend.API) error {
 
 	// public key to bytes
-	xBytes := EmulatedElementToBytes32(api, c.SignerPubKeyX)
-	yBytes := EmulatedElementToBytes32(api, c.SignerPubKeyY)
+	xBytes := zkcore.EmulatedElementToBytes32(api, c.SignerPubKeyX)
+	yBytes := zkcore.EmulatedElementToBytes32(api, c.SignerPubKeyY)
 
 	// Create the 0x04 prefix for uncompressed point
 	prefix := uints.NewU8(4)

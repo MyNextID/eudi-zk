@@ -125,7 +125,10 @@ func (c *CircuitEUDI) Define(api frontend.API) error {
 	// ===== STEP 8: Verify that the subject key == confirmation key ==
 	subjectPublicKeyDigest := zkcore.PublicKeyDigest(api, c.SubjectPubKeyX, c.SubjectPubKeyY)
 
-	zkcore.VerifyCnf(api, c.JWSProtected, c.CnfB64, c.CnfB64Position, c.CnfKeyHexPosition, subjectPublicKeyDigest)
+	err := zkcore.VerifyCnf(api, c.JWSProtected, c.CnfB64, c.CnfB64Position, c.CnfKeyHexPosition, subjectPublicKeyDigest)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

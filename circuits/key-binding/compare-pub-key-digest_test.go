@@ -12,7 +12,7 @@ func TestPubKeyHashCircuit_Define(t *testing.T) {
 
 	// Properly encode the public key in uncompressed format
 	// This ensures X and Y are always 32 bytes each
-	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.PublicKey.X, signerKey.PublicKey.Y)
+	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.X, signerKey.Y)
 
 	// Hash the encoded public key
 	pkDigest := sha256.Sum256(pubKeyBytes)
@@ -85,8 +85,8 @@ func TestPubKeyHashCircuit_Define(t *testing.T) {
 	// Create witness assignment with actual values
 	assignment := &ckb.PubKeyHashCircuit{
 		// Private inputs
-		SignerPubKeyX: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
-		SignerPubKeyY: emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.Y),
+		SignerPubKeyX: emulated.ValueOf[Secp256r1Fp](signerKey.X),
+		SignerPubKeyY: emulated.ValueOf[Secp256r1Fp](signerKey.Y),
 
 		// Public inputs
 		PubKeyHex: common.StringToU8Array(pkDigestHex),

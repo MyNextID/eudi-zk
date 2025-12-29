@@ -7,14 +7,15 @@ import (
 	"github.com/mynextid/eudi-zk/zkcore"
 )
 
-// Define Secp256r1 field parameters
+// Secp256r1Fp field parameters
 type Secp256r1Fp = emulated.P256Fp
+
+// Secp256r1Fr field parameters
 type Secp256r1Fr = emulated.P256Fr
 
 // CircuitSPK proves:
 // 1. I have a certificate with a subject public key
 // 2. Without revealing the certificate or the public key
-
 type CircuitSPK struct {
 	// ===== PRIVATE INPUTS (prover's secrets) =====
 

@@ -478,7 +478,7 @@ func generatePresentationID() string {
 }
 
 // rawInputsToWitness converts raw field element strings to gnark witness
-func rawInputsToWitness(rawInputs []string, curve ecc.ID) (witness.Witness, error) {
+func rawInputsToWitness(_ []string, _ ecc.ID) (witness.Witness, error) {
 	// This is circuit-specific and needs to be implemented based on your circuit
 	// The raw inputs should be field elements as decimal or hex strings
 	// that match the public input ordering of your circuit

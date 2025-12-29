@@ -6,7 +6,7 @@ import (
 	"github.com/mynextid/eudi-zk/zkcore"
 )
 
-// Circuit checks whether the Subset is a subset of the Bytes
+// CircuitCompareSubset checks whether the Subset is a subset of the Bytes
 type CircuitCompareSubset struct {
 	// Secret input
 	Bytes         []uints.U8        `gnark:",secret"`
@@ -16,6 +16,7 @@ type CircuitCompareSubset struct {
 	Subset []uints.U8 `gnark:",public"`
 }
 
+// Define implements the ZK circuit logic
 func (c *CircuitCompareSubset) Define(api frontend.API) error {
 
 	return zkcore.IsSubset(api, c.Bytes, c.Subset, c.PositionStart)

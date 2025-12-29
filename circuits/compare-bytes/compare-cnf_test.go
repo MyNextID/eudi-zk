@@ -35,7 +35,7 @@ func TestCircuitCompareCnf(t *testing.T) {
 
 	// Properly encode the public key in uncompressed format
 	// This ensures X and Y are always 32 bytes each
-	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.PublicKey.X, signerKey.PublicKey.Y)
+	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.X, signerKey.Y)
 
 	pubKeyBytesDigest := sha256.Sum256(pubKeyBytes)
 	pubKeyBytesDigestHex := hex.EncodeToString(pubKeyBytesDigest[:])

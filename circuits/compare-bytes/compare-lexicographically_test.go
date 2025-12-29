@@ -22,9 +22,9 @@ func TestCircuitLex(t *testing.T) {
 	smaller := []byte("2023-09-11")
 	greater := []byte("2024-09-21")
 	equal := reference
-	fmt.Println(reference)
-	fmt.Println(smaller)
-	fmt.Println(greater)
+	fmt.Printf("%x", reference)
+	fmt.Printf("%x", smaller)
+	fmt.Printf("%x", greater)
 
 	circuitTemplate := &ccb.CircuitLex{
 		StringReferenceBytes: make([]uints.U8, len(reference)),

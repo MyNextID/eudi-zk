@@ -98,10 +98,10 @@ func TestPoPCA(t *testing.T) {
 		t.Fatalf("failed to create a challenge %v", err)
 	}
 
-	c_digest := sha256.Sum256(challenge)
+	cDigest := sha256.Sum256(challenge)
 
 	// Sign the digest of the challenge
-	r, s, err := ecdsa.Sign(rand.Reader, signerKey, c_digest[:])
+	r, s, err := ecdsa.Sign(rand.Reader, signerKey, cDigest[:])
 	if err != nil {
 		t.Fatalf("failed to sign the challenge %v", err)
 	}
@@ -119,13 +119,13 @@ func TestPoPCA(t *testing.T) {
 		CertSigR:            emulated.ValueOf[Secp256r1Fr](certSig.R),
 		CertSigS:            emulated.ValueOf[Secp256r1Fr](certSig.S),
 		SubjectPubKeyPos:    frontend.Variable(pubKeyPosition),
-		SignerPubKeyX:       emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
-		SignerPubKeyY:       emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.Y),
+		SignerPubKeyX:       emulated.ValueOf[Secp256r1Fp](signerKey.X),
+		SignerPubKeyY:       emulated.ValueOf[Secp256r1Fp](signerKey.Y),
 		ChallengeSignatureR: emulated.ValueOf[Secp256r1Fr](r),
 		ChallengeSignatureS: emulated.ValueOf[Secp256r1Fr](s),
 		Challenge:           zkcore.BytesToU8Array(challenge),
-		CAPubKeyX:           emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.X),
-		CAPubKeyY:           emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.Y),
+		CAPubKeyX:           emulated.ValueOf[Secp256r1Fp](qtspKey.X),
+		CAPubKeyY:           emulated.ValueOf[Secp256r1Fp](qtspKey.Y),
 	}
 
 	// == Init the circuit ==
@@ -221,10 +221,10 @@ func TestPoP(t *testing.T) {
 		t.Fatalf("failed to create a challenge %v", err)
 	}
 
-	c_digest := sha256.Sum256(challenge)
+	cDdigest := sha256.Sum256(challenge)
 
 	// Sign the digest of the challenge
-	r, s, err := ecdsa.Sign(rand.Reader, signerKey, c_digest[:])
+	r, s, err := ecdsa.Sign(rand.Reader, signerKey, cDdigest[:])
 	if err != nil {
 		t.Fatalf("failed to sign the challenge %v", err)
 	}
@@ -240,8 +240,8 @@ func TestPoP(t *testing.T) {
 		CertBytes:           zkcore.BytesToU8Array(certDER),
 		CertLength:          frontend.Variable(len(certDER)),
 		SubjectPubKeyPos:    frontend.Variable(pubKeyPosition),
-		SignerPubKeyX:       emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
-		SignerPubKeyY:       emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.Y),
+		SignerPubKeyX:       emulated.ValueOf[Secp256r1Fp](signerKey.X),
+		SignerPubKeyY:       emulated.ValueOf[Secp256r1Fp](signerKey.Y),
 		ChallengeSignatureR: emulated.ValueOf[Secp256r1Fr](r),
 		ChallengeSignatureS: emulated.ValueOf[Secp256r1Fr](s),
 		Challenge:           zkcore.BytesToU8Array(challenge),
@@ -278,7 +278,7 @@ func TestSubjectPublicKey(t *testing.T) {
 		panic(fmt.Sprintf("Failed to generate key: %v", err))
 	}
 
-	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.PublicKey.X, signerKey.PublicKey.Y)
+	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.X, signerKey.Y)
 
 	// == Crate the x509 cert ==
 	// Generate certificate issuer (QTSP) key pair

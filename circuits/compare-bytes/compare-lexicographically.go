@@ -6,6 +6,7 @@ import (
 	"github.com/mynextid/eudi-zk/zkcore"
 )
 
+// CircuitLex performs a lexicographical comparison between two octet string -- assumptions, inputs are utf-8 encoded
 type CircuitLex struct {
 	// Reference string
 	StringReferenceBytes []uints.U8 `gnark:",secret"`
@@ -21,6 +22,7 @@ type CircuitLex struct {
 	Zero     frontend.Variable `gnark:",secret"`
 }
 
+// Define defines the circuit logic
 func (c *CircuitLex) Define(api frontend.API) error {
 
 	r, _ := zkcore.IsSmaller(api, c.StringSmallerBytes, c.StringReferenceBytes)
