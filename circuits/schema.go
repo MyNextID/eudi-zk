@@ -1,12 +1,16 @@
 package circuits
 
+// JSON schema from GO structs to display requests/responses in a human-readable
+// way
+
 import (
 	"reflect"
 	"strings"
 	"time"
 )
 
-// CreateSchemaInfo creates SchemaInfo from a struct type with example
+// CreateSchemaInfo creates SchemaInfo from a GO struct type with an optional
+// example
 func CreateSchemaInfo(contentType string, structType any, example any) *SchemaInfo {
 	return &SchemaInfo{
 		ContentType: contentType,
@@ -130,7 +134,7 @@ func GenerateSchema(v any) map[string]any {
 // getJSONType converts Go type to JSON schema type
 func getJSONType(t reflect.Type) string {
 	// Handle pointer types
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 

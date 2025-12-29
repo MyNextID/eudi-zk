@@ -10,6 +10,12 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
+// Circuit holds information about circuits
+type Circuit struct {
+	Instance *CircuitInstance
+	Info     *CircuitInfo
+}
+
 // CircuitInstance with loaded constraint system and proving and public verifying keys
 type CircuitInstance struct {
 	CS           constraint.ConstraintSystem

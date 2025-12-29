@@ -1,4 +1,4 @@
-// Package common contains common ZK circuit functions
+// Package zkcore contains common ZK circuit functions
 package zkcore
 
 import (
@@ -15,6 +15,16 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 )
+
+// Compile compiles a circuit and returns the constraint system
+func Compile(circuit *frontend.Circuit, opts ...frontend.CompileOption) (*constraint.ConstraintSystem, error) {
+
+	cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, *circuit, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &cs, nil
+}
 
 // SetupAndSave compiles and stores a circuit
 func SetupAndSave(circuitTemplate frontend.Circuit, ccsPath, pkPath, vkPath string) error {
