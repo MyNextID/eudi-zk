@@ -107,6 +107,7 @@ func TestCompareBytesAPI(t *testing.T) {
 
 	// TODO: the limit is set within the circuit but we don't check it explicitly
 	byteSize := 64
+	saveExamplePayload := true
 
 	// Generate inputs
 	randomBytes, err := zkcore.GenerateRandomBytes(byteSize)
@@ -140,6 +141,19 @@ func TestCompareBytesAPI(t *testing.T) {
 	err = zkc.VerifyWithJSON(pubInBuf, proof)
 	if err != nil {
 		t.Fatalf("failed to verify a proof: %v", err)
+	}
+
+	// save the sample payload
+	if saveExamplePayload {
+		proveRequest := circuits.Request{
+			Private: pvtIn,
+			Public:  pubIn,
+		}
+
+		err = proveRequest.Save("examples/compare-bytes-prove.json")
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 }

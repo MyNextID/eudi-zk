@@ -28,8 +28,8 @@ func NewServer(registry *CircuitRegistry) *Server {
 
 // ProveRequest represents a proof generation request
 type ProveRequest struct {
-	PublicInput  json.RawMessage `json:"public_input"`
-	PrivateInput json.RawMessage `json:"private_input"`
+	PublicInput  json.RawMessage `json:"public"`
+	PrivateInput json.RawMessage `json:"private"`
 }
 
 // ProveResponse represents a proof generation response
@@ -40,7 +40,7 @@ type ProveResponse struct {
 
 // VerifyRequest represents a proof verification request
 type VerifyRequest struct {
-	PublicInput json.RawMessage `json:"public_input"`
+	PublicInput json.RawMessage `json:"public"`
 	Proof       string          `json:"proof"` // base64 encoded
 }
 
@@ -177,7 +177,7 @@ func (s *Server) HandleProve(w http.ResponseWriter, r *http.Request) {
 	// Validate inputs
 	if len(req.PublicInput) == 0 || len(req.PrivateInput) == 0 {
 		respondError(w, http.StatusBadRequest, "missing_input",
-			"both public_input and private_input are required")
+			"both public and private_input are required")
 		return
 	}
 
@@ -190,7 +190,7 @@ func (s *Server) HandleProve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Encode proof as base64
-	proofB64 := base64.StdEncoding.EncodeToString(proofBytes)
+	proofB64 := base64.RawURLEncoding.EncodeToString(proofBytes)
 
 	duration := time.Since(start).String()
 	respondJSON(w, http.StatusOK, ProveResponse{
@@ -237,12 +237,12 @@ func (s *Server) HandleVerify(w http.ResponseWriter, r *http.Request) {
 	// Validate inputs
 	if len(req.PublicInput) == 0 || req.Proof == "" {
 		respondError(w, http.StatusBadRequest, "missing_input",
-			"both public_input and proof are required")
+			"both public and proof are required")
 		return
 	}
 
 	// Decode proof from base64
-	proofBytes, err := base64.StdEncoding.DecodeString(req.Proof)
+	proofBytes, err := base64.RawURLEncoding.DecodeString(req.Proof)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "invalid_proof_encoding",
 			fmt.Sprintf("failed to decode proof: %v", err))
