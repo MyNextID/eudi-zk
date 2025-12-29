@@ -64,6 +64,7 @@ type CircuitInfoResponse struct {
 	Version      uint                   `json:"version"`
 	Loaded       bool                   `json:"loaded"`
 	EndpointInfo *circuits.EndpointInfo `json:"methods,omitempty"`
+	Links        map[string]string      `json:"links,omitempty"`
 }
 
 // CircuitListResponse represents a list of circuits
@@ -136,7 +137,34 @@ func (s *Server) HandleGetCircuit(w http.ResponseWriter, r *http.Request) {
 		Version:      info.Version,
 		Loaded:       err == nil,
 		EndpointInfo: info.EndpointInfo,
+		Links: map[string]string{
+			"id": fmt.Sprintf("/circuits/%s/id", circuitName),
+		},
 	})
+}
+
+// HandleGetCircuitID returns circuit ID info
+func (s *Server) HandleGetCircuitID(w http.ResponseWriter, r *http.Request) {
+	circuitName := chi.URLParam(r, "circuit")
+
+	if circuitName == "" {
+		respondError(w, http.StatusBadRequest, "invalid_request", "circuit name is required")
+		return
+	}
+
+	c, err := s.registry.Get(circuitName)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "circuit_not_found", "circuit not found")
+		return
+	}
+
+	id, err := c.ID()
+	if err != nil {
+		respondError(w, http.StatusServiceUnavailable, "circuit_id_not_defined", "circuit ID not defined")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, id)
 }
 
 // HandleProve handles proof generation requests

@@ -2,6 +2,9 @@ package circuits
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -25,12 +28,52 @@ type CircuitInstance struct {
 	InputParser  InputParser
 }
 
-// PublicCircuitParams with the constraint system and public verifying keys
-// type PublicCircuitParams struct {
-// 	CS           *constraint.ConstraintSystem
-// 	VerifyingKey *groth16.VerifyingKey
-// 	InputParser  InputParser
-// }
+// CircuitID contains public circuit information
+type CircuitID struct {
+	ID           string `json:"id"`
+	ProvingKey   string `json:"provingKey"`
+	VerifyingKey string `json:"verifyingKey"`
+}
+
+// ID returns circuit fingerprint: H(circuit):H(proving-key):H(verifying-key) where H is hex encoded SHA256 hash of the payload
+func (c Circuit) ID() (*CircuitID, error) {
+
+	var csBuf bytes.Buffer
+	_, err := (*c.Instance.CS).WriteTo(&csBuf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write constrain system to buffer: %v", err)
+	}
+	csFp := fingerprintHex(csBuf.Bytes())
+
+	var pkBuf bytes.Buffer
+	_, err = (*c.Instance.ProvingKey).WriteTo(&pkBuf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write proving key to buffer: %v", err)
+	}
+	pkB64 := base64.RawURLEncoding.EncodeToString(pkBuf.Bytes())
+	pkFp := fingerprintHex(pkBuf.Bytes())
+
+	var vkBuf bytes.Buffer
+	_, err = (*c.Instance.VerifyingKey).WriteTo(&vkBuf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write  key to buffer: %v", err)
+	}
+	vkB64 := base64.RawURLEncoding.EncodeToString(vkBuf.Bytes())
+	vkFp := fingerprintHex(vkBuf.Bytes())
+
+	fp := fmt.Sprintf("%s:%s:%s", csFp, pkFp, vkFp)
+
+	return &CircuitID{
+		ID:           fp,
+		ProvingKey:   pkB64,
+		VerifyingKey: vkB64,
+	}, nil
+}
+
+func fingerprintHex(in []byte) string {
+	digest := sha256.Sum256(in)
+	return hex.EncodeToString(digest[:])
+}
 
 // Compile compiles and sets up a circuit from the CircuitInfo
 func Compile(ci *CircuitInfo) (*Circuit, error) {
@@ -114,21 +157,6 @@ func (c Circuit) Verify(assignment frontend.Circuit, proof []byte) error {
 	return nil
 }
 
-// // Verify verifies a proof for the given circuit and input params
-// func (c PublicCircuitParams) Verify(assignment frontend.Circuit, proof groth16.Proof) error {
-//
-// 	pw, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
-// 	if err != nil {
-// 		return fmt.Errorf("witness creation failed: %v", err)
-// 	}
-//
-// 	err = groth16.Verify(proof, *c.VerifyingKey, pw)
-// 	if err != nil {
-// 		return fmt.Errorf("proof verification failed: %v", err)
-// 	}
-// 	return nil
-// }
-
 // ProveWithJSON generates a proof from JSON inputs
 func (c Circuit) ProveWithJSON(publicInput, privateInput []byte) ([]byte, error) {
 
@@ -162,23 +190,3 @@ func (c *CircuitInstance) ProveWithJSON(publicInput, privateInput []byte) ([]byt
 
 	return c.Prove(assignment)
 }
-
-// // VerifyWithJSON verifies a proof using JSON public input
-// func (c PublicCircuitParams) VerifyWithJSON(publicInput, proofBytes []byte) error {
-//
-// 	// Parse only public input (pass empty private input)
-// 	assignment, err := c.InputParser.Parse(publicInput, []byte("{}"))
-// 	if err != nil {
-// 		return fmt.Errorf("failed to parse public input: %w", err)
-// 	}
-//
-// 	proof := groth16.NewProof(ecc.BN254)
-// 	buf := bytes.NewReader(proofBytes)
-// 	_, err = proof.ReadFrom(buf)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to parse the proof: %w", err)
-// 	}
-//
-// 	return c.Verify(assignment, proof)
-// }
-//

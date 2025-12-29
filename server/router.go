@@ -43,6 +43,7 @@ func setupRouter(server *api.Server, cfg *Config, logger Logger) *chi.Mux {
 	// Circuit info
 	r.Get("/circuits", server.HandleListCircuits)
 	r.Get("/circuits/{circuit}", server.HandleGetCircuit)
+	r.Get("/circuits/{circuit}/id", server.HandleGetCircuitID)
 
 	// Proof operations
 	r.Post("/prove/{circuit}", server.HandleProve)
