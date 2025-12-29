@@ -19,6 +19,8 @@ type DiscoveryResponse struct {
 type ServiceInfo struct {
 	Name        string `json:"name"`
 	Version     string `json:"version"`
+	Repository  string `json:"repository"`
+	License     string `json:"license"`
 	Commit      string `json:"commit"`
 	Description string `json:"description"`
 	Environment string `json:"environment,omitempty"`
@@ -78,58 +80,40 @@ func (s *Server) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Calculate circuits summary
-	totalCircuits := len(CircuitList)
-	loadedCircuits := len(s.registry.circuits)
-	availableNames := make([]string, 0, totalCircuits)
-	for name := range CircuitList {
-		availableNames = append(availableNames, name)
-	}
-
 	// Build discovery response
 	discovery := DiscoveryResponse{
 		Service: ServiceInfo{
 			Name:        "ZKPI",
 			Description: "Zero-knowledge proof generation and verification service for digital identity frameworks",
+			Repository:  "https://github.com/mynextid/eudi-zk",
+			License:     "https://raw.githubusercontent.com/MyNextID/eudi-zk/refs/heads/main/LICENSE",
 			Version:     Version,
 			Commit:      Commit,
 			Uptime:      time.Since(serverStartTime).Round(time.Second).String(),
 			GoVersion:   runtime.Version(),
 		},
 		Links: map[string]string{
-			"repository": "https://github.com/mynextid/eudi-zk",
-			"discovery":  "/",
-			"circuits":   "/circuits",
-			"health":     "/health",
+			"discovery": "/",
+			"circuits":  "/circuits",
+			"prove":     "/prove",
+			"verify":    "/verify",
+			"health":    "/health",
 		},
 		Endpoints: map[string]EndpointInfo{
 			"discovery": {
 				Description: "API discovery and documentation endpoint",
 				Path:        "/",
 				Methods:     []string{"GET"},
-				Response: &ResponseInfo{
-					ContentType: "application/json",
-				},
 			},
 			"health": {
 				Description: "Health check endpoint for monitoring",
 				Path:        "/health",
 				Methods:     []string{"GET"},
-				Response: &ResponseInfo{
-					ContentType: "application/json",
-					Example: map[string]string{
-						"status": "healthy",
-						"time":   time.Now().Format(time.RFC3339),
-					},
-				},
 			},
-			"list_circuits": {
+			"circuits": {
 				Description: "List all available zero-knowledge circuits",
 				Path:        "/circuits",
 				Methods:     []string{"GET"},
-				Response: &ResponseInfo{
-					ContentType: "application/json",
-				},
 			},
 			"get_circuit": {
 				Description: "Get information about a specific circuit",
@@ -143,14 +127,6 @@ func (s *Server) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 						Required:    true,
 						Type:        "string",
 						Example:     "compare-bytes",
-					},
-				},
-				Response: &ResponseInfo{
-					ContentType: "application/json",
-					Example: map[string]any{
-						"name":    "compare-bytes",
-						"version": 1,
-						"loaded":  true,
 					},
 				},
 			},
@@ -184,11 +160,6 @@ func (s *Server) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-		},
-		Circuits: CircuitsSummary{
-			Total:     totalCircuits,
-			Loaded:    loadedCircuits,
-			Available: availableNames,
 		},
 	}
 
