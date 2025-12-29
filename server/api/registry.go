@@ -10,13 +10,7 @@ import (
 // CircuitRegistry stores compiled circuits by name
 type CircuitRegistry struct {
 	dir      string // circuit directory
-	circuits map[string]*Circuit
-}
-
-// Circuit holds information about circuits
-type Circuit struct {
-	Instance *circuits.CircuitInstance
-	Info     *circuits.CircuitInfo
+	circuits map[string]*circuits.Circuit
 }
 
 // LoadAll loads all the registered circuits. Note: the circuits must be compiled to be loaded correctly
@@ -45,7 +39,7 @@ func (cr CircuitRegistry) LoadCircuit(ci *circuits.CircuitInfo) error {
 		return fmt.Errorf("failed to load the circuit: %v", err)
 	}
 
-	return cr.Register(ci.Name, &Circuit{
+	return cr.Register(ci.Name, &circuits.Circuit{
 		Instance: &circuits.CircuitInstance{
 			CS:           &cs,
 			ProvingKey:   &pk,
@@ -61,7 +55,7 @@ func NewCircuitRegistry(dir string) (*CircuitRegistry, error) {
 	// Create a new circuit
 	cr := &CircuitRegistry{
 		dir:      dir,
-		circuits: make(map[string]*Circuit),
+		circuits: make(map[string]*circuits.Circuit),
 	}
 
 	// load known circuits
@@ -74,7 +68,7 @@ func NewCircuitRegistry(dir string) (*CircuitRegistry, error) {
 }
 
 // Get returns a circuit by name
-func (cr *CircuitRegistry) Get(name string) (*Circuit, error) {
+func (cr *CircuitRegistry) Get(name string) (*circuits.Circuit, error) {
 	if c, ok := cr.circuits[name]; ok {
 		return c, nil
 	}
@@ -82,7 +76,7 @@ func (cr *CircuitRegistry) Get(name string) (*Circuit, error) {
 }
 
 // Register registers a new circuit by user-defined name
-func (cr *CircuitRegistry) Register(name string, circuit *Circuit) error {
+func (cr *CircuitRegistry) Register(name string, circuit *circuits.Circuit) error {
 	if _, ok := cr.circuits[name]; ok {
 		return fmt.Errorf("circuit with name %s already exists", name)
 	}

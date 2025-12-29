@@ -17,6 +17,21 @@ type Circuit struct {
 	Info     *CircuitInfo
 }
 
+// CircuitInstance with loaded constraint system and proving and public verifying keys
+type CircuitInstance struct {
+	CS           *constraint.ConstraintSystem
+	ProvingKey   *groth16.ProvingKey
+	VerifyingKey *groth16.VerifyingKey
+	InputParser  InputParser
+}
+
+// PublicCircuitParams with the constraint system and public verifying keys
+// type PublicCircuitParams struct {
+// 	CS           *constraint.ConstraintSystem
+// 	VerifyingKey *groth16.VerifyingKey
+// 	InputParser  InputParser
+// }
+
 // Compile compiles and sets up a circuit from the CircuitInfo
 func Compile(ci *CircuitInfo) (*Circuit, error) {
 
@@ -36,34 +51,19 @@ func Compile(ci *CircuitInfo) (*Circuit, error) {
 	}, nil
 }
 
-// CircuitInstance with loaded constraint system and proving and public verifying keys
-type CircuitInstance struct {
-	CS           *constraint.ConstraintSystem
-	ProvingKey   *groth16.ProvingKey
-	VerifyingKey *groth16.VerifyingKey
-	InputParser  InputParser
-}
-
-// PublicCircuitParams with the constraint system and public verifying keys
-type PublicCircuitParams struct {
-	CS           *constraint.ConstraintSystem
-	VerifyingKey *groth16.VerifyingKey
-	InputParser  InputParser
-}
-
 // Parser returns the circuit instance parser
 func (c CircuitInstance) Parser() InputParser {
 	return c.InputParser
 }
 
-// Public returns public circuit params
-func (c CircuitInstance) Public() PublicCircuitParams {
-	return PublicCircuitParams{
-		CS:           c.CS,
-		InputParser:  c.InputParser,
-		VerifyingKey: c.VerifyingKey,
-	}
-}
+// // Public returns public circuit params
+// func (c CircuitInstance) Public() PublicCircuitParams {
+// 	return PublicCircuitParams{
+// 		CS:           c.CS,
+// 		InputParser:  c.InputParser,
+// 		VerifyingKey: c.VerifyingKey,
+// 	}
+// }
 
 // Prove function creates a ZK proof for the circuit instance and the input parameters
 func (c CircuitInstance) Prove(assignment frontend.Circuit) ([]byte, error) {
@@ -114,20 +114,20 @@ func (c Circuit) Verify(assignment frontend.Circuit, proof []byte) error {
 	return nil
 }
 
-// Verify verifies a proof for the given circuit and input params
-func (c PublicCircuitParams) Verify(assignment frontend.Circuit, proof groth16.Proof) error {
-
-	pw, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
-	if err != nil {
-		return fmt.Errorf("witness creation failed: %v", err)
-	}
-
-	err = groth16.Verify(proof, *c.VerifyingKey, pw)
-	if err != nil {
-		return fmt.Errorf("proof verification failed: %v", err)
-	}
-	return nil
-}
+// // Verify verifies a proof for the given circuit and input params
+// func (c PublicCircuitParams) Verify(assignment frontend.Circuit, proof groth16.Proof) error {
+//
+// 	pw, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
+// 	if err != nil {
+// 		return fmt.Errorf("witness creation failed: %v", err)
+// 	}
+//
+// 	err = groth16.Verify(proof, *c.VerifyingKey, pw)
+// 	if err != nil {
+// 		return fmt.Errorf("proof verification failed: %v", err)
+// 	}
+// 	return nil
+// }
 
 // ProveWithJSON generates a proof from JSON inputs
 func (c Circuit) ProveWithJSON(publicInput, privateInput []byte) ([]byte, error) {
@@ -163,21 +163,22 @@ func (c *CircuitInstance) ProveWithJSON(publicInput, privateInput []byte) ([]byt
 	return c.Prove(assignment)
 }
 
-// VerifyWithJSON verifies a proof using JSON public input
-func (c PublicCircuitParams) VerifyWithJSON(publicInput, proofBytes []byte) error {
-
-	// Parse only public input (pass empty private input)
-	assignment, err := c.InputParser.Parse(publicInput, []byte("{}"))
-	if err != nil {
-		return fmt.Errorf("failed to parse public input: %w", err)
-	}
-
-	proof := groth16.NewProof(ecc.BN254)
-	buf := bytes.NewReader(proofBytes)
-	_, err = proof.ReadFrom(buf)
-	if err != nil {
-		return fmt.Errorf("failed to parse the proof: %w", err)
-	}
-
-	return c.Verify(assignment, proof)
-}
+// // VerifyWithJSON verifies a proof using JSON public input
+// func (c PublicCircuitParams) VerifyWithJSON(publicInput, proofBytes []byte) error {
+//
+// 	// Parse only public input (pass empty private input)
+// 	assignment, err := c.InputParser.Parse(publicInput, []byte("{}"))
+// 	if err != nil {
+// 		return fmt.Errorf("failed to parse public input: %w", err)
+// 	}
+//
+// 	proof := groth16.NewProof(ecc.BN254)
+// 	buf := bytes.NewReader(proofBytes)
+// 	_, err = proof.ReadFrom(buf)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to parse the proof: %w", err)
+// 	}
+//
+// 	return c.Verify(assignment, proof)
+// }
+//

@@ -250,7 +250,7 @@ func (s *Server) HandleVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify proof
-	err = circuit.Instance.Public().VerifyWithJSON(req.PublicInput, proofBytes)
+	err = circuit.VerifyWithJSON(req.PublicInput, proofBytes)
 
 	duration := time.Since(start).String()
 	response := VerifyResponse{
