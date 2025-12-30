@@ -22,13 +22,14 @@ const (
 
 // CircuitInfo contains a list of circuits
 type CircuitInfo struct {
-	Circuit      frontend.Circuit
-	Dir          string
-	Name         string `json:"name"`
-	Description  string `json:"description"`
-	Version      uint   `json:"version"`
-	InputParser  InputParser
-	EndpointInfo *EndpointInfo `json:"methods"`
+	Circuit         frontend.Circuit
+	Dir             string
+	Name            string `json:"name"`
+	Description     string `json:"description"`
+	LongDescription string `json:"longDescription"`
+	Version         uint   `json:"version"`
+	InputParser     InputParser
+	EndpointInfo    *EndpointInfo `json:"methods"`
 }
 
 // Compile compiles a circuit and stores the circuit information locally

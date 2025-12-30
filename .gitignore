@@ -49,3 +49,4 @@ scripts/verify_payload.json
 .DS_Store
 examples
 compiled
+circuits/boilerplate/circuit.go

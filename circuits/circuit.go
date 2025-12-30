@@ -139,9 +139,13 @@ func (c Circuit) Prove(assignment frontend.Circuit) ([]byte, error) {
 // Verify verifies a proof for the given circuit and input params
 func (c Circuit) Verify(assignment frontend.Circuit, proof []byte) error {
 
-	pw, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
+	w, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
 	if err != nil {
 		return fmt.Errorf("witness creation failed: %v", err)
+	}
+	pw, err := w.Public()
+	if err != nil {
+		return fmt.Errorf("public witness creation failed: %v", err)
 	}
 
 	p := groth16.NewProof(ecc.BN254)
@@ -172,7 +176,7 @@ func (c Circuit) ProveWithJSON(publicInput, privateInput []byte) ([]byte, error)
 func (c Circuit) VerifyWithJSON(publicInput, proof []byte) error {
 
 	// Parse only public input (pass empty private input)
-	assignment, err := c.Instance.InputParser.Parse(publicInput, []byte("{}"))
+	assignment, err := c.Instance.InputParser.Parse(publicInput, nil)
 	if err != nil {
 		return fmt.Errorf("failed to parse public input: %w", err)
 	}

@@ -496,6 +496,95 @@ func VerifyJWS(api frontend.API, protected []uints.U8, payload []uints.U8, publi
 
 }
 
+// AssertIsSubset verifies if the subset is a subset of bytes
+func AssertIsSubset(api frontend.API, bytes, subset []uints.U8, positionStart frontend.Variable) {
+	bytesAPI, _ := uints.NewBytes(api)
+	matchedCount := frontend.Variable(0)
+
+	// For each position in bytes
+	for byteIndex := range bytes {
+		// Convert byteIndex to frontend.Variable for comparison
+		currentPos := frontend.Variable(byteIndex)
+
+		// Check if current position matches positionStart + matchedCount
+		isAtMatchPosition := api.IsZero(api.Sub(currentPos, api.Add(positionStart, matchedCount)))
+
+		// Check if we haven't matched all subset bytes yet
+		hasMoreToMatch := api.Sub(1, api.IsZero(api.Sub(matchedCount, len(subset))))
+
+		// Only match if at correct position AND haven't finished matching
+		isAtMatchPosition = api.Mul(isAtMatchPosition, hasMoreToMatch)
+
+		// For each possible index in subset
+		for subsetIndex := range subset {
+			// Check if we're comparing the right subset element
+			isCorrectSubsetIndex := api.IsZero(api.Sub(matchedCount, subsetIndex))
+
+			// shouldCompare = 1 only when both conditions are true
+			shouldCompare := api.Mul(isAtMatchPosition, isCorrectSubsetIndex)
+
+			// Select which byte to compare
+			selectedByte := bytesAPI.Select(shouldCompare, bytes[byteIndex], subset[subsetIndex])
+			bytesAPI.AssertIsEqual(selectedByte, subset[subsetIndex])
+		}
+
+		// Increment counter when we're in the matching range
+		matchedCount = api.Add(matchedCount, isAtMatchPosition)
+	}
+
+	// Ensure all subset bytes were matched
+	api.AssertIsEqual(matchedCount, len(subset))
+}
+
+// AssertIsSubsetWithPadding verifies if the subset is a subset of bytes
+// bytesContentSize: actual content length in bytes (excluding padding)
+// subsetContentSize: actual content length in subset (excluding padding)
+func AssertIsSubsetWithPadding(api frontend.API, bytes []uints.U8, bytesContentSize frontend.Variable, subset []uints.U8, subsetContentSize frontend.Variable, positionStart frontend.Variable) {
+	bytesAPI, _ := uints.NewBytes(api)
+	matchedCount := frontend.Variable(0)
+
+	// For each position in bytes (up to actual content size)
+	for byteIndex := range bytes {
+		currentPos := frontend.Variable(byteIndex)
+
+		// Check if current position is within actual content
+		isWithinContent := api.Sub(1, api.IsZero(api.Sub(bytesContentSize, api.Add(currentPos, 1))))
+
+		// Check if current position matches positionStart + matchedCount
+		isAtMatchPosition := api.IsZero(api.Sub(currentPos, api.Add(positionStart, matchedCount)))
+
+		// Check if we haven't matched all subset bytes yet
+		hasMoreToMatch := api.Sub(1, api.IsZero(api.Sub(matchedCount, subsetContentSize)))
+
+		// Only match if: within content AND at correct position AND haven't finished matching
+		isAtMatchPosition = api.Mul(api.Mul(isWithinContent, isAtMatchPosition), hasMoreToMatch)
+
+		// For each possible index in subset
+		for subsetIndex := range subset {
+			subsetIndexVar := frontend.Variable(subsetIndex)
+
+			// Check if subset index is within actual content
+			isSubsetWithinContent := api.Sub(1, api.IsZero(api.Sub(subsetContentSize, api.Add(subsetIndexVar, 1))))
+
+			// Check if we're comparing the right subset element
+			isCorrectSubsetIndex := api.IsZero(api.Sub(matchedCount, subsetIndex))
+
+			// shouldCompare = 1 only when all conditions are true
+			shouldCompare := api.Mul(api.Mul(isAtMatchPosition, isCorrectSubsetIndex), isSubsetWithinContent)
+
+			// Select which byte to compare
+			selectedByte := bytesAPI.Select(shouldCompare, bytes[byteIndex], subset[subsetIndex])
+			bytesAPI.AssertIsEqual(selectedByte, subset[subsetIndex])
+		}
+
+		// Increment counter when we're in the matching range
+		matchedCount = api.Add(matchedCount, isAtMatchPosition)
+	}
+
+	// Ensure all subset bytes were matched
+	api.AssertIsEqual(matchedCount, subsetContentSize)
+}
+
 // IsSubset verifies if the subset is a subset of bytes
 func IsSubset(api frontend.API, bytes, subset []uints.U8, positionStart frontend.Variable) error {
 	bytesAPI, err := uints.NewBytes(api)
