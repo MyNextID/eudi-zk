@@ -1,5 +1,5 @@
 // Package assertecpubkey contains a ZK circuit that transforms an EC public key
-package assertecpubkey
+package assertecpubkeyd
 
 import (
 	"crypto/elliptic"
@@ -10,6 +10,7 @@ import (
 	"math/big"
 
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/std/conversion"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/mynextid/eudi-zk/circuits"
@@ -91,8 +92,14 @@ type Circuit struct {
 func (c *Circuit) Define(api frontend.API) error {
 	// Step 1: Convert emulated field elements (X, Y) to byte arrays
 	// Each coordinate is 32 bytes
-	xBytes := zkcore.EmulatedElementToBytes32(api, c.SignerPubKeyX)
-	yBytes := zkcore.EmulatedElementToBytes32(api, c.SignerPubKeyY)
+	xBytes, err := conversion.EmulatedToBytes(api, &c.SignerPubKeyX)
+	if err != nil {
+		return err
+	}
+	yBytes, err := conversion.EmulatedToBytes(api, &c.SignerPubKeyY)
+	if err != nil {
+		return err
+	}
 
 	// Step 2: Create the uncompressed EC point format
 	// Uncompressed format: 0x04 || X || Y (65 bytes total)

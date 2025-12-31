@@ -2,10 +2,10 @@ package ckb
 
 import (
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/std/conversion"
 	"github.com/consensys/gnark/std/hash/sha2"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // PubKeyHashCircuit defines the params for the circuit
@@ -21,8 +21,14 @@ type PubKeyHashCircuit struct {
 // Define defines the ZK circuit logic
 func (c *PubKeyHashCircuit) Define(api frontend.API) error {
 	// Convert the public key coordinates to bytes using the helper function
-	xBytes := zkcore.EmulatedElementToBytes32(api, c.SignerPubKeyX)
-	yBytes := zkcore.EmulatedElementToBytes32(api, c.SignerPubKeyY)
+	xBytes, err := conversion.EmulatedToBytes(api, &c.SignerPubKeyX)
+	if err != nil {
+		return err
+	}
+	yBytes, err := conversion.EmulatedToBytes(api, &c.SignerPubKeyY)
+	if err != nil {
+		return err
+	}
 
 	// Create the uncompressed public key format: 0x04 || X || Y
 	// Total: 1 + 32 + 32 = 65 bytes

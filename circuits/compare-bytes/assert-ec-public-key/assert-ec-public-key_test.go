@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -22,7 +21,7 @@ type Secp256r1Fp = emulated.P256Fp
 // Secp256r1Fr field parameters
 type Secp256r1Fr = emulated.P256Fr
 
-func TestCompareDigestPubKeys(t *testing.T) {
+func TestComparePubKeys(t *testing.T) {
 	saveExamplePayload := true
 
 	// == create dummy data ==
@@ -42,12 +41,9 @@ func TestCompareDigestPubKeys(t *testing.T) {
 	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.X, signerKey.Y)
 	pkX := pubKeyBytes[1:33]
 	pkY := pubKeyBytes[33:]
-	pubKeyBytesDigest := sha256.Sum256(pubKeyBytes)
 
 	pkXB64 := base64.RawURLEncoding.EncodeToString(pkX)
 	pkYB64 := base64.RawURLEncoding.EncodeToString(pkY)
-	pkB64 := base64.RawURLEncoding.EncodeToString(pubKeyBytes)
-	dB64 := base64.RawURLEncoding.EncodeToString(pubKeyBytesDigest[:])
 
 	pvtIn := assertecpubkey.PrivateInput{
 		PubKeyX: pkXB64,
@@ -55,8 +51,8 @@ func TestCompareDigestPubKeys(t *testing.T) {
 	}
 	pvtInBuf, _ := json.Marshal(pvtIn)
 	pubIn := assertecpubkey.PublicInput{
-		PubKeyBytes:  pkB64,
-		PubKeyDigest: dB64,
+		PubKeyXBytes: pkXB64,
+		PubKeyYBytes: pkYB64,
 	}
 	pubInBuf, _ := json.Marshal(pubIn)
 

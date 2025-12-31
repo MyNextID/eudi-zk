@@ -6,6 +6,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/algebra/emulated/sw_emulated"
+	"github.com/consensys/gnark/std/conversion"
 	"github.com/consensys/gnark/std/hash/sha2"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
@@ -324,59 +325,64 @@ func Sha256ToP256Fr(api frontend.API, hash []uints.U8) (*emulated.Element[emulat
 		panic("SHA256 hash must be 32 bytes")
 	}
 
-	field, err := emulated.NewField[emulated.P256Fr](api)
-	if err != nil {
-		return nil, err
-	}
+	return conversion.BytesToEmulated[emulated.P256Fr](api, hash)
 
-	// P256Fr uses 4 limbs of 64 bits each (standard for 256-bit fields in gnark)
-	// Limbs are stored in little-endian order
-	const nbLimbs = 4
-	const bytesPerLimb = 8
-
-	limbs := make([]frontend.Variable, nbLimbs)
-
-	// Pack bytes into limbs (little-endian limb order)
-	// hash[0..7] -> limb[0] (least significant)
-	// hash[8..15] -> limb[1]
-	// hash[16..23] -> limb[2]
-	// hash[24..31] -> limb[3] (most significant)
-	for i := range nbLimbs {
-		var limbVal frontend.Variable
-
-		// Process 8 bytes for this limb (little-endian within limb)
-		for j := range bytesPerLimb {
-			// Read from end of hash going backwards (to match little-endian)
-			byteIdx := len(hash) - 1 - (i*bytesPerLimb + j)
-
-			if byteIdx >= 0 && byteIdx < len(hash) {
-				// Shift: multiply by 2^(j*8) = 256^j
-				shift := frontend.Variable(1)
-				for range j {
-					shift = api.Mul(shift, 256)
-				}
-				limbVal = api.Add(limbVal, api.Mul(hash[byteIdx].Val, shift))
-			}
+	/*
+		field, err := emulated.NewField[emulated.P256Fr](api)
+		if err != nil {
+			return nil, err
 		}
 
-		limbs[i] = limbVal
-	}
+		// P256Fr uses 4 limbs of 64 bits each (standard for 256-bit fields in gnark)
+		// Limbs are stored in little-endian order
+		const nbLimbs = 4
+		const bytesPerLimb = 8
 
-	// Create element with properly structured limbs
-	result := &emulated.Element[emulated.P256Fr]{
-		Limbs: limbs,
-	}
+		limbs := make([]frontend.Variable, nbLimbs)
 
-	// Reduce to ensure it's in the correct range
-	return field.Reduce(result), nil
+		// Pack bytes into limbs (little-endian limb order)
+		// hash[0..7] -> limb[0] (least significant)
+		// hash[8..15] -> limb[1]
+		// hash[16..23] -> limb[2]
+		// hash[24..31] -> limb[3] (most significant)
+		for i := range nbLimbs {
+			var limbVal frontend.Variable
+
+			// Process 8 bytes for this limb (little-endian within limb)
+			for j := range bytesPerLimb {
+				// Read from end of hash going backwards (to match little-endian)
+				byteIdx := len(hash) - 1 - (i*bytesPerLimb + j)
+
+				if byteIdx >= 0 && byteIdx < len(hash) {
+					// Shift: multiply by 2^(j*8) = 256^j
+					shift := frontend.Variable(1)
+					for range j {
+						shift = api.Mul(shift, 256)
+					}
+					limbVal = api.Add(limbVal, api.Mul(hash[byteIdx].Val, shift))
+				}
+			}
+
+			limbs[i] = limbVal
+		}
+
+		// Create element with properly structured limbs
+		result := &emulated.Element[emulated.P256Fr]{
+			Limbs: limbs,
+		}
+
+		// Reduce to ensure it's in the correct range
+		return field.Reduce(result), nil
+	*/
 }
 
 // ComparePublicKeys compares public keys (emulated element) and an uncompressed EC public key (must have the 0x04 prefix)
 func ComparePublicKeys(api frontend.API, PubKeyX, PubKeyY emulated.Element[Secp256r1Fp], PubKeyBytes []uints.U8) {
 
-	// public key to bytes
-	xBytes := EmulatedElementToBytes32(api, PubKeyX)
-	yBytes := EmulatedElementToBytes32(api, PubKeyY)
+	// Convert the public key coordinates to bytes using the helper function
+	// TODO: add error handling
+	xBytes, _ := conversion.EmulatedToBytes(api, &PubKeyX)
+	yBytes, _ := conversion.EmulatedToBytes(api, &PubKeyY)
 
 	// Create the 0x04 prefix for uncompressed point
 	prefix := uints.NewU8(4)
@@ -392,8 +398,9 @@ func ComparePublicKeys(api frontend.API, PubKeyX, PubKeyY emulated.Element[Secp2
 func PublicKeyDigest(api frontend.API, PubKeyX, PubKeyY emulated.Element[Secp256r1Fp]) (PubKeyDigest []uints.U8) {
 
 	// public key to bytes
-	xBytes := EmulatedElementToBytes32(api, PubKeyX)
-	yBytes := EmulatedElementToBytes32(api, PubKeyY)
+	// TODO: add error handling
+	xBytes, _ := conversion.EmulatedToBytes(api, &PubKeyX)
+	yBytes, _ := conversion.EmulatedToBytes(api, &PubKeyY)
 
 	// Create the 0x04 prefix for uncompressed point
 	prefix := uints.NewU8(4)
@@ -405,60 +412,6 @@ func PublicKeyDigest(api frontend.API, PubKeyX, PubKeyY emulated.Element[Secp256
 	PubKeyDigest, _ = SHA256(api, pubKeyBytes)
 
 	return
-}
-
-// EmulatedElementToBytes32 maps an emulated element to uints.U8
-func EmulatedElementToBytes32(api frontend.API, elem emulated.Element[Secp256r1Fp]) []uints.U8 {
-	field, err := emulated.NewField[Secp256r1Fp](api)
-	if err != nil {
-		panic(err)
-	}
-
-	reduced := field.Reduce(&elem)
-	bits := field.ToBits(reduced)
-
-	// ToBits returns LSB-first (little-endian bit order)
-	// We need 256 bits exactly
-	if len(bits) > 256 {
-		bits = bits[:256]
-	}
-
-	// Pad with zeros at the end if needed (these are high-order bits)
-	if len(bits) < 256 {
-		padded := make([]frontend.Variable, 256)
-		copy(padded, bits)
-		for i := len(bits); i < 256; i++ {
-			padded[i] = 0
-		}
-		bits = padded
-	}
-
-	bytes := make([]uints.U8, 32)
-
-	// Convert LSB-first bits to big-endian bytes
-	// Byte 0 (most significant) contains bits [255:248]
-	// Byte 31 (least significant) contains bits [7:0]
-	for byteIdx := range 32 {
-		byteValue := frontend.Variable(0)
-
-		// Build each byte from 8 bits
-		for bitIdx := range 8 {
-			// For big-endian bytes from LSB-first bits:
-			// Byte 0 needs bits 255,254,253,...,248
-			// Byte 31 needs bits 7,6,5,...,0
-			bitPosition := (31-byteIdx)*8 + (7 - bitIdx)
-
-			// Build byte: MSB first
-			byteValue = api.Add(
-				api.Mul(byteValue, 2),
-				bits[bitPosition],
-			)
-		}
-
-		bytes[byteIdx] = uints.U8{Val: byteValue}
-	}
-
-	return bytes
 }
 
 // VerifyJWS verifies a JWS signature where protected header and payload are provided separately. This way we can provide the protected header as a private input and the payload as public or private input. The function adds the . separator, hence the protected header must be only base64url encoded, without the .

@@ -2,6 +2,7 @@ package csv
 
 import (
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/std/conversion"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/mynextid/eudi-zk/zkcore"
 )
@@ -21,7 +22,10 @@ func (circuit *CircuitJWS) verifyPubKeyInCertificateSimplified(api frontend.API)
 	*/
 
 	// Convert public key X to bytes (32 bytes for P-256)
-	pubKeyXBytes := zkcore.EmulatedElementToBytes32(api, circuit.SignerPubKeyX)
+	pubKeyXBytes, err := conversion.EmulatedToBytes(api, &circuit.SignerPubKeyX)
+	if err != nil {
+		return err
+	}
 
 	derLen := len(circuit.CertTBSDER)
 	matchCount := frontend.Variable(0)
