@@ -1,10 +1,9 @@
-package assertecpubkeyd_test
+package assertecpubkey_test
 
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -13,7 +12,7 @@ import (
 
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/mynextid/eudi-zk/circuits"
-	assertecpubkeyd "github.com/mynextid/eudi-zk/circuits/compare-bytes/assert-ec-public-key-digest"
+	assertecpubkey "github.com/mynextid/eudi-zk/circuits/basic-circuits/assert-ec-public-key"
 )
 
 // Secp256r1Fp field parameters
@@ -22,7 +21,7 @@ type Secp256r1Fp = emulated.P256Fp
 // Secp256r1Fr field parameters
 type Secp256r1Fr = emulated.P256Fr
 
-func TestCompareDigestPubKeys(t *testing.T) {
+func TestComparePubKeys(t *testing.T) {
 	saveExamplePayload := true
 
 	// == create dummy data ==
@@ -32,7 +31,7 @@ func TestCompareDigestPubKeys(t *testing.T) {
 		panic(fmt.Sprintf("Failed to generate key: %v", err))
 	}
 
-	zkc, err := circuits.Compile(assertecpubkeyd.Info)
+	zkc, err := circuits.Compile(assertecpubkey.Info)
 	if err != nil {
 		t.Fatalf("zk circuit compilation failed: %v", err)
 	}
@@ -42,21 +41,18 @@ func TestCompareDigestPubKeys(t *testing.T) {
 	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.X, signerKey.Y)
 	pkX := pubKeyBytes[1:33]
 	pkY := pubKeyBytes[33:]
-	pubKeyBytesDigest := sha256.Sum256(pubKeyBytes)
 
 	pkXB64 := base64.RawURLEncoding.EncodeToString(pkX)
 	pkYB64 := base64.RawURLEncoding.EncodeToString(pkY)
-	pkB64 := base64.RawURLEncoding.EncodeToString(pubKeyBytes)
-	dB64 := base64.RawURLEncoding.EncodeToString(pubKeyBytesDigest[:])
 
-	pvtIn := assertecpubkeyd.PrivateInput{
+	pvtIn := assertecpubkey.PrivateInput{
 		PubKeyX: pkXB64,
 		PubKeyY: pkYB64,
 	}
 	pvtInBuf, _ := json.Marshal(pvtIn)
-	pubIn := assertecpubkeyd.PublicInput{
-		PubKeyBytes:  pkB64,
-		PubKeyDigest: dB64,
+	pubIn := assertecpubkey.PublicInput{
+		PubKeyXBytes: pkXB64,
+		PubKeyYBytes: pkYB64,
 	}
 	pubInBuf, _ := json.Marshal(pubIn)
 

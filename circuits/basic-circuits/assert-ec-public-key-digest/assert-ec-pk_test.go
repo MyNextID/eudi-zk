@@ -1,26 +1,29 @@
-package decodehex_test
+package assertecpubkeyd_test
 
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"encoding/hex"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"testing"
 
+	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/mynextid/eudi-zk/circuits"
-	decodehex "github.com/mynextid/eudi-zk/circuits/compare-bytes/decode-hex"
+	assertecpubkeyd "github.com/mynextid/eudi-zk/circuits/basic-circuits/assert-ec-public-key-digest"
 )
 
-func TestCompareHex(t *testing.T) {
+// Secp256r1Fp field parameters
+type Secp256r1Fp = emulated.P256Fp
 
+// Secp256r1Fr field parameters
+type Secp256r1Fr = emulated.P256Fr
+
+func TestCompareDigestPubKeys(t *testing.T) {
 	saveExamplePayload := true
-	zkc, err := circuits.Compile(decodehex.Info)
-	if err != nil {
-		t.Fatalf("zk circuit compilation failed: %v", err)
-	}
 
 	// == create dummy data ==
 	// Generate ES256 (P-256) key pair
@@ -29,18 +32,31 @@ func TestCompareHex(t *testing.T) {
 		panic(fmt.Sprintf("Failed to generate key: %v", err))
 	}
 
+	zkc, err := circuits.Compile(assertecpubkeyd.Info)
+	if err != nil {
+		t.Fatalf("zk circuit compilation failed: %v", err)
+	}
+
 	// Properly encode the public key in uncompressed format
 	// This ensures X and Y are always 32 bytes each
 	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.X, signerKey.Y)
+	pkX := pubKeyBytes[1:33]
+	pkY := pubKeyBytes[33:]
+	pubKeyBytesDigest := sha256.Sum256(pubKeyBytes)
 
-	pubKeyBytesHex := hex.EncodeToString(pubKeyBytes)
+	pkXB64 := base64.RawURLEncoding.EncodeToString(pkX)
+	pkYB64 := base64.RawURLEncoding.EncodeToString(pkY)
+	pkB64 := base64.RawURLEncoding.EncodeToString(pubKeyBytes)
+	dB64 := base64.RawURLEncoding.EncodeToString(pubKeyBytesDigest[:])
 
-	pvtIn := decodehex.PrivateInput{
-		Bytes: pubKeyBytesHex,
+	pvtIn := assertecpubkeyd.PrivateInput{
+		PubKeyX: pkXB64,
+		PubKeyY: pkYB64,
 	}
 	pvtInBuf, _ := json.Marshal(pvtIn)
-	pubIn := decodehex.PublicInput{
-		BytesHex: pubKeyBytesHex,
+	pubIn := assertecpubkeyd.PublicInput{
+		PubKeyBytes:  pkB64,
+		PubKeyDigest: dB64,
 	}
 	pubInBuf, _ := json.Marshal(pubIn)
 

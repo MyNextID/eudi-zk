@@ -22,3 +22,6 @@ curve public key X, Y components into an uncompressed form.
 - [Compare Lexicographically](./compare-lexicographically/) proves lexicographical ordering
 relationship between a secret string and a public string without revealing the
 secret. Returns 1 if secret < public, 0 otherwise.
+- [Assert is subset](./assert-is-subset/) proves that a public subset exists
+within a secret byte array at a secret position, without revealing the full
+array or position.

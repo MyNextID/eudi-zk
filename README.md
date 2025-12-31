@@ -48,7 +48,7 @@ linkability/pseudonymity/anonymity as described in
 Start exploring the circuits:
 
 - **All circuits:** [circuits/](./circuits/README.md)
-- **Simple circuits:** [circuits/compare-bytes/](./circuits/compare-bytes/README.md)
+- **Simple circuits:** [circuits/basic-circuits/](./circuits/basic-circuits/README.md)
 - **EUDI/eIDAS circuits:** [circuits/eudi-vc/](./circuits/eudi-vc/README.md)
 
 Other tools and libraries

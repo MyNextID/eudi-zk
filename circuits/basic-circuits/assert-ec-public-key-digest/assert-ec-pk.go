@@ -1,4 +1,4 @@
-// Package assertecpubkey contains a ZK circuit that transforms an EC public key
+// Package assertecpubkeyd contains a ZK circuit that transforms an EC public key
 package assertecpubkeyd
 
 import (

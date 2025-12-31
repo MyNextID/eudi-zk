@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/mynextid/eudi-zk/circuits"
-	comparelex "github.com/mynextid/eudi-zk/circuits/compare-bytes/compare-lexicographically"
+	comparelex "github.com/mynextid/eudi-zk/circuits/basic-circuits/compare-lexicographically"
 )
 
 func TestCircuitLex(t *testing.T) {

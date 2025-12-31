@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/mynextid/eudi-zk/circuits"
-	decodeb64 "github.com/mynextid/eudi-zk/circuits/compare-bytes/decode-base64url"
+	decodeb64 "github.com/mynextid/eudi-zk/circuits/basic-circuits/decode-base64url"
 	"github.com/mynextid/eudi-zk/zkcore"
 )
 

@@ -1,4 +1,4 @@
-package assertisequal_test
+package assertissubset_test
 
 import (
 	"encoding/base64"
@@ -8,34 +8,46 @@ import (
 	"testing"
 
 	"github.com/mynextid/eudi-zk/circuits"
-	assertisequal "github.com/mynextid/eudi-zk/circuits/compare-bytes/assert-is-equal"
+	assertissubset "github.com/mynextid/eudi-zk/circuits/basic-circuits/assert-is-subset"
 	"github.com/mynextid/eudi-zk/zkcore"
 )
 
-func TestCompareBytesAPI(t *testing.T) {
+func TestCircuitCompareSubset(t *testing.T) {
 
-	byteSize := 64
 	saveExamplePayload := true
 
-	// Generate inputs
-	randomBytes, err := zkcore.GenerateRandomBytes(byteSize)
-	if err != nil {
-		t.Error(err)
-	}
-
-	zkc, err := circuits.Compile(assertisequal.Info)
+	zkc, err := circuits.Compile(assertissubset.Info)
 	if err != nil {
 		t.Fatalf("zk circuit compilation failed: %v", err)
 	}
 
-	randomBytesB64 := base64.RawURLEncoding.EncodeToString(randomBytes)
+	byteSize := 64
+	subsetSize := 32
+	position := 13
 
-	pvtIn := assertisequal.PrivateInput{
-		Bytes: randomBytesB64,
+	randomBytes, err := zkcore.GenerateRandomBytes(byteSize)
+	if err != nil {
+		t.Error(err)
+	}
+	randomBytesB64 := base64.RawURLEncoding.EncodeToString(randomBytes)
+	randomBytes2, err := zkcore.GenerateRandomBytes(byteSize)
+	if err != nil {
+		t.Error(err)
+	}
+	_ = randomBytes2
+
+	// Extract subset from the random bytes (make a proper copy)
+	subset := make([]byte, subsetSize)
+	copy(subset, randomBytes[position:position+subsetSize])
+	subsetB64 := base64.RawURLEncoding.EncodeToString(subset)
+
+	pvtIn := assertissubset.PrivateInput{
+		Bytes:         randomBytesB64,
+		PositionStart: position,
 	}
 	pvtInBuf, _ := json.Marshal(pvtIn)
-	pubIn := assertisequal.PublicInput{
-		Bytes: randomBytesB64,
+	pubIn := assertissubset.PublicInput{
+		Subset: subsetB64,
 	}
 	pubInBuf, _ := json.Marshal(pubIn)
 

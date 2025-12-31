@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/mynextid/eudi-zk/circuits"
-	assertcnf "github.com/mynextid/eudi-zk/circuits/compare-bytes/assert-cnf"
+	assertcnf "github.com/mynextid/eudi-zk/circuits/basic-circuits/assert-cnf"
 )
 
 func TestAssertCnfAPI(t *testing.T) {

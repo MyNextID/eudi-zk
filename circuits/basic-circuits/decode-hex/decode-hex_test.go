@@ -1,28 +1,26 @@
-package assertecpubkey_test
+package decodehex_test
 
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"testing"
 
-	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/mynextid/eudi-zk/circuits"
-	assertecpubkey "github.com/mynextid/eudi-zk/circuits/compare-bytes/assert-ec-public-key"
+	decodehex "github.com/mynextid/eudi-zk/circuits/basic-circuits/decode-hex"
 )
 
-// Secp256r1Fp field parameters
-type Secp256r1Fp = emulated.P256Fp
+func TestCompareHex(t *testing.T) {
 
-// Secp256r1Fr field parameters
-type Secp256r1Fr = emulated.P256Fr
-
-func TestComparePubKeys(t *testing.T) {
 	saveExamplePayload := true
+	zkc, err := circuits.Compile(decodehex.Info)
+	if err != nil {
+		t.Fatalf("zk circuit compilation failed: %v", err)
+	}
 
 	// == create dummy data ==
 	// Generate ES256 (P-256) key pair
@@ -31,28 +29,18 @@ func TestComparePubKeys(t *testing.T) {
 		panic(fmt.Sprintf("Failed to generate key: %v", err))
 	}
 
-	zkc, err := circuits.Compile(assertecpubkey.Info)
-	if err != nil {
-		t.Fatalf("zk circuit compilation failed: %v", err)
-	}
-
 	// Properly encode the public key in uncompressed format
 	// This ensures X and Y are always 32 bytes each
 	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.X, signerKey.Y)
-	pkX := pubKeyBytes[1:33]
-	pkY := pubKeyBytes[33:]
 
-	pkXB64 := base64.RawURLEncoding.EncodeToString(pkX)
-	pkYB64 := base64.RawURLEncoding.EncodeToString(pkY)
+	pubKeyBytesHex := hex.EncodeToString(pubKeyBytes)
 
-	pvtIn := assertecpubkey.PrivateInput{
-		PubKeyX: pkXB64,
-		PubKeyY: pkYB64,
+	pvtIn := decodehex.PrivateInput{
+		Bytes: pubKeyBytesHex,
 	}
 	pvtInBuf, _ := json.Marshal(pvtIn)
-	pubIn := assertecpubkey.PublicInput{
-		PubKeyXBytes: pkXB64,
-		PubKeyYBytes: pkYB64,
+	pubIn := decodehex.PublicInput{
+		BytesHex: pubKeyBytesHex,
 	}
 	pubInBuf, _ := json.Marshal(pubIn)
 

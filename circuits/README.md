@@ -59,7 +59,7 @@ and all required dependencies.
 
 ### 1. Compare Bytes
 
-**Location:** [compare-bytes/](./compare-bytes/)
+**Location:** [compare-bytes/](./basic-circuits/)
 
 Basic circuits demonstrating fundamental operations like byte comparison, public key encoding, and digest matching.
 
