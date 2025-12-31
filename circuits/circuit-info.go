@@ -50,10 +50,17 @@ func (ci CircuitInfo) FilePaths() (csPath, pkPath, vkPath string) {
 	return
 }
 
+// Constraints defines the variable constraints
+type Constraints struct {
+	Min int `json:"min,omitempty"`
+	Max int `json:"max,omitempty"`
+}
+
 // EndpointInfo contains information about the endpoints
 type EndpointInfo struct {
-	Prove  Endpoints `json:"prove"`
-	Verify Endpoints `json:"verify"`
+	Constraints map[string]Constraints `json:"constraints,omitempty"`
+	Prove       Endpoints              `json:"prove"`
+	Verify      Endpoints              `json:"verify"`
 }
 
 // Endpoints contains information about the endpoint requests/responses

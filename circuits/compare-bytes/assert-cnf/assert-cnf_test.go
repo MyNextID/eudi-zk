@@ -1,4 +1,4 @@
-package ccb_test
+package assertcnf_test
 
 import (
 	"crypto/ecdsa"
@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/mynextid/eudi-zk/circuits"
-	ccb "github.com/mynextid/eudi-zk/circuits/compare-bytes"
+	assertcnf "github.com/mynextid/eudi-zk/circuits/compare-bytes/assert-cnf"
 )
 
 func TestAssertCnfAPI(t *testing.T) {
@@ -54,12 +54,12 @@ func TestAssertCnfAPI(t *testing.T) {
 		},
 	}
 
-	zkc, err := circuits.Compile(ccb.CompareCnfInfo)
+	zkc, err := circuits.Compile(assertcnf.CompareCnfInfo)
 	if err != nil {
 		t.Fatalf("zk circuit compilation failed: %v", err)
 	}
 
-	pvtIn := ccb.PrivateInput{
+	pvtIn := assertcnf.PrivateInput{
 		ProtectedHeader: protectedB64,
 		CnfClaim:        cnf,
 	}
@@ -67,7 +67,7 @@ func TestAssertCnfAPI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to marshal pvt input: %v", err)
 	}
-	pubIn := ccb.PublicInput{
+	pubIn := assertcnf.PublicInput{
 		PublicKeyDigestHex: pubKeyBytesDigestHex,
 	}
 	pubInBuf, err := json.Marshal(pubIn)

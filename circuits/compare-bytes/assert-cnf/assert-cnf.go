@@ -1,4 +1,5 @@
-package ccb
+// Package assertcnf is a ZK circuit that asserts confirmation claim (cnf) membersip within a base64url encoded JSON
+package assertcnf
 
 import (
 	"bytes"
@@ -32,22 +33,22 @@ const (
 
 // DescriptionLong is a long circuit description
 const DescriptionLong = `
-CompareCnfCircuit proves that a JWS protected header contains a specific CNF
+AssertCnf circuit proves that a JWS protected header contains a specific cnf
 claim with a public key digest that matches a given value, WITHOUT revealing the
 full header.
 
-Use case: Prove that a JWT contains a specific public key binding (CNF claim)
+Use case: Prove that a JWT contains a specific public key binding (cnf claim)
 without revealing the entire JWT header or its position within the header.
 
 cnf (Confirmation) Claim: RFC 7800 - Proof-of-Possession Key Semantics for JSON
-Web Tokens (JWTs) Example CNF in JWT header: {"cnf":{"x5t#S256":"a1b2c3d4..."}}
+Web Tokens (JWTs) Example cnf in JWT header: {"cnf":{"kid":"a1b2c3d4..."}}
 
 The circuit performs these verification steps:
 
-1. Verify that the base64url-encoded CNF is a substring of the
+1. Verify that the base64url-encoded cnf is a substring of the
 base64url-encoded header
-2. Decode the CNF from base64url to get the JSON structure
-3. Extract the hex-encoded public key digest from the decoded CNF
+2. Decode the cnf from base64url to get the JSON structure
+3. Extract the hex-encoded public key digest from the decoded cnf
 4. Decode the hex string to get the raw digest bytes
 5. Compare the extracted digest with the provided public digest
 `
@@ -62,53 +63,53 @@ type AssertCnf struct {
 	// ProtectedHeaderSize is te actual cnf claim size without padding
 	ProtectedHeaderSize frontend.Variable `gnark:",secret"`
 
-	// CnfClaimB64 is the base64url-encoded substring containing the CNF claim
-	// This is extracted from the header and proves the CNF exists at the claimed position
+	// CnfClaimB64 is the base64url-encoded substring containing the cnf claim
+	// This is extracted from the header and proves the cnf exists at the claimed position
 	CnfClaimB64 [MaxCnfClaimSize]uints.U8 `gnark:",secret"`
 	// CnfClaimSize is te actual cnf claim size without padding
 	CnfClaimSize frontend.Variable `gnark:",secret"`
 
 	// CnfClaimPosition is the byte position where CnfClaimB64 starts within ProtectedHeaderB64
-	// This proves we're not fabricating the CNF - it's actually in the header at this position
+	// This proves we're not fabricating the cnf - it's actually in the header at this position
 	CnfClaimPosition frontend.Variable `gnark:",secret"`
 
-	// PubKeyDigestHexPosition is the byte position of the hex-encoded digest within the decoded CNF
-	// After base64url decoding the CNF, this points to where the public key digest starts
-	// Example: in '{"cnf":{"x5t#S256":"a1b2c3d4..."}}', points to the start of "a1b2c3d4..."
+	// PubKeyDigestHexPosition is the byte position of the hex-encoded digest within the decoded cnf
+	// After base64url decoding the cnf, this points to where the public key digest starts
+	// Example: in '{"cnf":{"kid":"a1b2c3d4..."}}', points to the start of "a1b2c3d4..."
 	PubKeyDigestHexPosition frontend.Variable `gnark:",secret"`
 
 	// ===== PUBLIC INPUTS (Visible to Verifier) =====
 
 	// PublicKeyDigest is the SHA-256 digest of the public key we're checking for
-	// This is publicly known - we prove the header contains a CNF with THIS
+	// This is publicly known - we prove the header contains a cnf with THIS
 	// specific digest 32 bytes for SHA-256 hash
 	PublicKeyDigest [SHA256DigestSize]uints.U8 `gnark:",public"`
 }
 
-// Define implements the circuit logic that proves CNF claim validity This
+// Define implements the circuit logic that proves cnf claim validity This
 // creates the constraint system that will be converted into a zero-knowledge
 // proof
 //
-// What we prove: "I know a JWS header that contains a CNF claim at a specific
-// position, and when decoded, that CNF contains a public key digest matching
+// What we prove: "I know a JWS header that contains a cnf claim at a specific
+// position, and when decoded, that cnf contains a public key digest matching
 // the public input"
 func (c *AssertCnf) Define(api frontend.API) error {
 	// Step 1: Verify that CnfClaimB64 is actually contained within
 	// ProtectedHeaderB64
-	// This proves we're not making up a fake CNF - it must exist in the real
+	// This proves we're not making up a fake cnf - it must exist in the real
 	// header
 	// IsSubset checks: ProtectedHeaderB64[CnfClaimPosition:CnfClaimPosition+len(CnfClaimB64)] == CnfClaimB64
 	zkcore.AssertIsSubsetWithPadding(api, c.ProtectedHeaderB64[:], c.ProtectedHeaderSize, c.CnfClaimB64[:], c.CnfClaimSize, c.CnfClaimPosition)
 
-	// Step 2: Decode the base64url-encoded CNF claim to get the raw JSON bytes
+	// Step 2: Decode the base64url-encoded cnf claim to get the raw JSON bytes
 	// Example: "ImNuZiI6eyJ4NXQjUzI1NiI6IjEyMzQifQ" →
-	// '"cnf":{"x5t#S256":"1234"}'
+	// '"cnf":{"kid":"1234"}'
 	// This creates constraints that verify correct base64url decoding
 	decodedCnfClaim, err := zkcore.DecodeBase64Url(api, c.CnfClaimB64[:])
 	if err != nil {
 		return err
 	}
-	// Step 3: Extract the hex-encoded public key digest from the decoded CNF
+	// Step 3: Extract the hex-encoded public key digest from the decoded cnf
 	// The digest is a SHA-256 hash hex-encoded, so it's 64 hex characters (32
 	// bytes * 2)
 	// Example: "a1b2c3d4e5f6..." (64 characters representing 32 bytes)
@@ -161,9 +162,9 @@ func (w *WitnessInput) Validate() error {
 		return fmt.Errorf("invalid base64url protected header: %w", err)
 	}
 
-	// Validate CNF claim exists
+	// Validate cnf claim exists
 	if len(w.CnfClaim) == 0 {
-		return fmt.Errorf("CNF claim cannot be empty")
+		return fmt.Errorf("cnf claim cannot be empty")
 	}
 
 	return nil
@@ -182,10 +183,10 @@ func (w *WitnessInput) CreateWitness() (frontend.Circuit, error) {
 		return nil, fmt.Errorf("public key digest must be 32 bytes (SHA-256), got %d bytes", len(publicKeyDigestBytes))
 	}
 
-	// Step 3: Encode CNF claim and trim braces to get the field content
+	// Step 3: Encode cnf claim and trim braces to get the field content
 	cnfJSON, err := json.Marshal(w.CnfClaim)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal CNF claim JSON: %w", err)
+		return nil, fmt.Errorf("failed to marshal cnf claim JSON: %w", err)
 	}
 
 	// Remove outer braces: {"cnf":...} becomes "cnf":...
@@ -201,7 +202,7 @@ func (w *WitnessInput) CreateWitness() (frontend.Circuit, error) {
 	// Step 5: Find where the cnf field appears in the protected header JSON
 	cnfStart := strings.Index(string(protectedHeaderJSONBytes), cnfStr)
 	if cnfStart == -1 {
-		return nil, fmt.Errorf("CNF field not found in protected header JSON")
+		return nil, fmt.Errorf("cnf field not found in protected header JSON")
 	}
 
 	// Step 6: Align to base64 boundaries
@@ -212,30 +213,30 @@ func (w *WitnessInput) CreateWitness() (frontend.Circuit, error) {
 	// Extract the aligned section
 	cnfAligned := protectedHeaderJSONBytes[cnfStartAligned:cnfEndAligned]
 
-	// Step 7: Base64url encode both the full header and the aligned CNF section
+	// Step 7: Base64url encode both the full header and the aligned cnf section
 	cnfAlignedB64 := base64.RawURLEncoding.EncodeToString(cnfAligned)
 
-	// Step 8: Verify the aligned CNF appears in the base64 encoded header
+	// Step 8: Verify the aligned cnf appears in the base64 encoded header
 	cnfB64Index := strings.Index(w.ProtectedHeader, cnfAlignedB64)
 	if cnfB64Index == -1 {
-		return nil, fmt.Errorf("aligned CNF not found in base64 encoded protected header")
+		return nil, fmt.Errorf("aligned cnf not found in base64 encoded protected header")
 	}
 
 	// Step 9: Find the public key digest hex within the aligned section
 	pubKeyDigestHexPosition := strings.Index(string(cnfAligned), w.PublicKeyDigestHex)
 	if pubKeyDigestHexPosition == -1 {
-		return nil, fmt.Errorf("public key digest hex not found in aligned CNF section")
+		return nil, fmt.Errorf("public key digest hex not found in aligned cnf section")
 	}
 
 	// Step 10: Validate the digest matches
 	digestHexFromCnf := string(cnfAligned)[pubKeyDigestHexPosition : pubKeyDigestHexPosition+64]
 	digestBytesFromCnf, err := hex.DecodeString(digestHexFromCnf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to hex decode digest from CNF: %w", err)
+		return nil, fmt.Errorf("failed to hex decode digest from cnf: %w", err)
 	}
 
 	if !bytes.Equal(digestBytesFromCnf, publicKeyDigestBytes) {
-		return nil, fmt.Errorf("digest mismatch: CNF digest does not match public input")
+		return nil, fmt.Errorf("digest mismatch: cnf digest does not match public input")
 	}
 
 	protectedB64Uints8, err := zkcore.StringToU8ArrayWithPadding(w.ProtectedHeader, MaxProtectedHeaderSize)
@@ -289,7 +290,7 @@ func (w *WitnessInput) CreatePublicWitness() (frontend.Circuit, error) {
 	var pk [SHA256DigestSize]uints.U8
 	copy(pk[:], d)
 
-	// Initialize empty arrays for private fields
+	// Initialize empty arrays for private inputs
 	emptyProtected, _ := zkcore.BytesToU8ArrayWithPadding([]byte{}, MaxProtectedHeaderSize)
 	emptyCnf, _ := zkcore.BytesToU8ArrayWithPadding([]byte{}, MaxCnfClaimSize)
 
@@ -322,12 +323,12 @@ type PrivateInput struct {
 	// Example: "eyJhbGciOiJFUzI1NiIsImNuZiI6eyJ4NXQjUzI1NiI6ImExYjJjM2Q0In19"
 	ProtectedHeader string `json:"protected" description:"BASE64URL encoded JWS protected header"`
 
-	// CnfClaim is the CNF claim as a JSON object (NOT encoded)
-	// Example: {"cnf":{"x5t#S256":"a1b2c3d4e5f6789012345678901234567890123456789012345678901234"}}
+	// CnfClaim is the cnf claim as a JSON object (NOT encoded)
+	// Example: {"cnf":{"kid":"a1b2c3d4e5f6789012345678901234567890123456789012345678901234"}}
 	// The parser will encode this to base64url and find its position in the
-	// header Per RFC 7800, the CNF claim confirms possession of a
+	// header Per RFC 7800, the cnf claim confirms possession of a
 	// proof-of-possession key
-	CnfClaim map[string]any `json:"cnf" description:"CNF claim as JSON object (will be encoded by parser)"`
+	CnfClaim map[string]any `json:"cnf" description:"cnf claim as JSON object (will be encoded by parser)"`
 }
 
 // PublicInput defines the JSON structure for public inputs
@@ -336,7 +337,21 @@ type PublicInput struct {
 	// PublicKeyDigestHex is the SHA-256 digest of the public key in hexadecimal format
 	// Example: "a1b2c3d4e5f6789012345678901234567890123456789012345678901234"
 	// 64 hex characters representing 32 bytes
-	PublicKeyDigestHex string `json:"public_key_digest_hex" description:"Hex-encoded SHA-256 digest of the public key (64 hex chars)"`
+	PublicKeyDigestHex string `json:"publicKeyDigestHex" description:"Hex-encoded SHA-256 digest of the public key (64 hex chars)"`
+}
+
+// Constraints defines the circuit constraints
+// cnf size constraint applies to the marshalled cnf JSON object
+var Constraints = map[string]circuits.Constraints{
+	"protected": {
+		Max: MaxProtectedHeaderSize,
+	},
+	"cnf": {
+		Max: MaxCnfClaimSize,
+	},
+	"publicKeyDigestHex": {
+		Max: MaxCnfClaimSize,
+	},
 }
 
 // ========================================================================
@@ -346,7 +361,7 @@ type PublicInput struct {
 // ProveRequest defines the request body for generating a ZK proof
 type ProveRequest struct {
 	Public  PublicInput  `json:"public" description:"Public ZK circuit inputs (public key digest)"`
-	Private PrivateInput `json:"private" description:"Private ZK circuit inputs (header and CNF claim)"`
+	Private PrivateInput `json:"private" description:"Private ZK circuit inputs (header and cnf claim)"`
 }
 
 // ProveResponse defines the response body containing the generated proof
@@ -381,7 +396,7 @@ type VerifyResponse struct {
 // INPUT PARSER - Converts API JSON to circuit format
 // ========================================================================
 
-// CompareCnfAPI implements the InputParser interface for the CNF comparison circuit
+// CompareCnfAPI implements the InputParser interface for the cnf comparison circuit
 type CompareCnfAPI struct{}
 
 // Parse parses the HTTP API inputs to ZK Circuit inputs
@@ -420,10 +435,13 @@ func (api *CompareCnfAPI) Parse(publicInputJSON, privateInputJSON []byte) (front
 
 // CompareCnfInfo contains all metadata needed to register this circuit
 var CompareCnfInfo = &circuits.CircuitInfo{
+	// Circuit version
+	Version: 1,
+
 	// Circuit template with appropriately sized arrays
 	Circuit: &AssertCnf{
 		ProtectedHeaderB64:      [MaxProtectedHeaderSize]uints.U8{}, // Large enough for typical JWT headers
-		CnfClaimB64:             [MaxCnfClaimSize]uints.U8{},        // CNF claim is smaller than full header
+		CnfClaimB64:             [MaxCnfClaimSize]uints.U8{},        // cnf claim is smaller than full header
 		CnfClaimPosition:        0,
 		PubKeyDigestHexPosition: 0,
 		PublicKeyDigest:         [SHA256DigestSize]uints.U8{}, // SHA-256 is always 32 bytes
@@ -431,14 +449,15 @@ var CompareCnfInfo = &circuits.CircuitInfo{
 
 	Name: "compare-cnf",
 
-	Description:     "Proves that a JWS protected header contains a CNF (confirmation) claim per RFC 7800 with a specific public key digest, without revealing the full header contents. Verifies: (1) CNF is substring of header, (2) base64url decoding, (3) hex decoding of digest, (4) digest equality.",
-	LongDescription: DescriptionLong,
+	Description: "Proves that a JWS protected header contains a cnf (confirmation) claim per RFC 7800 with a specific public key digest, without revealing the full header contents. Verifies: (1) cnf is substring of header, (2) base64url decoding, (3) hex decoding of digest, (4) digest equality.",
 
-	Version: 1,
+	// LongDescription: DescriptionLong,
+	LongDescription: DescriptionLong,
 
 	InputParser: &CompareCnfAPI{},
 
 	EndpointInfo: &circuits.EndpointInfo{
+		Constraints: Constraints,
 		Prove: circuits.Endpoints{
 			Request:  circuits.CreateSchemaInfo("application/json", ProveRequest{}, nil),
 			Response: circuits.CreateSchemaInfo("application/json", ProveResponse{}, nil),

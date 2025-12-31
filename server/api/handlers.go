@@ -59,12 +59,13 @@ type ErrorResponse struct {
 
 // CircuitInfoResponse represents circuit information
 type CircuitInfoResponse struct {
-	Name         string                 `json:"name"`
-	Description  string                 `json:"description"`
-	Version      uint                   `json:"version"`
-	Loaded       bool                   `json:"loaded"`
-	EndpointInfo *circuits.EndpointInfo `json:"methods,omitempty"`
-	Links        map[string]string      `json:"links,omitempty"`
+	Name            string                 `json:"name"`
+	Description     string                 `json:"description"`
+	LongDescription string                 `json:"longDescription"`
+	Version         uint                   `json:"version"`
+	Loaded          bool                   `json:"loaded"`
+	EndpointInfo    *circuits.EndpointInfo `json:"methods,omitempty"`
+	Links           map[string]string      `json:"links,omitempty"`
 }
 
 // CircuitListResponse represents a list of circuits
@@ -132,11 +133,12 @@ func (s *Server) HandleGetCircuit(w http.ResponseWriter, r *http.Request) {
 	_, err := s.registry.Get(circuitName)
 
 	respondJSON(w, http.StatusOK, CircuitInfoResponse{
-		Name:         info.Name,
-		Description:  info.Description,
-		Version:      info.Version,
-		Loaded:       err == nil,
-		EndpointInfo: info.EndpointInfo,
+		Name:            info.Name,
+		Description:     info.Description,
+		LongDescription: info.LongDescription,
+		Version:         info.Version,
+		Loaded:          err == nil,
+		EndpointInfo:    info.EndpointInfo,
 		Links: map[string]string{
 			"id": fmt.Sprintf("/circuits/%s/id", circuitName),
 		},

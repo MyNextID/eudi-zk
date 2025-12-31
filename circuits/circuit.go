@@ -31,7 +31,7 @@ type CircuitInstance struct {
 // CircuitID contains public circuit information
 type CircuitID struct {
 	ID           string `json:"id"`
-	ProvingKey   string `json:"provingKey"`
+	ProvingKey   string `json:"provingKey,omitempty"`
 	VerifyingKey string `json:"verifyingKey"`
 }
 
@@ -50,7 +50,7 @@ func (c Circuit) ID() (*CircuitID, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to write proving key to buffer: %v", err)
 	}
-	pkB64 := base64.RawURLEncoding.EncodeToString(pkBuf.Bytes())
+	// pkB64 := base64.RawURLEncoding.EncodeToString(pkBuf.Bytes())
 	pkFp := fingerprintHex(pkBuf.Bytes())
 
 	var vkBuf bytes.Buffer
@@ -64,8 +64,8 @@ func (c Circuit) ID() (*CircuitID, error) {
 	fp := fmt.Sprintf("%s:%s:%s", csFp, pkFp, vkFp)
 
 	return &CircuitID{
-		ID:           fp,
-		ProvingKey:   pkB64,
+		ID: fp,
+		// ProvingKey:   pkB64,
 		VerifyingKey: vkB64,
 	}, nil
 }
