@@ -54,7 +54,7 @@ func TestAssertCnfAPI(t *testing.T) {
 		},
 	}
 
-	zkc, err := circuits.Compile(assertcnf.CompareCnfInfo)
+	zkc, err := circuits.Compile(assertcnf.Info)
 	if err != nil {
 		t.Fatalf("zk circuit compilation failed: %v", err)
 	}

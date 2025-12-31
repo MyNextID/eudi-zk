@@ -396,11 +396,11 @@ type VerifyResponse struct {
 // INPUT PARSER - Converts API JSON to circuit format
 // ========================================================================
 
-// CompareCnfAPI implements the InputParser interface for the cnf comparison circuit
-type CompareCnfAPI struct{}
+// API implements the InputParser interface for the cnf comparison circuit
+type API struct{}
 
 // Parse parses the HTTP API inputs to ZK Circuit inputs
-func (api *CompareCnfAPI) Parse(publicInputJSON, privateInputJSON []byte) (frontend.Circuit, error) {
+func (api *API) Parse(publicInputJSON, privateInputJSON []byte) (frontend.Circuit, error) {
 	// Step 1: Parse JSON into Go structs
 	var publicInput PublicInput
 	var privateInput PrivateInput
@@ -433,8 +433,8 @@ func (api *CompareCnfAPI) Parse(publicInputJSON, privateInputJSON []byte) (front
 // CIRCUIT REGISTRATION - Metadata for the framework
 // ========================================================================
 
-// CompareCnfInfo contains all metadata needed to register this circuit
-var CompareCnfInfo = &circuits.CircuitInfo{
+// Info contains all metadata needed to register this circuit
+var Info = &circuits.CircuitInfo{
 	// Circuit version
 	Version: 1,
 
@@ -447,14 +447,14 @@ var CompareCnfInfo = &circuits.CircuitInfo{
 		PublicKeyDigest:         [SHA256DigestSize]uints.U8{}, // SHA-256 is always 32 bytes
 	},
 
-	Name: "compare-cnf",
+	Name: "assert-cnf",
 
 	Description: "Proves that a JWS protected header contains a cnf (confirmation) claim per RFC 7800 with a specific public key digest, without revealing the full header contents. Verifies: (1) cnf is substring of header, (2) base64url decoding, (3) hex decoding of digest, (4) digest equality.",
 
 	// LongDescription: DescriptionLong,
 	LongDescription: DescriptionLong,
 
-	InputParser: &CompareCnfAPI{},
+	InputParser: &API{},
 
 	EndpointInfo: &circuits.EndpointInfo{
 		Constraints: Constraints,
