@@ -101,10 +101,11 @@ func (s *Server) HandleListCircuits(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("[ERROR]", err)
 		}
 		circuits = append(circuits, CircuitInfoResponse{
-			Name:        info.Name,
-			Description: info.Description,
-			Version:     info.Version,
-			Loaded:      err == nil,
+			Name:            info.Name,
+			Description:     info.Description,
+			LongDescription: info.LongDescription,
+			Version:         info.Version,
+			Loaded:          err == nil,
 		})
 	}
 
