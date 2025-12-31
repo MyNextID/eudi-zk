@@ -298,7 +298,7 @@ Return resulting string, or error if any step fails.
 
 Examples:
 
-- canonicalize("https://www.example.com:443/path") = "example.com"
+- canonicalize("<https://www.example.com:443/path>") = "example.com"
 - canonicalize("api.staging.example.co.uk") = "example.co.uk"
 - canonicalize("MÜNCHEN.DE") = "xn--mnchen-3ya.de"
 

@@ -23,7 +23,7 @@ performance for:
 All the circuits presented here are framework-agnostic and can be implemented in
 alternative ZKP systems like
 [Longfellow-ZK](https://github.com/google/longfellow-zk/) or
-[zkID/OpenAC](https://pse.dev/projects/zk-id) or other ZK frameworks.
+[zkID/OpenAC](https://pse.dev/projects/zk-id) or other.
 
 ## Motivation
 
@@ -35,9 +35,9 @@ where batches must be managed by both the issuer and the wallet. This creates
 high operational complexity and tight coupling between issuers and wallets.
 
 **Demonstrating infrastructure reusability.**
-We aim to show that existing e-signing and e-sealing infrastructure can be
-reused as-is to introduce efficient wallet systems, requiring only the addition
-of ZKP circuits.
+We aim to show that existing e-signing and e-sealing infrastructure, such as
+eIDAS (v1) can be reused as-is to introduce efficient identity wallet framework,
+requiring only the addition of ZKP circuits.
 
 With ZK circuits we can achieve different levels of
 linkability/pseudonymity/anonymity as described in
@@ -47,13 +47,16 @@ linkability/pseudonymity/anonymity as described in
 
 Start exploring the circuits:
 
-- **All circuits:** [circuits/](./circuits/README.md)
-- **Simple circuits:** [circuits/basic-circuits/](./circuits/basic-circuits/README.md)
+- **All the circuits:** [circuits/](./circuits/README.md)
+- **Basic circuits:** [circuits/basic-circuits/](./circuits/basic-circuits/README.md)
 - **EUDI/eIDAS circuits:** [circuits/eudi-vc/](./circuits/eudi-vc/README.md)
+
+Test the circuits:
+
+- [ZKPI](./cmd/README.md) a tool for easy ZKP creation and validation
 
 Other tools and libraries
 
-- [ZKPI](./server/README.md) tool for easy Zero Knowledge Proof creation and validation
 - [CAdES](./CAdES/README.md) core implementation of the CAdES-BES signer. A
 [CAdES-BES signature](https://www.etsi.org/deliver/etsi_ts/103100_103199/103173/02.02.01_60/ts_103173v020201p.pdf) is a CMS/PKCS#7 signature that includes the signer's
 certificate additional  signed attributes and is encoded using DER. It's the
@@ -61,7 +64,7 @@ minimal profile for an advanced electronic signature under eIDAS.
 - [ASN.1 preview](./asn1/README.md) a simple Go package for parsing and visualizing DER-encoded ASN.1 data
 structures with a clean tree-based output.
 
-Technical specifications
+Technical documents
 
 - [Base64 comparison](./specs/base64-comparison.md) describes how to perform
 membership check without decoding base64(url) encoded payload. Useful when
@@ -126,10 +129,11 @@ credentials.
 
 ## Adding a New Circuit
 
-1. Define the circuit struct in `circuits/`
-2. Add circuit info to `CircuitList` in `api/circuit_config.go`
-3. Define input fields with metadata
-4. Recompile: `zkpi compile -o ./setup`
+1. Define the circuit struct in `circuits/`; Definition must follow the pattern
+as laid out in this [simple
+circuit](./circuits/basic-circuits/assert-is-equal/assert-is-equal.go)
+2. Add circuit info to the [CircuitList](./server/api/list.go)
+3. Recompile: `zkpi compile -o ./setup --force`
 
 ## Contributing
 

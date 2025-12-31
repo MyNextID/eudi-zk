@@ -1,12 +1,12 @@
-# Circuit: byte comparison and decoding
+# Basic simple circuits
 
 Version: 2
 
-In this folder you can find various basic ZK circuits. The goal of these
-circuits is to showcase the basic logic and operations that will later act as
-building blocks for more complex ZK circuits.
+In this folder you can find various basic ZK circuits. Our goal is to showcase
+the basic logic and operations that will later act as building blocks for more
+complex ZK circuits.
 
-You can find the following circuits:
+here you can find the following ZK circuits:
 
 - [Assert is equal](./assert-is-equal/) defines a zero-knowledge circuit that
 proves two byte arrays are equal without revealing the secret byte array.

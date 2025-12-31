@@ -40,6 +40,8 @@ First, compile the zero-knowledge circuits:
 zkpi compile -o ./setup
 ```
 
+Note: it will take a while.
+
 This generates three files for each circuit:
 
 - `.ccs` - Constraint system
