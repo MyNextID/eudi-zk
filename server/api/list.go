@@ -7,6 +7,7 @@ import (
 	assertisequal "github.com/mynextid/eudi-zk/circuits/compare-bytes/assert-is-equal"
 	comparelex "github.com/mynextid/eudi-zk/circuits/compare-bytes/compare-lexicographically"
 	decodeb64 "github.com/mynextid/eudi-zk/circuits/compare-bytes/decode-base64url"
+	decodehex "github.com/mynextid/eudi-zk/circuits/compare-bytes/decode-hex"
 )
 
 // CircuitList holds all the registered circuits
@@ -17,6 +18,7 @@ func init() {
 	circuitList := []*circuits.CircuitInfo{
 		assertisequal.Info,
 		decodeb64.Info,
+		decodehex.Info,
 		assertcnf.Info,
 		assertecpubkey.Info,
 		comparelex.Info,

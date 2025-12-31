@@ -15,6 +15,8 @@ contains a specific cnf claim with a public key digest that matches a given
 value, WITHOUT revealing the full header.
 - [Decode BASE64URL](./decode-base64url/) circuit decodes base64url encoded
 payload and compares it against the reference value.
+- [Decode Hex](./decode-hex/) circuit decodes hex encoded payload and compares
+it against the reference value.
 - [Assert EC Public Key](./assert-ec-public-key/) circuit transform elliptic
 curve public key X, Y components into an uncompressed form.
 - [Compare Lexicographically](./compare-lexicographically/) proves lexicographical ordering
