@@ -1,21 +1,17 @@
 # Circuit: byte comparison and decoding
 
-Version: 1
+Version: 2
 
-Here we test different decoding and public key transformation functions within
-ZK circuits. These circuits are mainly intended for testing and building core
-functions.
+In this folder you can find various basic ZK circuits. The goal of these
+circuits is to showcase the basic logic and operations that will later act as
+building blocks for more complex ZK circuits.
 
-In this repository we have the following test circuits:
+You can find the following circuits:
 
-- compare-bytes: performs simple byte-by-byte comparison
-- compare-hex: performs hex decoding + byte comparison
-- compare-public-keys: performs byte comparison of x and y components of elliptic curve public keys
-- compare-digest-public-keys: computes a hash of an elliptic curve public key
-- compare-base64url: performs base64url and hex decoding and compares it with the original byte array
-
-All the tests can be run using test functions in [circuit_test](./circuit_test.go)
-
-Note: some take longer than the default 30s test limit (increase the test limit as required)
-
-All the circuits and proving and verification keys are stored in the [compiled](./compiled/) folder.
+- [Assert is equal](./assert-is-equal/) defines a zero-knowledge circuit that
+proves two byte arrays are equal without revealing the secret byte array.
+- [Assert cnf](./assert-cnf/) circuit proves that a JWS protected header
+contains a specific cnf claim with a public key digest that matches a given
+value, WITHOUT revealing the full header.
+- [Decode BASE64URL](./decode-base64url/) circuit decodes base64url encoded
+payload and compares it against the reference value.

@@ -2,9 +2,10 @@ package api
 
 import (
 	"github.com/mynextid/eudi-zk/circuits"
-	ccb "github.com/mynextid/eudi-zk/circuits/compare-bytes"
 	assertcnf "github.com/mynextid/eudi-zk/circuits/compare-bytes/assert-cnf"
+	assertecpubkey "github.com/mynextid/eudi-zk/circuits/compare-bytes/assert-ec-public-key"
 	assertisequal "github.com/mynextid/eudi-zk/circuits/compare-bytes/assert-is-equal"
+	decodeb64 "github.com/mynextid/eudi-zk/circuits/compare-bytes/decode-base64url"
 )
 
 // CircuitList holds all the registered circuits
@@ -14,8 +15,10 @@ func init() {
 
 	circuitList := []*circuits.CircuitInfo{
 		assertisequal.Info,
-		ccb.CBB64UrlInfo,
-		assertcnf.Info}
+		decodeb64.Info,
+		assertcnf.Info,
+		assertecpubkey.Info,
+	}
 
 	for _, c := range circuitList {
 		CircuitList[c.Name] = c

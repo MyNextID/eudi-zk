@@ -295,7 +295,7 @@ var Info = &circuits.CircuitInfo{
 	// InputParser converts JSON API requests into circuit inputs
 	InputParser: &API{},
 
-	// EndpointInfo defines OpenAPI/Swagger documentation for auto-generated docs
+	// EndpointInfo defines API documentation for auto-generated docs
 	EndpointInfo: &circuits.EndpointInfo{
 		Constraints: Constraints,
 		Prove: circuits.Endpoints{
