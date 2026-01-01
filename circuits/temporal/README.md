@@ -1,135 +1,211 @@
-# Temporal validation Circuits
+# Temporal Validation Circuits
 
-Version: draft
+Version: 1
+
+## Overview
+
+These circuits provide zero-knowledge proofs for temporal validity constraints
+in digital credentials and certificates. They enable privacy-preserving
+verification of time-based claims (such as age requirements) without revealing
+the actual dates or credential contents.
 
 ## What We Prove
 
-These circuits prove temporal validity of X.509 certificates or credentials.
+The circuits prove that a date claim within a credential satisfies a temporal
+constraint relative to a threshold date, without revealing:
+
+- The actual date value
+- The full credential payload
+- The position of the date within the credential
+- Any other personal information in the credential
 
 ## Use Cases
 
-### Over XX
+### Over XX (Age Verification)
 
-The Over18 Circuit serves a specific verification purpose: to establish that a
-person's date of birth, as attested in the birthdate claim of a JWS payload,
-indicates sufficient age according to a threshold date specified by the
-verifier.
+The OverXX circuit proves that a person meets an age threshold (e.g., over 18,
+over 21) based on their birthdate in a credential, without disclosing the exact
+birthdate or any other personal information.
 
-The verification mechanism itself is remarkably simple, relying on
-lexicographical comparison. This approach works because the date format
-has been carefully chosen, specifically, YYYY-MM-DD (ISO 8601), which possesses a
-crucial property: for any two dates d1 and d2, we have d1 < d2 chronologically
-if and only if d1 < d2 lexicographically when both are represented as strings in
-this format. The year-first ordering ensures that string comparison naturally
-mirrors temporal ordering.
+**What it proves:**
 
-The verifier establishes a minimal date of birth d_min; the circuit then checks
-whether the claimant's birthdate d_claim satisfies d_claim < d_min, which
-confirms that the claimant was born before the threshold date and is therefore
-of sufficient age.
+> "I possess a valid credential containing a birthdate claim that proves I was
+born before the threshold date (PUBLIC), making me old enough to meet the age
+requirement."
 
-It is worth noting that this comparison technique generalizes naturally: any
-claim values that can be represented in a lexicographically-ordered format may
-be compared using this same fundamental mechanism, making the approach broadly
-applicable beyond age verification alone.
+**Privacy guarantees:**
 
-## Date and time formats
+- Actual birthdate remains secret
+- Credential contents remain secret  
+- Position of the birthdate within the credential remains secret
+- Only reveals: "Yes, I meet the age requirement"
 
-The following date and date-time formats appear in different credentials or certificates:
+**Public inputs (visible to verifier):**
 
-- ISO 8601: `YYYY-DD-MM`
-- UTC Time: `YYMMDDHHMMSSZ` (not applicable)
-- GeneralizedTime: `YYYYMMDDHHMMSSZ`
-- Unix Timestamp: seconds elapsed since the Unix epoch (January 1, 1970, 00:00:00 UTC); See paragraph [Unix Timestamp](#unix-timestamp)
+- `ThresholdDate`: The age threshold in YYYY-MM-DD format (e.g., "2006-01-01" for over-18 verification in 2024)
+- `Claim`: The name of the date field to verify (e.g., "birthdate", "date_of_birth", "birth_date")
 
-### Application to X.509 Certificates
+**Private inputs (secret to prover):**
 
-One might naturally wonder whether this lexicographical comparison technique
-extends to the date-time formats found in X.509 certificates, which employ two
-distinct ASN.1 time representations: UTCTime (format `YYMMDDHHMMSSZ`) for dates
-through 2049, and GeneralizedTime (format `YYYYMMDDHHMMSSZ`) for dates in 2050
-and beyond.
+- `Payload`: The base64url-encoded credential payload
+- Internal positions and extracted data (automatically computed)
 
-The answer reveals both the power and the limitations of our approach.
-**Importantly, UTCTime does not support lexicographical comparison even within
-its own format**, due to its year encoding scheme: the two-digit year YY is
-interpreted with a pivot rule (50-99 represents 1950-1999, while 00-49
-represents 2000-2049), which means "50" (1950) follows "49" (2049)
-lexicographically despite representing an earlier date. This non-monotonic
-encoding breaks the fundamental requirement for lexicographical comparison.
+### Technical Approach
 
-If one wishes to perform lexicographical comparison of date-times in UTCTime format, the correct century prefix must be added first—transforming "49..." to "2049..." and "50..." to "1950..." thereby converting the representation to an equivalent GeneralizedTime-like format before comparison.
+The circuit performs these verification steps:
 
-GeneralizedTime, however, works admirably—GeneralizedTime strings compare
-correctly with other GeneralizedTime strings, since this format maintains the
-crucial property that lexicographical ordering mirrors chronological ordering
-(its four-digit year eliminates the pivot ambiguity).
+1. **Subset verification**: Proves that a base64url-encoded date claim is
+embedded within the base64url-encoded credential payload at a specific position
+(using padding-aware comparison)
 
-A critical constraint remains: when using this technique with GeneralizedTime,
-the reference date d_min must be expressed in the same format as the claim being
-verified. One cannot meaningfully compare a UTCTime string against a
-GeneralizedTime string lexicographically, as they differ in length and
-structure—indeed, the string "491231235959Z" (December 31, 2049) would
-incorrectly appear greater than "20500101000000Z" (January 1, 2050) under
-lexicographical comparison, despite representing an earlier moment in time.
+2. **Claim name validation**: Verifies that the specified claim name (e.g.,
+"birthdate") appears within the date claim at a specific position, ensuring the
+correct field is being validated
 
-Thus, when applying this technique to X.509 validity periods, lexicographical
-comparison is only viable for GeneralizedTime values, and the verifier must
-ensure the reference threshold is also encoded in GeneralizedTime format.
+3. **Base64 decoding**: Decodes the base64url-encoded date claim to extract the
+JSON data containing the date
 
-Note: extension for UTCTime representation has not been implemented.
+4. **Date extraction**: Extracts the actual date string (YYYY-MM-DD format) from
+within the decoded JSON at a specific position
 
-### Unix Timestamp
+5. **Lexicographical comparison**: Performs lexicographical comparison to verify
+the birthdate is before the threshold date (proving age eligibility)
 
-An alternative representation that merits consideration is the Unix timestamp:
-the number of seconds elapsed since the Unix epoch (January 1, 1970, 00:00:00
-UTC). This representation offers a compelling advantage—temporal comparison
-reduces to simple numeric comparison of integers. If a claim t_claim and
-reference threshold t_min are both expressed as Unix timestamps, then the
-verification condition t_claim < t_min is evaluated directly in the arithmetic
-domain, without any need for string manipulation or format parsing.
+All positions and intermediate values remain private, providing strong privacy
+guarantees.
 
-However—and this is a subtle but important point—when Unix timestamps are
-transmitted as strings (as they often are in JSON Web Tokens and similar
-formats), lexicographical comparison becomes problematic. Consider: the
-timestamp "999999999" (September 9, 2001) and "1000000000" (September 9, 2001,
-one second later) do not compare correctly lexicographically, since the
-former has 9 digits while the latter has 10, and lexicographically "999999999" >
-"1000000000". The remedy is straightforward: one must either (1) parse the
-strings into integers before comparison, thereby returning to proper numeric
-ordering, or (2) normalize the string representation by padding with leading
-zeros to a fixed width, say "0999999999" and "1000000000", which does preserve
-lexicographical ordering.
+### Verification Mechanism: Lexicographical Comparison
 
-The Unix timestamp thus illustrates a general principle: the applicability of
-lexicographical comparison depends not merely on the semantics of the data
-format, but critically on its syntactic representation as a string.
+The circuit employs lexicographical string comparison as its core verification
+mechanism. This approach works because of a crucial property of the ISO 8601
+date format (YYYY-MM-DD): for any two dates d_1 and d_2, we have d_1 < d_2
+chronologically if and only if d_1 < d_2 lexicographically when both are
+represented as strings in this format.
 
-Note: extension for UnixTimestamp representation has not been implemented.
+**Why this works:**
 
-## Circuit Profiles
+The year-first ordering with fixed-width zero-padded fields ensures that string
+comparison naturally mirrors temporal ordering:
 
-### Verifiable Credentials signed as JWS
+- "1990-01-01" < "2006-01-01" (lexicographically and chronologically)
+- "2005-12-31" < "2006-01-01" (lexicographically and chronologically)
 
-Digital signature format: JWS
+**Verification logic:**
 
-Private inputs:
+The verifier specifies a minimum birthdate threshold `d_threshold`. The circuit
+proves that the claimant's birthdate `d_claim` satisfies:
 
-- Base64URL encoded protected header
-- Base64URL encoded payload
-- TODO: list other endpoints here
+```text
+d_claim < d_threshold (lexicographically) -> person is old enough
+```
 
-Public inputs:
+For example, if `d_threshold = "2006-01-01"` (for over-18 verification in 2024), then:
 
-- Credential type (vct)
-- Name of the ephemeral claim
-- Date and time of validity check
+- `d_claim = "1990-05-15"` → "1990-05-15" < "2006-01-01" → **VALID** (person is over 18)
+- `d_claim = "2010-03-20"` → "2010-03-20" > "2006-01-01" → **INVALID** (person is under 18)
 
-## Credential Profiles
+**Generalization:**
 
-- JAdES-B-B signed (JWT) where we only include the `kid`
-  - eIDAS minimum dataset
-  - PID dataset
-- cnf:kid is in the protected header
+This comparison technique generalizes naturally: any claim values that can be
+represented in a lexicographically-ordered format may be compared using the same
+fundamental mechanism, making the approach broadly applicable beyond age
+verification alone.
 
-Presentation: using KB-JWT
+## Supported Date and Time Formats
+
+### ISO 8601 (Currently Supported)
+
+**Format:** `YYYY-MM-DD`
+
+**Example:** "2006-01-01"
+
+**Lexicographical comparison:** Supported
+
+**Use case:** Birthdate verification, date-based claims in W3C Verifiable Credentials, SD-JWT VCs
+
+This is the primary format supported by the current circuit implementation.
+
+### GeneralizedTime (X.509 Certificates)
+
+**Format:** `YYYYMMDDHHMMSSZ`
+
+**Example:** "20240315120000Z"
+
+**Lexicographical comparison:** Supported (strings compare correctly with other GeneralizedTime strings)
+
+**Use case:** X.509 certificate validity periods (dates in 2050 and beyond)
+
+**Note:** When using GeneralizedTime, the reference threshold date must also be
+in GeneralizedTime format. You cannot meaningfully compare a GeneralizedTime
+string against a UTCTime string lexicographically.
+
+### UTCTime (X.509 Certificates) - Not Currently Supported
+
+**Format:** `YYMMDDHHMMSSZ`
+
+**Example:** "240315120000Z" (March 15, 2024)
+
+**Lexicographical comparison:** Not supported directly
+
+**Issue:** UTCTime does not support lexicographical comparison even within its
+own format due to its year encoding scheme. The two-digit year YY is
+interpreted with a pivot rule:
+
+- 50-99 represents 1950-1999
+- 00-49 represents 2000-2049
+
+This means "50" (1950) follows "49" (2049) lexicographically despite
+representing an earlier date, breaking the fundamental requirement for
+lexicographical comparison.
+
+**Workaround:** To compare UTCTime values, the correct century prefix must be
+added first—transforming "49..." to "2049..." and "50..." to "1950..."—thereby
+converting to GeneralizedTime-like format before comparison.
+
+**Status:** Extension for UTCTime representation has not been implemented.
+
+### Unix Timestamp - Not Currently Supported
+
+**Format:** Integer seconds since Unix epoch (January 1, 1970, 00:00:00 UTC)
+
+**Example:** 1710504000 (March 15, 2024)
+
+**Numeric comparison:** Supported (when parsed as integers)
+
+**Lexicographical comparison:** Problematic when transmitted as strings
+
+**Issue:** When Unix timestamps are transmitted as strings (as in JSON Web Tokens), lexicographical comparison fails. Consider:
+
+- "999999999" (Sep 9, 2001) > "1000000000" (Sep 9, 2001 + 1 second) lexicographically
+- This is because "999999999" has 9 digits while "1000000000" has 10 digits
+
+**Workarounds:**
+
+1. Parse strings into integers before comparison (proper numeric ordering)
+2. Normalize string representation with fixed-width zero-padding: "0999999999" vs "1000000000"
+
+**Principle:** The applicability of lexicographical comparison depends not
+merely on the semantics of the data format, but critically on its syntactic
+representation as a string.
+
+**Status:** Extension for Unix timestamp representation has not been
+implemented.
+
+## Generalization Opportunities
+
+The lexicographical comparison technique can be extended to:
+
+- **Credential validity periods:** Prove a credential is currently valid
+- **License expiration:** Prove a license hasn't expired
+- **Sequential ordering:** Prove events occurred in a specific order
+- **Threshold comparisons:** Prove any numeric or temporal value meets a threshold
+
+## References
+
+- ISO 8601: Date and time format standard
+- RFC 7519: JSON Web Token (JWT)
+- RFC 7515: JSON Web Signature (JWS)
+- W3C Verifiable Credentials Data Model
+- SD-JWT VC: Selective Disclosure for JWTs data model
+- ISO/IEC 18013-5: Mobile driving licence (mDL)
+- X.509: Certificate and Certificate Revocation List (CRL) Profile

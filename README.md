@@ -39,6 +39,7 @@ We aim to show that existing e-signing and e-sealing infrastructure, such as
 eIDAS (v1) can be reused as-is to introduce efficient identity wallet framework,
 requiring only the addition of ZKP circuits.
 
+dd
 With ZK circuits we can achieve different levels of
 linkability/pseudonymity/anonymity as described in
 [PII linkability, pseudonymity, and anonymity](./docs/unlinkability.md).
@@ -49,6 +50,7 @@ Start exploring the circuits:
 
 - **All the circuits:** [circuits/](./circuits/README.md)
 - **Basic circuits:** [circuits/basic-circuits/](./circuits/basic-circuits/README.md)
+- **Over18 circuit:** [circuits/temporal](./circuits/temporal/README.md)
 - **EUDI/eIDAS circuits:** [circuits/eudi-vc/](./circuits/eudi-vc/README.md)
 
 Test the circuits:

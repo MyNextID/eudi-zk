@@ -9,6 +9,7 @@ import (
 	comparelex "github.com/mynextid/eudi-zk/circuits/basic-circuits/compare-lexicographically"
 	decodeb64 "github.com/mynextid/eudi-zk/circuits/basic-circuits/decode-base64url"
 	decodehex "github.com/mynextid/eudi-zk/circuits/basic-circuits/decode-hex"
+	overxx "github.com/mynextid/eudi-zk/circuits/temporal"
 )
 
 // CircuitList holds all the registered circuits
@@ -24,6 +25,7 @@ func init() {
 		assertecpubkeyd.Info,
 		comparelex.Info,
 		assertissubset.Info,
+		overxx.Info,
 	}
 
 	for _, c := range circuitList {
