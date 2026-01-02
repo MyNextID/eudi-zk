@@ -9,17 +9,6 @@ import (
 	"github.com/mynextid/eudi-zk/zkcore"
 )
 
-// Byte array sizes
-const (
-	ByteSize32    = 32
-	ByteSize64    = 64
-	ByteSizeB64   = 86
-	ByteSize128   = 128
-	ByteSize256   = 256
-	ByteSize1024  = 1024
-	ByteSize64Hex = 128
-)
-
 // CircuitInfo contains a list of circuits
 type CircuitInfo struct {
 	Circuit         frontend.Circuit

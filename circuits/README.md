@@ -75,17 +75,6 @@ in verifiable credentials and certificates. They enable privacy-preserving
 verification of time-based claims (such as age requirements) without revealing
 the actual dates or credential contents.
 
-### 2. Key Binding (deprecated)
-
-Note: these functions have been migrated to eudi-vc
-
-**Location:** [key-binding/](./key-binding/)
-
-Circuits for validating Verifiable Credential holder key binding using different approaches:
-
-- cnf (Confirmation Method) validation
-- Key digest verification
-
 ### 3. eIDAS Signature Verification
 
 **Location:** [verify-eidas-signature/](./verify-eidas-signature/)
