@@ -1,4 +1,4 @@
-package csv
+package verifyjwscert
 
 import (
 	"github.com/consensys/gnark/frontend"
@@ -7,8 +7,11 @@ import (
 	"github.com/mynextid/eudi-zk/zkcore"
 )
 
-// verifyPubKeyInCertificateSimplified searches for the public key X coordinate in the DER certificate. Note: this simplified version is insecure as it will try to match ANY public key in the certificate.
-func (circuit *CircuitJWS) verifyPubKeyInCertificateSimplified(api frontend.API) error {
+// verifyPubKeyInCertificateSimplified searches for the public key X coordinate
+// in the DER certificate.
+// Note: this simplified version is insecure as it will try to match ANY public
+// key in the certificate.
+func (circuit *Circuit) verifyPubKeyInCertificateSimplified(api frontend.API) error {
 	/*
 		Naive and insecure approach
 		1. Find the 0x04 (uncompressed point indicator) in the certificate

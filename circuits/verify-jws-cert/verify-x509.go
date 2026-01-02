@@ -1,4 +1,4 @@
-package csv
+package verifyjwscert
 
 import (
 	"github.com/consensys/gnark/frontend"
@@ -10,9 +10,9 @@ import (
 
 // VerifyX509Signature verifies a signature of a DER encoded X.509 certificate
 // CertTBSDER is the DER encoded certificate signature payload, aka Certificate To Be Signed (TBS) payload.
-func (c *CircuitJWS) VerifyX509Signature(api frontend.API) error {
+func (c *Circuit) VerifyX509Signature(api frontend.API) error {
 
-	messageHash, _ := zkcore.SHA256(api, c.CertTBSDER)
+	messageHash, _ := zkcore.SHA256FiniteLengthSum(api, c.CertTBSDER, c.CertTBSDERSize)
 
 	mHash, err := zkcore.Sha256ToP256Fr(api, messageHash)
 	if err != nil {

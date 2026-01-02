@@ -10,6 +10,7 @@ import (
 	decodeb64 "github.com/mynextid/eudi-zk/circuits/basic-circuits/decode-base64url"
 	decodehex "github.com/mynextid/eudi-zk/circuits/basic-circuits/decode-hex"
 	overxx "github.com/mynextid/eudi-zk/circuits/temporal"
+	verifyjwscert "github.com/mynextid/eudi-zk/circuits/verify-jws-cert"
 )
 
 // CircuitList holds all the registered circuits
@@ -26,6 +27,7 @@ func init() {
 		comparelex.Info,
 		assertissubset.Info,
 		overxx.Info,
+		verifyjwscert.Info,
 	}
 
 	for _, c := range circuitList {

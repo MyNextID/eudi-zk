@@ -1,4 +1,4 @@
-package csv
+package verifyjwscert
 
 import "github.com/consensys/gnark/std/math/emulated"
 

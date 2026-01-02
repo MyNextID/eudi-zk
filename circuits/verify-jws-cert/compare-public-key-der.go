@@ -1,9 +1,13 @@
-package csv
+package verifyjwscert
 
 import (
+	"fmt"
+
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
 )
+
+// Note: this function will replace the simplified verification
 
 // X509SubjectPubKeyCircuit extracts the subject public key from a DER-encoded X.509 certificate
 type X509SubjectPubKeyCircuit struct {
@@ -20,10 +24,10 @@ func (circuit *X509SubjectPubKeyCircuit) Define(api frontend.API) error {
 	// Verify the extracted key matches the expected output
 	// This proves we correctly extracted the subject's public key
 	if len(extractedKey) != len(circuit.SubjectPubKey) {
-		panic("extracted key length mismatch")
+		return fmt.Errorf("public key length mismatch. Got %d, expected %d", len(extractedKey), len(circuit.SubjectPubKey))
 	}
 
-	for i := 0; i < len(extractedKey); i++ {
+	for i := range extractedKey {
 		api.AssertIsEqual(extractedKey[i].Val, circuit.SubjectPubKey[i].Val)
 	}
 

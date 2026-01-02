@@ -77,7 +77,7 @@ the actual dates or credential contents.
 
 ### 3. eIDAS Signature Verification
 
-**Location:** [verify-eidas-signature/](./verify-eidas-signature/)
+**Location:** [verifyjwscert/](./verifyjwscert/)
 
 Circuits for validating digital signatures in eIDAS contexts:
 

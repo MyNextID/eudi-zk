@@ -327,53 +327,6 @@ func Sha256ToP256Fr(api frontend.API, hash []uints.U8) (*emulated.Element[emulat
 
 	return conversion.BytesToEmulated[emulated.P256Fr](api, hash)
 
-	/*
-		field, err := emulated.NewField[emulated.P256Fr](api)
-		if err != nil {
-			return nil, err
-		}
-
-		// P256Fr uses 4 limbs of 64 bits each (standard for 256-bit fields in gnark)
-		// Limbs are stored in little-endian order
-		const nbLimbs = 4
-		const bytesPerLimb = 8
-
-		limbs := make([]frontend.Variable, nbLimbs)
-
-		// Pack bytes into limbs (little-endian limb order)
-		// hash[0..7] -> limb[0] (least significant)
-		// hash[8..15] -> limb[1]
-		// hash[16..23] -> limb[2]
-		// hash[24..31] -> limb[3] (most significant)
-		for i := range nbLimbs {
-			var limbVal frontend.Variable
-
-			// Process 8 bytes for this limb (little-endian within limb)
-			for j := range bytesPerLimb {
-				// Read from end of hash going backwards (to match little-endian)
-				byteIdx := len(hash) - 1 - (i*bytesPerLimb + j)
-
-				if byteIdx >= 0 && byteIdx < len(hash) {
-					// Shift: multiply by 2^(j*8) = 256^j
-					shift := frontend.Variable(1)
-					for range j {
-						shift = api.Mul(shift, 256)
-					}
-					limbVal = api.Add(limbVal, api.Mul(hash[byteIdx].Val, shift))
-				}
-			}
-
-			limbs[i] = limbVal
-		}
-
-		// Create element with properly structured limbs
-		result := &emulated.Element[emulated.P256Fr]{
-			Limbs: limbs,
-		}
-
-		// Reduce to ensure it's in the correct range
-		return field.Reduce(result), nil
-	*/
 }
 
 // ComparePublicKeys compares public keys (emulated element) and an uncompressed EC public key (must have the 0x04 prefix)
@@ -581,6 +534,52 @@ func IsSubset(api frontend.API, bytes, subset []uints.U8, positionStart frontend
 	// Ensure all subset bytes were matched
 	api.AssertIsEqual(matchedCount, len(subset))
 	return nil
+}
+
+// GetSubsetCircuit extracts bytes[start:start+length] into a result array
+// length is fixed at compile time and determines the result array size
+func GetSubsetCircuit(api frontend.API, bytes []uints.U8, start frontend.Variable, length frontend.Variable) []uints.U8 {
+	bytesAPI, err := uints.NewBytes(api)
+	if err != nil {
+		panic(err)
+	}
+
+	result := []uints.U8{}
+
+	// Initialize result with zeros
+	for i := range result {
+		result[i] = uints.NewU8(0)
+	}
+
+	matchedCount := frontend.Variable(0)
+
+	// For each position in source bytes
+	for byteIndex := range bytes {
+		currentPos := frontend.Variable(byteIndex)
+
+		// Check if at position start + matchedCount
+		isAtPosition := api.IsZero(api.Sub(currentPos, api.Add(start, matchedCount)))
+
+		// Check if we haven't exceeded the desired length
+		notDone := api.Sub(1, api.IsZero(api.Sub(matchedCount, length)))
+
+		shouldCopy := api.Mul(isAtPosition, notDone)
+
+		// Copy to each possible result position
+		for outIndex := range result {
+			isCorrectOutPos := api.IsZero(api.Sub(matchedCount, outIndex))
+			shouldCopyHere := api.Mul(shouldCopy, isCorrectOutPos)
+
+			result[outIndex] = bytesAPI.Select(shouldCopyHere, bytes[byteIndex], result[outIndex])
+		}
+
+		matchedCount = api.Add(matchedCount, shouldCopy)
+	}
+
+	// Assert we extracted the correct length
+	api.AssertIsEqual(matchedCount, length)
+
+	return result
 }
 
 // GetSubset extracts bytes[start:start+length] into a result array
