@@ -60,7 +60,7 @@ and all required dependencies.
 
 ### 1. Basic circuits
 
-**Location:** [basic-circuits/](./basic-circuits/)
+**Location:** [basic-circuits/](./basic-circuits/README.md)
 
 These circuits implement basic ZK proofs. Our goal is to showcase the basic
 logic and operations that will later act as building blocks for more complex ZK
@@ -68,7 +68,7 @@ circuits.
 
 ### 2. Temporal
 
-**Location:** [temporal](./temporal/)
+**Location:** [temporal](./temporal/README.md)
 
 These circuits provide zero-knowledge proofs for temporal validity constraints
 in verifiable credentials and certificates. They enable privacy-preserving
@@ -77,12 +77,15 @@ the actual dates or credential contents.
 
 ### 3. eIDAS Signature Verification
 
-**Location:** [verifyjwscert/](./verifyjwscert/)
+**Location:** [verifyjwscert/](./verify-jws-cert/README.md)
 
-Circuits for validating digital signatures in eIDAS contexts:
+This construction enables a prover to establish that "a document carries a valid
+digital signature from an entity whose public key certificate was issued by a
+trusted QTSP," while simultaneously concealing:
 
-- JWS (JSON Web Signature) validation
-- DER-encoded signature verification
+- The specific identity of the signing entity
+- The complete contents of their certificate
+- Metadata about the signature algorithm and keys
 
 ### 4. VC Verification
 
