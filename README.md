@@ -76,6 +76,7 @@ structures, etc.
 defines an algorithm that compares strings lexicographically within a circuit.
 - [Presentation KB-JWT](./specs/presentation-kb-jwt.md) profiles the verifiable
 presentation using the [KB-JWT](https://www.rfc-editor.org/rfc/rfc9901.html#name-key-binding-jwt) data model.
+- [Domain-bound CRL](./specs/crl-domain-bound.md) Domain-Bound Certificate Revocation Lists (DB-CRL)
 
 ## Core Circuits
 
@@ -98,6 +99,8 @@ signed by a legitimate Certificate Authority.
 Trust Service Provider)
 
 ### 2. Verifiable Credential Validation
+
+Note: the circuits are being refactored.
 
 Location: [circuits/eudi-vc/](./circuits/eudi-vc/README.md)
 
