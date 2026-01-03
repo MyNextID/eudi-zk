@@ -18,14 +18,14 @@ func NewServeCmd() *cobra.Command {
   zkpi serve
 
   # Start with custom settings
-  zkpi serve --host 0.0.0.0 --port 9090 --circuits-dir circuits
+  zkpi serve --host 0.0.0.0 --port 9090 --circuits-dir setup
 
   # Production deployment with TLS
   zkpi serve --host 0.0.0.0 --port 443 --enable-tls \
     --cert-file /etc/ssl/cert.pem --key-file /etc/ssl/key.pem
 
   # Load specific circuits only
-  zkpi serve --circuits compare-bytes-b64url,compare-bytes`,
+  zkpi serve --circuits assert-is-equal`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return server.Run(cfg)
 		},

@@ -77,7 +77,7 @@ the actual dates or credential contents.
 
 ### 3. eIDAS Signature Verification
 
-**Location:** [verifyjwscert/](./verify-jws-cert/README.md)
+**Location:** [verify-jws-cert/](./verify-jws-cert/README.md)
 
 This construction enables a prover to establish that "a document carries a valid
 digital signature from an entity whose public key certificate was issued by a
@@ -88,6 +88,8 @@ trusted QTSP," while simultaneously concealing:
 - Metadata about the signature algorithm and keys
 
 ### 4. VC Verification
+
+NOTE: refactoring is in progres
 
 **Location:** [eudi-vc](./eudi-vc/README.md)
 
@@ -142,7 +144,7 @@ independently. Expect the complete test suite to take significant time.
 Test a specific circuit using its import path:
 
 ```bash
-go test -v -timeout 5m -run ^TestCompareDigestPubKeys$ github.com/mynextid/eudi-zk/circuits/compare-bytes
+go test -v -timeout 5m -run ^TestCompareBytesAPI$ github.com/mynextid/eudi-zk/circuits/basic-circuits/assert-is-equal
 ```
 
 **Command breakdown:**

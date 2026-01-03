@@ -31,7 +31,7 @@ func (cr CircuitRegistry) LoadCircuit(ci *circuits.CircuitInfo) error {
 	// TODO: if circuits are not loaded, circuit path info will be incorrect
 	ci.Dir = cr.dir
 	csPath, pkPath, vkPath := ci.FilePaths()
-	fmt.Println("[INIT] loading circuit:", csPath)
+	fmt.Println("[LOAD] loading circuit:", csPath)
 
 	// load the setup
 	cs, pk, vk, err := zkcore.LoadSetup(csPath, pkPath, vkPath)

@@ -274,7 +274,7 @@ func (api *API) Parse(publicInputJSON, privateInputJSON []byte) (frontend.Circui
 // This enables automatic API endpoint generation
 var Info = &circuits.CircuitInfo{
 	// Name is the circuit identifier used in API routes
-	// e.g., GET /circuits/compare-bytes, POST /prove/compare-bytes
+	// e.g., GET /circuits/assert-is-equal, POST /prove/assert-is-equal
 	Name: "assert-is-equal",
 
 	// Description explains what this circuit proves in plain language

@@ -30,10 +30,10 @@ func NewCompileCmd() *cobra.Command {
   and verification keys. Compiling all circuits might take some time. List of
   circuits is available available in server/api/list.go`,
 		Example: `  # Compile all circuits
-  zkpi compile -o ./circuits
+  zkpi compile -o ./setup
 
   # Compile specific circuits
-  zkpi compile -o ./circuits -c compare-bytes-b64url,compare-bytes
+  zkpi compile -o ./setup -c assert-is-equal
 
 `,
 		RunE: func(_ *cobra.Command, _ []string) error {

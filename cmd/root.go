@@ -14,7 +14,7 @@ func newRootCmd() *cobra.Command {
 		Short: "Zero-Knowledge Proof Interfaces",
 		Long: `
   A collection of tools and APIs for creating and verifying zero-knowledge
-  proofs for EUDI digital identity and privacy-preserving applications.`,
+  proofs for digital identity and privacy-preserving applications.`,
 	}
 
 	rootCmd.AddCommand(
