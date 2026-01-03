@@ -1,3 +1,4 @@
+// Package models implements common data models
 package models
 
 // EUDI Personal Identification Data (PID) data model proposal for SD-JWT VC
@@ -90,7 +91,7 @@ func GetDemoPID() *PersonIdentificationData {
 	}
 }
 
-// GetDemoPID returns a fully populated demo PID for testing and examples
+// GetDemoPIDUnder18 returns a fully populated demo (age under 18) PID for testing and examples
 func GetDemoPIDUnder18() *PersonIdentificationData {
 	return &PersonIdentificationData{
 		VCT:        "urn:eudi:pid:1",

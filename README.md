@@ -1,4 +1,4 @@
-# ZK Circuits for eIDAS and EUDI and other digital identity frameworks
+# ZK Circuits for eIDAS, EUDI, and other digital identity frameworks
 
 ## Overview
 
@@ -23,7 +23,7 @@ performance for:
 All the circuits presented here are framework-agnostic and can be implemented in
 alternative ZKP systems like
 [Longfellow-ZK](https://github.com/google/longfellow-zk/) or
-[zkID/OpenAC](https://pse.dev/projects/zk-id) or other ZK frameworks.
+[zkID/OpenAC](https://pse.dev/projects/zk-id) or other.
 
 ## Motivation
 
@@ -35,9 +35,9 @@ where batches must be managed by both the issuer and the wallet. This creates
 high operational complexity and tight coupling between issuers and wallets.
 
 **Demonstrating infrastructure reusability.**
-We aim to show that existing e-signing and e-sealing infrastructure can be
-reused as-is to introduce efficient wallet systems, requiring only the addition
-of ZKP circuits.
+We aim to show that existing e-signing and e-sealing infrastructure, such as
+eIDAS (v1) can be reused as-is to introduce efficient identity wallet framework,
+requiring only the addition of ZKP circuits.
 
 With ZK circuits we can achieve different levels of
 linkability/pseudonymity/anonymity as described in
@@ -47,9 +47,14 @@ linkability/pseudonymity/anonymity as described in
 
 Start exploring the circuits:
 
-- **All circuits:** [circuits/](./circuits/README.md)
-- **Simple circuits:** [circuits/compare-bytes/](./circuits/compare-bytes/README.md)
+- **All the circuits:** [circuits/](./circuits/README.md)
+- **Basic circuits:** [circuits/basic-circuits/](./circuits/basic-circuits/README.md)
+- **Over18 circuit:** [circuits/temporal](./circuits/temporal/README.md)
 - **EUDI/eIDAS circuits:** [circuits/eudi-vc/](./circuits/eudi-vc/README.md)
+
+Test the circuits:
+
+- [ZKPI](./cmd/README.md) a tool for easy ZKP creation and validation
 
 Other tools and libraries
 
@@ -60,13 +65,17 @@ minimal profile for an advanced electronic signature under eIDAS.
 - [ASN.1 preview](./asn1/README.md) a simple Go package for parsing and visualizing DER-encoded ASN.1 data
 structures with a clean tree-based output.
 
-Technical specifications
+Technical documents
 
 - [Base64 comparison](./specs/base64-comparison.md) describes how to perform
 membership check without decoding base64(url) encoded payload. Useful when
 performing membership checks on JWS/JWT.
 - [DER encoding](./specs/der-encoding.md) contains notes on the DER encoding,
 structures, etc.
+- [Lexicographical comparison algorithm](./specs/lexicographical-comparison.md)
+defines an algorithm that compares strings lexicographically within a circuit.
+- [Presentation KB-JWT](./specs/presentation-kb-jwt.md) profiles the verifiable
+presentation using the [KB-JWT](https://www.rfc-editor.org/rfc/rfc9901.html#name-key-binding-jwt) data model.
 
 ## Core Circuits
 
@@ -75,7 +84,7 @@ the eIDAS/EUDI context:
 
 ### 1. eIDAS Signature Verification
 
-Location: [circuits/signature-verification/](./circuits/verify-eidas-signature)
+Location: [circuits/signature-verification/](./circuits/verify-eidas-signature/README.md)
 
 Proves that a signed payload is valid without revealing the signature, public
 key, or the public key certificate, while proving that the certificate has been
@@ -90,7 +99,7 @@ Trust Service Provider)
 
 ### 2. Verifiable Credential Validation
 
-Location: [circuits/eudi-vc/](./circuits/eudi-vc/)
+Location: [circuits/eudi-vc/](./circuits/eudi-vc/README.md)
 
 Enables privacy-preserving verification of EUDI Wallet credentials.
 
@@ -119,6 +128,14 @@ credential issuance.
 - Selective disclosure: Share specific attributes without revealing entire
 credentials.
 
+## Adding a New Circuit
+
+1. Define the circuit struct in `circuits/`; Definition must follow the pattern
+as laid out in this [simple
+circuit](./circuits/basic-circuits/assert-is-equal/assert-is-equal.go)
+2. Add circuit info to the [CircuitList](./server/api/list.go)
+3. Recompile: `zkpi compile -o ./setup --force`
+
 ## Contributing
 
 We welcome contributions! Here's how to get involved:
@@ -129,6 +146,14 @@ We welcome contributions! Here's how to get involved:
 
 Please ensure code follows existing patterns.
 
+## Acknowledgments
+
+- [gnark](https://github.com/Consensys/gnark) - Zero-knowledge proof framework
+- [Cobra](https://github.com/spf13/cobra) - CLI framework
+- [Chi](https://github.com/go-chi/chi) - HTTP router
+
 ## License
 
-This project is licensed under the [MIT License](./LICENSE).
+The code of this project is licensed under the [Apache2.0 License](./LICENSE).
+
+The specification in this repository licensed under the [CC BY-SA 4.0](./specs/LICENSE)

@@ -1,0 +1,26 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+output:
+  formats:
+    text: 
+      path: stdout
+      print-issued-lines: true
+
+linters:
+  enable:
+    - gosec
+    - errcheck
+    - staticcheck
+    - govet
+    - revive
+    - unused
+    - unparam
+  settings:
+    unused:
+      exported-fields-are-used: false
+    unparam:
+      check-exported: true

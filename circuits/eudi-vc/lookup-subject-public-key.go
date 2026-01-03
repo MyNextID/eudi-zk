@@ -4,17 +4,18 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
-// Define Secp256r1 field parameters
+// Secp256r1Fp field parameters
 type Secp256r1Fp = emulated.P256Fp
+
+// Secp256r1Fr field parameters
 type Secp256r1Fr = emulated.P256Fr
 
 // CircuitSPK proves:
 // 1. I have a certificate with a subject public key
 // 2. Without revealing the certificate or the public key
-
 type CircuitSPK struct {
 	// ===== PRIVATE INPUTS (prover's secrets) =====
 
@@ -47,7 +48,7 @@ func (c *CircuitSPK) Define(api frontend.API) error {
 	)
 
 	// ===== STEP 4: Verify extracted key matches the claimed public key =====
-	common.AssertIsEqualBytes(api, extractedPubKey, c.SignerPubKeyBytes)
+	zkcore.AssertIsEqualBytes(api, extractedPubKey, c.SignerPubKeyBytes)
 
 	return nil
 }

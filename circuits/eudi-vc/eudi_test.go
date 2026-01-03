@@ -22,7 +22,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	cdl "github.com/mynextid/eudi-zk/circuits/eudi-vc"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // Define Secp256r1 field parameters
@@ -49,7 +49,7 @@ func TestEUDI(t *testing.T) {
 
 	// Properly encode the public key in uncompressed format
 	// This ensures X and Y are always 32 bytes each
-	subPubKeyBytes := elliptic.Marshal(elliptic.P256(), subjectKey.PublicKey.X, subjectKey.PublicKey.Y)
+	subPubKeyBytes := elliptic.Marshal(elliptic.P256(), subjectKey.X, subjectKey.Y)
 
 	// Hash the encoded public key
 	pkDigest := sha256.Sum256(subPubKeyBytes)
@@ -103,7 +103,7 @@ func TestEUDI(t *testing.T) {
 	cnfLen := len(cnfStr)
 	cnfEnd := cnfStart + cnfLen
 
-	cnfStartNew, cnfEndNew := common.B64Align(cnfStart, cnfEnd)
+	cnfStartNew, cnfEndNew := zkcore.B64Align(cnfStart, cnfEnd)
 
 	cnfAligned := protectedJSON[cnfStartNew:cnfEndNew]
 	cnfAlignedB64 := base64.RawURLEncoding.EncodeToString([]byte(cnfAligned))
@@ -150,7 +150,7 @@ func TestEUDI(t *testing.T) {
 	}
 
 	// Create the complete JWS
-	signatureBytes := append(common.PadTo32Bytes(jwsR.Bytes()), common.PadTo32Bytes(jwsS.Bytes())...)
+	signatureBytes := append(zkcore.PadTo32Bytes(jwsR.Bytes()), zkcore.PadTo32Bytes(jwsS.Bytes())...)
 	signatureB64 := base64.RawURLEncoding.EncodeToString(signatureBytes)
 	jwtToken := signingInput + "." + signatureB64
 
@@ -213,15 +213,15 @@ func TestEUDI(t *testing.T) {
 	}
 
 	// == create and sign the challenge ==
-	challenge, err := common.GenerateRandomBytes(32)
+	challenge, err := zkcore.GenerateRandomBytes(32)
 	if err != nil {
 		t.Fatalf("failed to create a challenge %v", err)
 	}
 
-	c_digest := sha256.Sum256(challenge)
+	cDigest := sha256.Sum256(challenge)
 
 	// Sign the digest of the challenge
-	r, s, err := ecdsa.Sign(rand.Reader, subjectKey, c_digest[:])
+	r, s, err := ecdsa.Sign(rand.Reader, subjectKey, cDigest[:])
 	if err != nil {
 		t.Fatalf("failed to sign the challenge %v", err)
 	}
@@ -237,34 +237,34 @@ func TestEUDI(t *testing.T) {
 
 	// Create witness assignment with actual values
 	assignment := &cdl.CircuitEUDI{
-		CertBytes:           common.BytesToU8Array(tbsCert),
+		CertBytes:           zkcore.BytesToU8Array(tbsCert),
 		CertLength:          frontend.Variable(len(tbsCert)),
 		CertSigR:            emulated.ValueOf[Secp256r1Fr](certSig.R),
 		CertSigS:            emulated.ValueOf[Secp256r1Fr](certSig.S),
 		SubjectPubKeyPos:    frontend.Variable(pubKeyPosition),
-		SubjectPubKeyX:      emulated.ValueOf[Secp256r1Fp](subjectKey.PublicKey.X),
-		SubjectPubKeyY:      emulated.ValueOf[Secp256r1Fp](subjectKey.PublicKey.Y),
+		SubjectPubKeyX:      emulated.ValueOf[Secp256r1Fp](subjectKey.X),
+		SubjectPubKeyY:      emulated.ValueOf[Secp256r1Fp](subjectKey.Y),
 		ChallengeSignatureR: emulated.ValueOf[Secp256r1Fr](r),
 		ChallengeSignatureS: emulated.ValueOf[Secp256r1Fr](s),
 		JWSR:                emulated.ValueOf[Secp256r1Fr](jwsR),
 		JWSS:                emulated.ValueOf[Secp256r1Fr](jwsS),
-		JWSProtected:        common.StringToU8Array(protectedB64),
-		CnfB64:              common.StringToU8Array(cnfAlignedB64),
+		JWSProtected:        zkcore.StringToU8Array(protectedB64),
+		CnfB64:              zkcore.StringToU8Array(cnfAlignedB64),
 		CnfB64Position:      cnfB64Index,
 		CnfKeyHexPosition:   pubKeyIndex,
-		Challenge:           common.BytesToU8Array(challenge),
-		CAPubKeyX:           emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.X),
-		CAPubKeyY:           emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.Y),
-		IssuerPubKeyX:       emulated.ValueOf[Secp256r1Fp](issuerKey.PublicKey.X),
-		IssuerPubKeyY:       emulated.ValueOf[Secp256r1Fp](issuerKey.PublicKey.Y),
-		JWSPayload:          common.StringToU8Array(payloadB64),
+		Challenge:           zkcore.BytesToU8Array(challenge),
+		CAPubKeyX:           emulated.ValueOf[Secp256r1Fp](qtspKey.X),
+		CAPubKeyY:           emulated.ValueOf[Secp256r1Fp](qtspKey.Y),
+		IssuerPubKeyX:       emulated.ValueOf[Secp256r1Fp](issuerKey.X),
+		IssuerPubKeyY:       emulated.ValueOf[Secp256r1Fp](issuerKey.Y),
+		JWSPayload:          zkcore.StringToU8Array(payloadB64),
 	}
 
 	// == Init the circuit ==
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -273,5 +273,5 @@ func TestEUDI(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuitSimple(assignment, ccs, pk, vk)
+	zkcore.TestCircuitSimple(assignment, ccs, pk, vk)
 }

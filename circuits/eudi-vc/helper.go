@@ -8,6 +8,7 @@ import (
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
 // VerifyTBSMembership proves that TBS bytes are embedded in certificate at the claimed position
 func VerifyTBSMembership(
 	api frontend.API,

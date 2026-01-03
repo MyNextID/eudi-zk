@@ -14,7 +14,7 @@ import (
 
 	"github.com/consensys/gnark/std/math/uints"
 	cdl "github.com/mynextid/eudi-zk/circuits/eudi-vc"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 func TestCRLNotRevoked(t *testing.T) {
@@ -153,8 +153,8 @@ func TestCRLNotRevoked(t *testing.T) {
 
 	// Create witness assignment with actual values
 	assignment := &cdl.CircuitCRL{
-		CertBytes:    common.BytesToU8Array(certDER),
-		CRLBytes:     common.BytesToU8Array(crlDER),
+		CertBytes:    zkcore.BytesToU8Array(certDER),
+		CRLBytes:     zkcore.BytesToU8Array(crlDER),
 		MaxSerialLen: maxSerialLen,
 	}
 
@@ -162,7 +162,7 @@ func TestCRLNotRevoked(t *testing.T) {
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("Failed to initialize circuit: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestCRLNotRevoked(t *testing.T) {
 
 	// == Run the circuit ==
 	fmt.Println("\n--- Running circuit verification ---")
-	common.TestCircuitSimple(assignment, ccs, pk, vk)
+	zkcore.TestCircuitSimple(assignment, ccs, pk, vk)
 
 	fmt.Println("\n[OK] Circuit proof generated and verified successfully!")
 	fmt.Println("[OK] Certificate is proven to NOT be revoked")
@@ -314,8 +314,8 @@ func TestCRLRevoked(t *testing.T) {
 
 	// Create witness assignment with actual values
 	assignment := &cdl.CircuitCRL{
-		CertBytes:    common.BytesToU8Array(certDER),
-		CRLBytes:     common.BytesToU8Array(crlDER),
+		CertBytes:    zkcore.BytesToU8Array(certDER),
+		CRLBytes:     zkcore.BytesToU8Array(crlDER),
 		MaxSerialLen: maxSerialLen,
 	}
 
@@ -323,7 +323,7 @@ func TestCRLRevoked(t *testing.T) {
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("Failed to initialize circuit: %v", err)
 	}
@@ -333,7 +333,7 @@ func TestCRLRevoked(t *testing.T) {
 
 	// == Run the circuit ==
 	fmt.Println("\n--- Running circuit verification ---")
-	common.TestCircuitSimple(assignment, ccs, pk, vk)
+	zkcore.TestCircuitSimple(assignment, ccs, pk, vk)
 
 	fmt.Println("\n[OK] Circuit proof generated and verified successfully!")
 	fmt.Println("[OK] Certificate is proven to be revoked")

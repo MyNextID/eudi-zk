@@ -5,7 +5,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/consensys/gnark/std/signature/ecdsa"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 // CircuitPoP proves:
@@ -53,7 +53,7 @@ func (c *CircuitPoP) Define(api frontend.API) error {
 
 	// ===== STEP 4: Verify extracted key matches the claimed public key =====
 	// common.CompareBytes(api, extractedPubKey, circuit.SignerPubKeyBytes)
-	common.ComparePublicKeys(api, c.SignerPubKeyX, c.SignerPubKeyY, extractedPubKey)
+	zkcore.ComparePublicKeys(api, c.SignerPubKeyX, c.SignerPubKeyY, extractedPubKey)
 
 	// ===== STEP 5: Verify signature on challenge =====
 
@@ -67,7 +67,7 @@ func (c *CircuitPoP) Define(api frontend.API) error {
 		S: c.ChallengeSignatureS,
 	}
 
-	common.VerifyES256(api, c.Challenge, publicKey, signature)
+	zkcore.VerifyES256(api, c.Challenge, publicKey, signature)
 	// ===== PROOF COMPLETE =====
 	// We've proven:
 	// 1. We extracted a public key from a certificate at a claimed position

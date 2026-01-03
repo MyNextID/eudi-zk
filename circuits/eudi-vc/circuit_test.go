@@ -18,7 +18,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/uints"
 	cdl "github.com/mynextid/eudi-zk/circuits/eudi-vc"
-	"github.com/mynextid/eudi-zk/common"
+	"github.com/mynextid/eudi-zk/zkcore"
 )
 
 func TestPoPCA(t *testing.T) {
@@ -93,15 +93,15 @@ func TestPoPCA(t *testing.T) {
 	}
 
 	// == create and sign the challenge ==
-	challenge, err := common.GenerateRandomBytes(32)
+	challenge, err := zkcore.GenerateRandomBytes(32)
 	if err != nil {
 		t.Fatalf("failed to create a challenge %v", err)
 	}
 
-	c_digest := sha256.Sum256(challenge)
+	cDigest := sha256.Sum256(challenge)
 
 	// Sign the digest of the challenge
-	r, s, err := ecdsa.Sign(rand.Reader, signerKey, c_digest[:])
+	r, s, err := ecdsa.Sign(rand.Reader, signerKey, cDigest[:])
 	if err != nil {
 		t.Fatalf("failed to sign the challenge %v", err)
 	}
@@ -114,25 +114,25 @@ func TestPoPCA(t *testing.T) {
 
 	// Create witness assignment with actual values
 	assignment := &cdl.CircuitPoPCA{
-		CertBytes:           common.BytesToU8Array(tbsCert),
+		CertBytes:           zkcore.BytesToU8Array(tbsCert),
 		CertLength:          frontend.Variable(len(tbsCert)),
 		CertSigR:            emulated.ValueOf[Secp256r1Fr](certSig.R),
 		CertSigS:            emulated.ValueOf[Secp256r1Fr](certSig.S),
 		SubjectPubKeyPos:    frontend.Variable(pubKeyPosition),
-		SignerPubKeyX:       emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
-		SignerPubKeyY:       emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.Y),
+		SignerPubKeyX:       emulated.ValueOf[Secp256r1Fp](signerKey.X),
+		SignerPubKeyY:       emulated.ValueOf[Secp256r1Fp](signerKey.Y),
 		ChallengeSignatureR: emulated.ValueOf[Secp256r1Fr](r),
 		ChallengeSignatureS: emulated.ValueOf[Secp256r1Fr](s),
-		Challenge:           common.BytesToU8Array(challenge),
-		CAPubKeyX:           emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.X),
-		CAPubKeyY:           emulated.ValueOf[Secp256r1Fp](qtspKey.PublicKey.Y),
+		Challenge:           zkcore.BytesToU8Array(challenge),
+		CAPubKeyX:           emulated.ValueOf[Secp256r1Fp](qtspKey.X),
+		CAPubKeyY:           emulated.ValueOf[Secp256r1Fp](qtspKey.Y),
 	}
 
 	// == Init the circuit ==
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestPoPCA(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuit(assignment, ccs, pk, vk)
+	zkcore.TestCircuit(assignment, ccs, pk, vk)
 }
 
 func TestPoP(t *testing.T) {
@@ -216,15 +216,15 @@ func TestPoP(t *testing.T) {
 	}
 
 	// == create and sign the challenge ==
-	challenge, err := common.GenerateRandomBytes(32)
+	challenge, err := zkcore.GenerateRandomBytes(32)
 	if err != nil {
 		t.Fatalf("failed to create a challenge %v", err)
 	}
 
-	c_digest := sha256.Sum256(challenge)
+	cDigest := sha256.Sum256(challenge)
 
 	// Sign the digest of the challenge
-	r, s, err := ecdsa.Sign(rand.Reader, signerKey, c_digest[:])
+	r, s, err := ecdsa.Sign(rand.Reader, signerKey, cDigest[:])
 	if err != nil {
 		t.Fatalf("failed to sign the challenge %v", err)
 	}
@@ -237,21 +237,21 @@ func TestPoP(t *testing.T) {
 
 	// Create witness assignment with actual values
 	assignment := &cdl.CircuitPoP{
-		CertBytes:           common.BytesToU8Array(certDER),
+		CertBytes:           zkcore.BytesToU8Array(certDER),
 		CertLength:          frontend.Variable(len(certDER)),
 		SubjectPubKeyPos:    frontend.Variable(pubKeyPosition),
-		SignerPubKeyX:       emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.X),
-		SignerPubKeyY:       emulated.ValueOf[Secp256r1Fp](signerKey.PublicKey.Y),
+		SignerPubKeyX:       emulated.ValueOf[Secp256r1Fp](signerKey.X),
+		SignerPubKeyY:       emulated.ValueOf[Secp256r1Fp](signerKey.Y),
 		ChallengeSignatureR: emulated.ValueOf[Secp256r1Fr](r),
 		ChallengeSignatureS: emulated.ValueOf[Secp256r1Fr](s),
-		Challenge:           common.BytesToU8Array(challenge),
+		Challenge:           zkcore.BytesToU8Array(challenge),
 	}
 
 	// == Init the circuit ==
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -260,7 +260,7 @@ func TestPoP(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuit(assignment, ccs, pk, vk)
+	zkcore.TestCircuit(assignment, ccs, pk, vk)
 }
 
 func TestSubjectPublicKey(t *testing.T) {
@@ -278,7 +278,7 @@ func TestSubjectPublicKey(t *testing.T) {
 		panic(fmt.Sprintf("Failed to generate key: %v", err))
 	}
 
-	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.PublicKey.X, signerKey.PublicKey.Y)
+	pubKeyBytes := elliptic.Marshal(elliptic.P256(), signerKey.X, signerKey.Y)
 
 	// == Crate the x509 cert ==
 	// Generate certificate issuer (QTSP) key pair
@@ -340,9 +340,9 @@ func TestSubjectPublicKey(t *testing.T) {
 
 	// Create witness assignment with actual values
 	assignment := &cdl.CircuitSPK{
-		CertBytes:         common.BytesToU8Array(certDER),
+		CertBytes:         zkcore.BytesToU8Array(certDER),
 		CertLength:        frontend.Variable(len(certDER)),
-		SignerPubKeyBytes: common.BytesToU8Array(pubKeyBytes),
+		SignerPubKeyBytes: zkcore.BytesToU8Array(pubKeyBytes),
 		SubjectPubKeyPos:  frontend.Variable(pubKeyPosition),
 	}
 
@@ -350,7 +350,7 @@ func TestSubjectPublicKey(t *testing.T) {
 	fmt.Println("\n--- Init the circuit ---")
 	startCircuit := time.Now()
 
-	ccs, pk, vk, err := common.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
+	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
 	if err != nil {
 		t.Fatalf("failed to initialize a circuit: %v", err)
 	}
@@ -359,5 +359,5 @@ func TestSubjectPublicKey(t *testing.T) {
 	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
 
 	// == Run the circuit ==
-	common.TestCircuit(assignment, ccs, pk, vk)
+	zkcore.TestCircuit(assignment, ccs, pk, vk)
 }

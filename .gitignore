@@ -43,3 +43,10 @@ circuits/verify-eidas-signature/.DS_Store
 archive
 sandbox
 output
+setup
+server/openapi.yaml
+scripts/verify_payload.json
+.DS_Store
+examples
+compiled
+circuits/boilerplate/circuit.go

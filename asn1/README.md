@@ -79,4 +79,4 @@ The parser formats different ASN.1 types:
 
 ## License
 
-MIT
+The code of this project is licensed under the [Apache2.0 License](../LICENSE).

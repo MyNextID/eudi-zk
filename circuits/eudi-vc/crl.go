@@ -1,3 +1,4 @@
+// Package cdl implements VC exchange-related circuits
 package cdl
 
 import (
@@ -217,8 +218,8 @@ func ExtractSerialFromCert(
 	serialBytes := make([]uints.U8, maxSerialLen)
 
 	for i := range maxSerialLen {
-		byte := ReadByteAt(api, certBytes, api.Add(index, i))
-		serialBytes[i] = byte
+		buf := ReadByteAt(api, certBytes, api.Add(index, i))
+		serialBytes[i] = buf
 	}
 
 	return serialBytes

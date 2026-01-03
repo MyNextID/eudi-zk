@@ -1,0 +1,113 @@
+// Package zkproof contains main command definitions
+package zkproof
+
+import (
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/mynextid/eudi-zk/server"
+	"github.com/mynextid/eudi-zk/server/api"
+	"github.com/spf13/cobra"
+)
+
+type compileConfig struct {
+	outputDir string
+	circuits  []string
+	curve     string
+	force     bool
+}
+
+// NewCompileCmd defines the compilation command
+func NewCompileCmd() *cobra.Command {
+	cfg := &compileConfig{}
+
+	cmd := &cobra.Command{
+		Use:   "compile",
+		Short: "Compile circuits and generate setup files",
+		Long: `
+  Compile zero-knowledge circuits and generate constraint systems, proving keys,
+  and verification keys. Compiling all circuits might take some time. List of
+  circuits is available available in server/api/list.go`,
+		Example: `  # Compile all circuits
+  zkpi compile -o ./setup
+
+  # Compile specific circuits
+  zkpi compile -o ./setup -c assert-is-equal
+
+`,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runCompile(cfg)
+		},
+	}
+
+	defaultCfg := server.DefaultServerConfig()
+
+	cmd.Flags().StringVarP(&cfg.outputDir, "output", "o", defaultCfg.CircuitsDir, "Output directory for compiled circuits")
+	cmd.Flags().StringSliceVarP(&cfg.circuits, "circuits", "c", defaultCfg.Circuits, "Specific circuits to compile (comma-separated, empty = all)")
+	// cmd.Flags().StringVar(&cfg.curve, "curve", "bn254", "Elliptic curve (bn254)")
+	cfg.curve = "bn254"
+	cmd.Flags().BoolVarP(&cfg.force, "force", "f", false, "Overwrite existing files")
+
+	return cmd
+}
+
+func runCompile(cfg *compileConfig) error {
+	// Create output directory
+	if err := os.MkdirAll(cfg.outputDir, 0750); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	circuitsToCompile := cfg.circuits
+	if len(circuitsToCompile) == 0 {
+		for name := range api.CircuitList {
+			circuitsToCompile = append(circuitsToCompile, name)
+		}
+	}
+
+	fmt.Printf("\n==== Compiling %d circuits to %s====\n", len(circuitsToCompile), cfg.outputDir)
+
+	for _, name := range circuitsToCompile {
+		ci, ok := api.CircuitList[name]
+		if !ok {
+			fmt.Printf("Circuit %s not found, skipping\n", name)
+			continue
+		}
+
+		start := time.Now()
+		fmt.Printf("Compiling %s...\n", name)
+
+		csPath, pkPath, vkPath := ci.FilePaths()
+
+		// Check if files exist
+		if !cfg.force {
+			if _, err := os.Stat(csPath); err == nil {
+				fmt.Printf("%s already exists, skipping (use --force to overwrite)\n", name)
+				continue
+			}
+			if _, err := os.Stat(pkPath); err == nil {
+				fmt.Printf("%s already exists, skipping (use --force to overwrite)\n", pkPath)
+				continue
+			}
+			if _, err := os.Stat(vkPath); err == nil {
+				fmt.Printf("%s already exists, skipping (use --force to overwrite)\n", vkPath)
+				continue
+			}
+		}
+
+		// set the output dir
+		ci.Dir = cfg.outputDir
+
+		// compile the circuit
+		if err := ci.Compile(); err != nil {
+			fmt.Printf("[X] Failed to compile %s: %v\n", name, err)
+			continue
+		}
+
+		elapsed := time.Since(start)
+		fmt.Printf("[OK] Compiled %s in %s\n", name, elapsed.Round(time.Second))
+	}
+
+	fmt.Println("\n==== Compilation complete ====")
+	return nil
+}

@@ -1,12 +1,13 @@
 # ZK Circuits
 
 This directory contains reference implementations of zero-knowledge proof
-circuits for eIDAS and EUDI use cases. These circuits prioritize clarity and
-educational value over performance optimization.
+circuits relevant for digital identity frameworks, such as eIDAS, EUDI, and
+other. These circuits prioritize clarity and educational value over performance
+optimization.
 
 Notes:
 
-- Production-optimized circuits will be published separately.
+- Production-optimized circuits will be published separately
 - Some circuits take a while to compile/setup
 - Observation: memory consumption of some circuits is high
 
@@ -55,35 +56,40 @@ and all required dependencies.
 - Base64URL
 - JWT/JWS signature formats (common on the web)
 
-## Available Circuits
+## Circuit collections
 
-### 1. Compare Bytes
+### 1. Basic circuits
 
-**Location:** [compare-bytes/](./compare-bytes/)
+**Location:** [basic-circuits/](./basic-circuits/README.md)
 
-Basic circuits demonstrating fundamental operations like byte comparison, public key encoding, and digest matching.
+These circuits implement basic ZK proofs. Our goal is to showcase the basic
+logic and operations that will later act as building blocks for more complex ZK
+circuits.
 
-### 2. Key Binding (deprecated)
+### 2. Temporal
 
-Note: these functions have been migrated to eudi-vc
+**Location:** [temporal](./temporal/README.md)
 
-**Location:** [key-binding/](./key-binding/)
-
-Circuits for validating Verifiable Credential holder key binding using different approaches:
-
-- cnf (Confirmation Method) validation
-- Key digest verification
+These circuits provide zero-knowledge proofs for temporal validity constraints
+in verifiable credentials and certificates. They enable privacy-preserving
+verification of time-based claims (such as age requirements) without revealing
+the actual dates or credential contents.
 
 ### 3. eIDAS Signature Verification
 
-**Location:** [verify-eidas-signature/](./verify-eidas-signature/)
+**Location:** [verify-jws-cert/](./verify-jws-cert/README.md)
 
-Circuits for validating digital signatures in eIDAS contexts:
+This construction enables a prover to establish that "a document carries a valid
+digital signature from an entity whose public key certificate was issued by a
+trusted QTSP," while simultaneously concealing:
 
-- JWS (JSON Web Signature) validation
-- DER-encoded signature verification
+- The specific identity of the signing entity
+- The complete contents of their certificate
+- Metadata about the signature algorithm and keys
 
 ### 4. VC Verification
+
+NOTE: refactoring is in progres
 
 **Location:** [eudi-vc](./eudi-vc/README.md)
 
@@ -102,17 +108,14 @@ Each circuit folder follows this organization:
 
 ```bash
 circuits/
-├── {circuit-name}/
-│   ├── README.md              # Circuit-specific documentation
-│   ├── {circuit-name}_test.go # Test functions and examples
-│   ├── {circuit-name}.go      # Circuit implementation
-│   └── compiled/              # Generated artifacts (gitignored)
-│       ├── circuit.ccs        # Constraint system
-│       ├── proving.key        # Proving key
-│       └── verification.key   # Verifier key
+├── README.md                       # this file
+├── {circuit-collection}/           # A collection of circuit implementations
+│   ├── README.md                   # Circuit collection summary
+│   └── {circuit-name}/             # Circuit implementation and tests
+│       ├── {circuit-name}.go       # Circuit implementation
+│       ├── {circuit-name}_test.go  # Circuit test(s)
+│       └── /examples               # API payload example
 ```
-
-Note: we're migrating from `circuit_test.go` to `{circuit-name}_test.go`
 
 ## Running the Circuits
 
@@ -141,7 +144,7 @@ independently. Expect the complete test suite to take significant time.
 Test a specific circuit using its import path:
 
 ```bash
-go test -v -timeout 5m -run ^TestCompareDigestPubKeys$ github.com/mynextid/eudi-zk/circuits/compare-bytes
+go test -v -timeout 5m -run ^TestCompareBytesAPI$ github.com/mynextid/eudi-zk/circuits/basic-circuits/assert-is-equal
 ```
 
 **Command breakdown:**
@@ -154,7 +157,7 @@ go test -v -timeout 5m -run ^TestCompareDigestPubKeys$ github.com/mynextid/eudi-
 ### Run All Tests in a Circuit Folder
 
 ```bash
-go test -v -timeout 5m ./compare-bytes
+go test -v -timeout 5m ./basic-circuits
 ```
 
 ### View Available Tests
@@ -162,7 +165,7 @@ go test -v -timeout 5m ./compare-bytes
 List all test functions in a circuit:
 
 ```bash
-go test -list . ./compare-bytes
+go test -list . ./basic-circuits
 ```
 
 ## Troubleshooting
@@ -172,7 +175,7 @@ go test -list . ./compare-bytes
 Circuit compilation is computationally intensive. If tests timeout:
 
 ```bash
-go test -v -timeout 15m ./compare-bytes
+go test -v -timeout 15m ./basic-circuits
 ```
 
 ### Missing Dependencies
@@ -194,7 +197,7 @@ rm -rf */compiled/*
 
 ## Development Workflow
 
-1. **Explore examples:** Start with `compare-bytes/` for basic patterns
+1. **Explore examples:** Start with `basic-circuits/` for basic patterns
 2. **Read circuit docs:** Check each folder's README.md for detailed explanations
 3. **Run tests:** Execute tests to see circuits in action
 4. **Modify inputs:** Edit test functions to experiment with different values
@@ -205,5 +208,3 @@ rm -rf */compiled/*
 - **First run:** Compilation generates CCS and keys (slow, 1-5 minutes)
 - **Subsequent runs:** Uses cached artifacts (fast, seconds)
 - **Constraint count:** Check test output for circuit complexity metrics
-
-If you're modifying only the inputs, set `forceCompile := false`.
