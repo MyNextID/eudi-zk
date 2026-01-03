@@ -74,18 +74,6 @@ type CircuitListResponse struct {
 	Count    int                   `json:"count"`
 }
 
-// HandleHealth handles health check requests
-func (s *Server) HandleHealth(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	respondJSON(w, http.StatusOK, map[string]string{
-		"status": "healthy",
-		"time":   time.Now().Format(time.RFC3339),
-	})
-}
-
 // HandleListCircuits lists all available circuits
 func (s *Server) HandleListCircuits(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {

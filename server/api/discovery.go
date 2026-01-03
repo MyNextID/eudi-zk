@@ -30,13 +30,14 @@ type ServiceInfo struct {
 
 // EndpointInfo represents information about an API endpoint
 type EndpointInfo struct {
-	Description string          `json:"description"`
-	Path        string          `json:"path"`
-	Methods     []string        `json:"methods"`
-	Parameters  []ParameterInfo `json:"parameters,omitempty"`
-	Request     *RequestInfo    `json:"request,omitempty"`
-	Response    *ResponseInfo   `json:"response,omitempty"`
-	Examples    map[string]any  `json:"examples,omitempty"`
+	Description     string          `json:"description"`
+	LongDescription string          `json:"longDescription,omitempty"`
+	Path            string          `json:"path"`
+	Methods         []string        `json:"methods"`
+	Parameters      []ParameterInfo `json:"parameters,omitempty"`
+	Request         *SchemaInfo     `json:"request,omitempty"`
+	Response        *SchemaInfo     `json:"response,omitempty"`
+	Examples        map[string]any  `json:"examples,omitempty"`
 }
 
 // ParameterInfo represents URL or query parameters
@@ -47,20 +48,6 @@ type ParameterInfo struct {
 	Required    bool   `json:"required"`
 	Type        string `json:"type"`
 	Example     string `json:"example,omitempty"`
-}
-
-// RequestInfo represents request body information
-type RequestInfo struct {
-	ContentType string         `json:"content_type"`
-	Schema      map[string]any `json:"schema,omitempty"`
-	Example     any            `json:"example,omitempty"`
-}
-
-// ResponseInfo represents response information
-type ResponseInfo struct {
-	ContentType string         `json:"content_type"`
-	Schema      map[string]any `json:"schema,omitempty"`
-	Example     any            `json:"example,omitempty"`
 }
 
 // CircuitsSummary provides a summary of available circuits
@@ -170,11 +157,7 @@ func (s *Server) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-			"health": {
-				Description: "Health check endpoint for monitoring",
-				Path:        "/health",
-				Methods:     []string{"GET"},
-			},
+			"health": *HealthDefinition.Info,
 		},
 	}
 
