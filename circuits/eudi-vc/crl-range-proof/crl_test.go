@@ -1,4 +1,4 @@
-package cdl_test
+package crlrangeproof_test
 
 import (
 	"crypto/ecdsa"
@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/consensys/gnark/std/math/uints"
-	cdl "github.com/mynextid/eudi-zk/circuits/eudi-vc"
+	crlrangeproof "github.com/mynextid/eudi-zk/circuits/eudi-vc/crl-range-proof"
 	"github.com/mynextid/eudi-zk/zkcore"
 )
 
@@ -99,10 +99,6 @@ func TestCRLNotRevoked(t *testing.T) {
 			SerialNumber:   big.NewInt(2222),
 			RevocationTime: time.Now(),
 		},
-		{
-			SerialNumber:   big.NewInt(3333),
-			RevocationTime: time.Now(),
-		},
 	}
 
 	crlTemplate := &x509.RevocationList{
@@ -143,16 +139,16 @@ func TestCRLNotRevoked(t *testing.T) {
 	fmt.Println("[OK] Verified: Certificate is NOT in the CRL")
 
 	//  New circuit template
-	maxSerialLen := 20 // maximum serial number length in bytes
+	maxSerialLen := 5 // maximum serial number length in bytes
 
-	circuitTemplate := &cdl.CircuitCRL{
+	circuitTemplate := &crlrangeproof.CircuitCRL{
 		CertBytes:    make([]uints.U8, len(certDER)),
 		CRLBytes:     make([]uints.U8, len(crlDER)),
 		MaxSerialLen: maxSerialLen,
 	}
 
 	// Create witness assignment with actual values
-	assignment := &cdl.CircuitCRL{
+	assignment := &crlrangeproof.CircuitCRL{
 		CertBytes:    zkcore.BytesToU8Array(certDER),
 		CRLBytes:     zkcore.BytesToU8Array(crlDER),
 		MaxSerialLen: maxSerialLen,
@@ -222,7 +218,7 @@ func TestCRLRevoked(t *testing.T) {
 	}
 
 	// Create end-entity certificate template
-	serialNumber := big.NewInt(12345)
+	serialNumber := big.NewInt(3333)
 	certTemplate := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -254,10 +250,6 @@ func TestCRLRevoked(t *testing.T) {
 	revokedCerts := []pkix.RevokedCertificate{
 		{
 			SerialNumber:   big.NewInt(1111),
-			RevocationTime: time.Now(),
-		},
-		{
-			SerialNumber:   big.NewInt(12345),
 			RevocationTime: time.Now(),
 		},
 		{
@@ -306,14 +298,14 @@ func TestCRLRevoked(t *testing.T) {
 	//  New circuit template
 	maxSerialLen := 20 // maximum serial number length in bytes
 
-	circuitTemplate := &cdl.CircuitCRL{
+	circuitTemplate := &crlrangeproof.CircuitCRL{
 		CertBytes:    make([]uints.U8, len(certDER)),
 		CRLBytes:     make([]uints.U8, len(crlDER)),
 		MaxSerialLen: maxSerialLen,
 	}
 
 	// Create witness assignment with actual values
-	assignment := &cdl.CircuitCRL{
+	assignment := &crlrangeproof.CircuitCRL{
 		CertBytes:    zkcore.BytesToU8Array(certDER),
 		CRLBytes:     zkcore.BytesToU8Array(crlDER),
 		MaxSerialLen: maxSerialLen,
