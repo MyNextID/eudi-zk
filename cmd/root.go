@@ -44,7 +44,7 @@ COPYRIGHT
   (c) 2025 MyNextID/Netis d.o.o.
 
 LICENSE
-  Licensed under MIT
+  Licensed under Apache2.0
 
 FEEDBACK
   Your feedback is valuable! The ZKPI utility does not collect usage statistics

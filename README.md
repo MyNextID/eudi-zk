@@ -154,4 +154,6 @@ Please ensure code follows existing patterns.
 
 ## License
 
-This project is licensed under the [MIT License](./LICENSE).
+The code of this project is licensed under the [Apache2.0 License](./LICENSE).
+
+The specification in this repository licensed under the [CC BY-SA 4.0](./specs/LICENSE)
