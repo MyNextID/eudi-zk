@@ -154,18 +154,12 @@ go test -v -timeout 5m -run ^TestCompareBytesAPI$ github.com/mynextid/eudi-zk/ci
 - `-run ^TestName$`: Runs specific test function matching the regex pattern
 - Final argument: Full import path to the circuit package
 
-### Run All Tests in a Circuit Folder
-
-```bash
-go test -v -timeout 5m ./basic-circuits
-```
-
 ### View Available Tests
 
 List all test functions in a circuit:
 
 ```bash
-go test -list . ./basic-circuits
+go test -list ./basic-circuits/*
 ```
 
 ## Troubleshooting
@@ -175,7 +169,7 @@ go test -list . ./basic-circuits
 Circuit compilation is computationally intensive. If tests timeout:
 
 ```bash
-go test -v -timeout 15m ./basic-circuits
+go test -v -timeout 15m ./basic-circuits/assert-is-equal
 ```
 
 ### Missing Dependencies
@@ -185,14 +179,6 @@ If you encounter import errors:
 ```bash
 go mod tidy
 go mod download
-```
-
-### Clean Compiled Artifacts
-
-Remove generated files to recompile from scratch:
-
-```bash
-rm -rf */compiled/*
 ```
 
 ## Development Workflow

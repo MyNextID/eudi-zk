@@ -1,0 +1,4 @@
+[submodule "longfellow/vendor/longfellow-zk"]
+	path = longfellow/vendor/longfellow-zk
+	url = https://github.com/google/longfellow-zk.git
+	branch = main
