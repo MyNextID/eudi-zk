@@ -26,6 +26,7 @@ namespace proofs
     using Elt2 = f2_p256::Elt;
     using FftExtConvolutionFactory = FFTExtConvolutionFactory<Fp256Base, f2_p256>;
     using RSFactory = ReedSolomonFactory<Fp256Base, FftExtConvolutionFactory>;
+    using Elt = Fp256Base::Elt;
 
     constexpr char kRootX[] =
         "112649224146410281873500457609690258373018840430489408729223714171582664680802";
@@ -39,18 +40,18 @@ namespace proofs
     void CreateProof(
         ZkProof<Fp256Base> *zkproof,
         Circuit<Fp256Base> *circuit,
-        const StaticString &public_key_x,
-        const StaticString &public_key_y,
-        const StaticString &message_hash,
-        const StaticString &signature_r,
-        const StaticString &signature_s);
+        const char *public_key_x,
+        const char *public_key_y,
+        const char *message_hash,
+        const char *signature_r,
+        const char *signature_s);
 
     // VerifyProof verifies a ZK proof using only public inputs
     bool VerifyProof(
         Circuit<Fp256Base> *circuit,
-        const StaticString &public_key_x,
-        const StaticString &public_key_y,
-        const StaticString &message_hash,
+        const char *public_key_x,
+        const char *public_key_y,
+        const char *message_hash,
         ZkProof<Fp256Base> &zkproof);
 
 } // namespace proofs
