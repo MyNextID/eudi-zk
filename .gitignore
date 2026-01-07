@@ -55,5 +55,3 @@ longfellow/cpp/build
 longfellow/vendor/longfellow-zk
 longfellow/readme-internal.md
 longfellow/go-longfellow-zk/longfellow.go
-longfellow/cpp/include/ecdsa_c.h
-longfellow/cpp/src/ecdsa_c.cpp

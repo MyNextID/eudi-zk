@@ -322,6 +322,7 @@ namespace proofs
         // Uses Fiat-Shamir heuristic to derive challenges from transcript
         prover.prove(*zkproof, PrivateWitness, transcript);
         std::cout << "[OK] Proof created (size: " << zkproof->size() << " bytes)" << std::endl;
+
     }
 
     /**
@@ -396,12 +397,12 @@ namespace proofs
 
         if (result)
         {
-            std::cout << "[OK] Proof verification PASSED ✓" << std::endl;
+            std::cout << "[OK] Proof verification PASSED" << std::endl;
             std::cout << "      The prover knows a valid ECDSA signature!" << std::endl;
         }
         else
         {
-            std::cout << "[ERROR] Proof verification FAILED ✗" << std::endl;
+            std::cout << "[ERROR] Proof verification FAILED" << std::endl;
             std::cout << "        Either the signature is invalid or the proof is malformed." << std::endl;
         }
 

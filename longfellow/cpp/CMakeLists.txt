@@ -52,38 +52,40 @@ include_directories(
     ${ZSTD_INCLUDE_DIRS}
 )
 
-# Source files
-# set(SOURCES
-#     src/longfellow_wrapper.cpp
-# )
-# 
-# # Create shared library (for CGo)
-# add_library(longfellow_wrapper SHARED ${SOURCES})
-# 
-# # Link libraries
-# target_link_libraries(longfellow_wrapper
-#     ${LONGFELLOW_LIB}
-#     OpenSSL::SSL
-#     OpenSSL::Crypto
-#     ${ZSTD_LIBRARIES}
-# )
-# 
-# # Set library output name
-# set_target_properties(longfellow_wrapper PROPERTIES
-#     OUTPUT_NAME "longfellow_wrapper"
-#     VERSION ${PROJECT_VERSION}
-#     SOVERSION 0
-# )
-# 
-# # Install rules
-# install(TARGETS longfellow_wrapper
-#     LIBRARY DESTINATION lib
-#     ARCHIVE DESTINATION lib
-# )
-# 
-# install(FILES include/longfellow_wrapper.h
-#     DESTINATION include
-# )
+# ============== Shared Library (for CGo) ==============
+# Source files for the wrapper library
+set(WRAPPER_SOURCES
+    src/ecdsa-circuit.cpp
+    src/ecdsa_c.cpp
+)
+
+# Create shared library (for CGo)
+add_library(longfellow_wrapper SHARED ${WRAPPER_SOURCES})
+
+# Link libraries
+target_link_libraries(longfellow_wrapper
+    ${LONGFELLOW_LIB}
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    ${ZSTD_LIBRARIES}
+)
+
+# Set library output name
+set_target_properties(longfellow_wrapper PROPERTIES
+    OUTPUT_NAME "longfellow_wrapper"
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 0
+)
+
+# Install rules
+install(TARGETS longfellow_wrapper
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+install(FILES include/ecdsa_c.h
+    DESTINATION include
+)
 
 # ============== Testing ==============
 # Enable testing
