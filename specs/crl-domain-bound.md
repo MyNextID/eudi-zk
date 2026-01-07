@@ -1,15 +1,16 @@
 # Domain-Bound Credential Revocation List (DB-CRL) <!-- omit in toc -->
 
-Version: draft
+Version: 0.2
 
 Implementation: WIP
 
 ## Table of Contents <!-- omit in toc -->
 
 - [1. Overview](#1-overview)
-  - [1.1. The Revocation Problem in Zero-Knowledge Systems](#11-the-revocation-problem-in-zero-knowledge-systems)
-  - [1.2. Our Approach: Domain-Bound Revocation Identifiers](#12-our-approach-domain-bound-revocation-identifiers)
-  - [1.3. Document Scope](#13-document-scope)
+  - [1.1. Revocation Verification: At Presentation vs. After Presentation](#11-revocation-verification-at-presentation-vs-after-presentation)
+  - [1.2. The Challenge of Post-Presentation Revocation Verification in Zero-Knowledge Proof Systems](#12-the-challenge-of-post-presentation-revocation-verification-in-zero-knowledge-proof-systems)
+  - [1.3. Our Approach: Domain-Bound Revocation Identifiers](#13-our-approach-domain-bound-revocation-identifiers)
+  - [1.4. Document Scope](#14-document-scope)
 - [2. Introduction](#2-introduction)
   - [2.1. Purpose](#21-purpose)
   - [2.2. Goals](#22-goals)
@@ -35,32 +36,61 @@ Implementation: WIP
   - [7.3. Presentation Verification](#73-presentation-verification)
   - [7.4. CRL Format](#74-crl-format)
   - [7.5. Status Updates](#75-status-updates)
-- [8. Extension - Time-dependent revocation id](#8-extension---time-dependent-revocation-id)
+- [8. Extensions](#8-extensions)
+  - [8.1. Time-limiting credential status visibility](#81-time-limiting-credential-status-visibility)
 
 ## 1. Overview
 
-### 1.1. The Revocation Problem in Zero-Knowledge Systems
+### 1.1. Revocation Verification: At Presentation vs. After Presentation
 
-Traditional credential revocation mechanisms publish a list mapping credential
-identifiers to their status (valid, suspended, revoked). While effective, this
-approach is incompatible with zero-knowledge systems where (metadata)
-unlinkability is essential: different verifiers must not be able to correlate
-presentations of the same credential by comparing identifiers.
+Verifiable Credentials with revocation capabilities fall into two categories
+based on when revocation verification is needed:
 
-Existing ZK-compatible solutions either:
+a) **Verification at the time of credential presentation only:** Use cases such as
+age verification, insurance eligibility, and student discounts require proof of
+non-revocation only at the moment the credential is presented. For an efficient
+approach see [Mini CRL](crl-range-proof.md).
 
-1. Include entire revocation lists as circuit inputs (inefficient, scales poorly)
-2. Prove non-membership using cryptographic accumulators (requires holder to update witness data)
-3. Sacrifice verifier independence (require holder cooperation for status checks)
+b) **Verification at and after the time of credential presentation:**
+Use cases—including education and employment credentials, identity credentials,
+and KYC credentials—require verifiers to check credential validity both at
+presentation and at any point afterward, without requiring the holder's
+involvement. While verification after the time of credential presentation is
+straightforward using traditional revocation mechanisms, it presents significant
+challenges in zero-knowledge systems.
 
-### 1.2. Our Approach: Domain-Bound Revocation Identifiers
+This document addresses the latter category.
+
+### 1.2. The Challenge of Post-Presentation Revocation Verification in Zero-Knowledge Proof Systems
+
+Traditional credential revocation mechanisms publish lists that map credential
+identifiers to their status (valid, suspended, or revoked). While effective in
+conventional systems and it allows anyone with the credential to check the
+status, this approach is fundamentally incompatible with zero-knowledge proof
+systems that require metadata unlinkability: different verifiers must not be
+able to correlate presentations of the same credential by comparing identifiers.
+
+Current ZK-compatible approaches include revocation lists as circuit inputs,
+allowing verifiers to **confirm non-revocation only at the time of presentation**.
+Once the ZK proof is created, input variables cannot be changed, hence if a
+verifier needs to check the credential status later, we face two problematic
+options:
+
+a) Require holder cooperation – The holder must participate again to generate a
+new proof, which may not be feasible or desirable.
+
+b) Use a revocation identifier – The verifier learns a persistent identifier
+that can act as a global correlator, breaking unlinkability guarantees.
+
+### 1.3. Our Approach: Domain-Bound Revocation Identifiers
 
 We introduce Domain-Bound Certificate Revocation Lists (DB-CRL), which enables:
 
-- Unlinkability: Each verifier sees a different revocation identifier
+- Independent revocation verification: ZK proofs remain valid and verifiers
+check current status independently at any point in time
 - Verifier Independence: Status checks require no holder cooperation  
+- Unlinkability: Each verifier sees a different revocation identifier
 - Efficiency: Small revocation lists, simple lookups
-- Temporal Validity: Proofs remain valid; verifiers check current status independently at any point in time
 
 Core Mechanism:
 
@@ -88,15 +118,31 @@ Key Properties:
 
 - Different domains -> different identifiers: `SHA256(revocation_id || "verifier-a.com") != SHA256(revocation_id || "verifier-b.com")`
 - Verifiers cannot correlate: Even colluding verifiers cannot determine if two `domain_rev_id` values derive from the same credential
-- Issuer generates domain-specific CRLs: When queried, issuer computes `SHA256(revocation_id || requesting_domain)` for each revoked credential
+- Issuer generates domain-specific CRLs: When queried, issuer computes
+`SHA256(revocation_id || requesting_domain)` for each revoked credential
 - Small CRLs: Only revoked credentials listed (approx. 1% of issued credentials)
-- No holder involvement in status checks: Verifier queries CRL directly; proof remains valid regardless of status changes
+- No holder involvement in status checks: Verifier queries CRL directly; zero
+knowledge proof remains valid regardless of status changes
 - Verifier can check the status at any point in time
 
-Limitation: When a single credential is newly revoked, timing analysis could enable
-correlation. Mitigation: batch revocations or pad lists to minimum size.
+Limitations:
 
-### 1.3. Document Scope
+- When a single credential is newly revoked, timing analysis could enable
+correlation.
+Mitigation: batch revocations or pad lists to minimum size.
+- Issuer-verifier collusion is possible. If the verifier shares all the
+`domain_rev_id` values it has observed from credential presentations, the issuer
+can compute `SHA256(revocation_id || verifier_domain)` for all credentials it
+has issued (since it knows all the `revocation_id`s it created) and match these
+against the verifier's observed `domain_rev_id` values to determine which
+specific credentials have been presented to that verifier.
+- Returning uses can be identified; If a returning user shares the same
+credential, the `domain_rev_id` will be the same.
+
+Note: The last two points are not applicable for most use cases that require
+revocation checks after the time of presenstation.
+
+### 1.4. Document Scope
 
 This specification defines:
 
@@ -115,20 +161,23 @@ validity at specific past or future timestamps. See separate specification:
 ### 2.1. Purpose
 
 This specification defines the Domain-Bound Credential Revocation List (DB-CRL)
-system, which enables credential status verification in zero-knowledge proof
-systems while maintaining unlinkability across different verifiers.
+system, which enables credential status verification at and after the time of
+presentation in zero-knowledge proof systems while maintaining unlinkability
+across different verifiers.
 
 ### 2.2. Goals
 
 - Verifier Unlinkability: Prevent different verifiers from correlating credentials by comparing revocation identifiers
-- Independent Verification: Enable verifiers to check credential status without holder cooperation
+- Independent Verification: Enable verifiers to check credential status without holder cooperation even after the time of presentation
 - Privacy-Preserving: Minimize information leakage about credential usage patterns
 - Practical: Maintain reasonable computational and operational costs
 
 ### 2.3. Non-Goals
 
-- Holder Anonymity from Issuer: The issuer is expected to know which credentials are issued to which holders
-- Complete Verifier Anonymity: The issuer may observe which verifiers query which CRL lists, but they don't learn for which Verifiable Credential
+- Holder Anonymity from Issuer: The issuer is expected to know which credentials
+are issued to which holders
+- Complete Verifier Anonymity: The issuer may observe which verifiers query
+which CRL lists, but they don't learn for which Verifiable Credential
 
 ### 2.4. Threat Model
 
@@ -387,26 +436,36 @@ The model works with any CRL profile.
 
 Query API proposal: `GET /crl/{crlId}?domain={domain}` returns signed CRL document.
 
-Verifier caching: Verifiers SHOULD cache CRLs until `nextUpdate` timestamp.
-
 ### 7.5. Status Updates
 
-CRLs are dynamically computed per request with well defined time of next update, hence CRL lists are re-computed every time when requested (caching mechanism can be implemented).
+Verifier caching: Verifiers SHOULD cache CRLs until `nextUpdate` timestamp.
 
-## 8. Extension - Time-dependent revocation id
+CRLs are dynamically computed per verifier with well defined update time.
 
-The proposed model allows users to track the status of CRL entries. If required,
-additional time component can be plugged in as follows:
+## 8. Extensions
+
+### 8.1. Time-limiting credential status visibility
+
+The vanilla model allows users to track the status of CRL entries without any
+time-constraints. If required, additional time component can be plugged in as
+follows:
 
 ```go
+// Base domain-specific revocation identifier
 domain_rev_id = HASH(revocation_id || domain)
 
-t_i = floor((t-now) / duration)
+// Time period index (e.g., days, weeks, or months since epoch)
+time_index = floor(now / time_period)
 
-domain_rev_id(t_i) = HASH(domain_rev_id || t_i)
+// Time-bound domain revocation identifier
+time_bound_rev_id = HASH(domain_rev_id || time_index)
 
-// or if we want to mask the status:
-domain_rev_id(t_i) = HASH(domain_rev_id || status || t_i)
+// Alternative: with status masking
+time_bound_rev_id = HASH(domain_rev_id || status || time_index)
 ```
 
-This way verifier cannot monitor the status updates of other entries.
+This limits the verifier to checking credential status only within the time
+period for which it has been granted access.
+
+If credential status only needs to be verified at the time of presentation, see
+[Mini CRL](./crl-range-proof.md) for a more appropriate approach.
