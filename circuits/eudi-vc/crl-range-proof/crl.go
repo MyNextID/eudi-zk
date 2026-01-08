@@ -257,10 +257,7 @@ func (api *API) Parse(publicInputJSON, privateInputJSON []byte) (frontend.Circui
 	}
 
 	// Step 4: Create full witness
-	w := WitnessInput{
-		CRLBytes:  privateInput.CRLBytes,
-		CertBytes: privateInput.CertBytes,
-	}
+	w := WitnessInput(privateInput)
 
 	// Validate inputs
 	if err := w.Validate(); err != nil {
