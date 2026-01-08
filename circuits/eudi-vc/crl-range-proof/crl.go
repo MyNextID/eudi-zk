@@ -309,34 +309,3 @@ var Info = &circuits.CircuitInfo{
 		},
 	},
 }
-
-/*
-// Package minicrl implements the Mini CRL circuit
-package minicrl
-
-import (
-	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/std/math/uints"
-)
-
-// Circuit defines a ZK circuit that verifies
-// The circuit focuses on two main operations:
-//
-// - extract the certificate serial number
-// - prove that the serial number is in the range between the two CRL entries
-type Circuit struct {
-	// private inputs
-	CRLBytes  []uints.U8 `gnark:",private"` // Mini CRL in DER format
-	CertBytes []uints.U8 `gnark:",secret"`  // Certificate in DER format
-
-	// Circuit parameters set at compile time
-	MaxSerialLen int `gnark:"-"` // Maximum serial number length
-}
-
-// Define implements the gnark Circuit interface
-func (c *Circuit) Define(api frontend.API) error {
-	// Verify that the certificate's serial number is NOT in the CRL
-	return VerifySerialNotRevoked(api, c.CertBytes, c.CRLBytes, c.MaxSerialLen)
-}
-
-*/
