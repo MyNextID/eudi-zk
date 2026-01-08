@@ -329,7 +329,7 @@ func BytesToFieldElement(api frontend.API, bytes []uints.U8) frontend.Variable {
 }
 
 // FindSubjectPublicKeyPosition locates the subject public key in DER bytes
-func FindSubjectPublicKeyPosition(certDER []byte) (int, error) {
+func FindSubjectPublicKeyPosition(certDER []byte) int {
 	// Parse the certificate to find the SubjectPublicKeyInfo position
 	// This is done off-circuit using standard Go parsing
 
@@ -364,7 +364,7 @@ func FindSubjectPublicKeyPosition(certDER []byte) (int, error) {
 
 	// Now at BIT STRING containing the public key
 	// This is the position we want!
-	return idx, nil
+	return idx
 }
 
 // ============================================================================
@@ -411,7 +411,7 @@ func FindTBSStart(certDER []byte) int {
 }
 
 // FindSubjectPublicKeyPositionInTBS locates the subject public key within TBS bytes
-func FindSubjectPublicKeyPositionInTBS(tbsDER []byte) (int, error) {
+func FindSubjectPublicKeyPositionInTBS(tbsDER []byte) int {
 	idx := 0
 
 	// Skip TBS SEQUENCE header
@@ -437,5 +437,5 @@ func FindSubjectPublicKeyPositionInTBS(tbsDER []byte) (int, error) {
 	idx = skipElement(tbsDER, idx)
 
 	// Now at BIT STRING containing the public key
-	return idx, nil
+	return idx
 }

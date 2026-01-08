@@ -1,31 +1,80 @@
-package crlrangeproof_test
+package minicrl_test
 
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/consensys/gnark/std/math/uints"
-	crlrangeproof "github.com/mynextid/eudi-zk/circuits/eudi-vc/crl-range-proof"
-	"github.com/mynextid/eudi-zk/zkcore"
+	"github.com/mynextid/eudi-zk/circuits"
+	minicrl "github.com/mynextid/eudi-zk/circuits/eudi-vc/crl-range-proof"
 )
 
-func TestCRLNotRevoked(t *testing.T) {
+func TestCompareBytesAPI(t *testing.T) {
 
-	// == Circuit data ==
-	ccsPath := "compiled/circuit-crl-v1.ccs"
-	pkPath := "compiled/proving-crl-v1.key"
-	vkPath := "compiled/verifying-crl-v1.key"
-	// true: recompile, false: load circuit if exists
-	forceCompile := true
+	saveExamplePayload := true
 
+	// Generate inputs
+
+	zkc, err := circuits.Compile(minicrl.Info)
+	if err != nil {
+		t.Fatalf("zk circuit compilation failed: %v", err)
+	}
+
+	data := MockData(t)
+
+	pvtIn := minicrl.PrivateInput{
+		CRLBytes:  base64.RawURLEncoding.EncodeToString(data.CRL),
+		CertBytes: base64.RawURLEncoding.EncodeToString(data.Cert),
+	}
+	pvtInBuf, _ := json.Marshal(pvtIn)
+	pubIn := minicrl.PublicInput{}
+	pubInBuf, _ := json.Marshal(pubIn)
+
+	// create a proof
+	proof, err := zkc.ProveWithJSON(pubInBuf, pvtInBuf)
+	if err != nil {
+		t.Fatalf("failed to create a proof: %v", err)
+	}
+
+	// verify the proof
+	err = zkc.VerifyWithJSON(pubInBuf, proof)
+	if err != nil {
+		t.Fatalf("failed to verify a proof: %v", err)
+	}
+
+	// save the sample payload
+	if saveExamplePayload {
+		proveRequest := circuits.Request{
+			Private: pvtIn,
+			Public:  pubIn,
+		}
+
+		filename := fmt.Sprintf("%s.json", zkc.Info.Name)
+		path := filepath.Join("examples", filename)
+		err = proveRequest.Save(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+}
+
+type Inputs struct {
+	CRL  []byte
+	Cert []byte
+}
+
+func MockData(t *testing.T) Inputs {
 	// == Generate test certificate ==
 	// Generate certificate key pair
 	certKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -43,7 +92,7 @@ func TestCRLNotRevoked(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	keyId := sha1.Sum(pubKeyBytes)
+	keyID := sha256.Sum256(pubKeyBytes)
 
 	// Create CA certificate template
 	caTemplate := &x509.Certificate{
@@ -57,7 +106,7 @@ func TestCRLNotRevoked(t *testing.T) {
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCRLSign | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 		IsCA:                  true,
-		SubjectKeyId:          keyId[:],
+		SubjectKeyId:          keyID[:],
 	}
 
 	// Create end-entity certificate template
@@ -118,71 +167,13 @@ func TestCRLNotRevoked(t *testing.T) {
 	fmt.Printf("Certificate DER length: %d bytes\n", len(certDER))
 	fmt.Printf("CRL DER length: %d bytes\n", len(crlDER))
 
-	// Verify our certificate is NOT in the CRL
-	crl, err := x509.ParseRevocationList(crlDER)
-	if err != nil {
-		t.Fatalf("Failed to parse CRL: %v", err)
+	return Inputs{
+		CRL:  crlDER,
+		Cert: certDER,
 	}
-
-	isRevoked := false
-	for _, revokedCert := range crl.RevokedCertificateEntries {
-		if revokedCert.SerialNumber.Cmp(cert.SerialNumber) == 0 {
-			isRevoked = true
-			break
-		}
-	}
-
-	if isRevoked {
-		t.Fatal("Test certificate should NOT be revoked!")
-	}
-
-	fmt.Println("[OK] Verified: Certificate is NOT in the CRL")
-
-	//  New circuit template
-	maxSerialLen := 5 // maximum serial number length in bytes
-
-	circuitTemplate := &crlrangeproof.CircuitCRL{
-		CertBytes:    make([]uints.U8, len(certDER)),
-		CRLBytes:     make([]uints.U8, len(crlDER)),
-		MaxSerialLen: maxSerialLen,
-	}
-
-	// Create witness assignment with actual values
-	assignment := &crlrangeproof.CircuitCRL{
-		CertBytes:    zkcore.BytesToU8Array(certDER),
-		CRLBytes:     zkcore.BytesToU8Array(crlDER),
-		MaxSerialLen: maxSerialLen,
-	}
-
-	// == Init the circuit ==
-	fmt.Println("\n--- Init the circuit ---")
-	startCircuit := time.Now()
-
-	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
-	if err != nil {
-		t.Fatalf("Failed to initialize circuit: %v", err)
-	}
-
-	circuitTime := time.Since(startCircuit)
-	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
-
-	// == Run the circuit ==
-	fmt.Println("\n--- Running circuit verification ---")
-	zkcore.TestCircuitSimple(assignment, ccs, pk, vk)
-
-	fmt.Println("\n[OK] Circuit proof generated and verified successfully!")
-	fmt.Println("[OK] Certificate is proven to NOT be revoked")
 }
 
-func TestCRLRevoked(t *testing.T) {
-
-	// == Circuit data ==
-	ccsPath := "compiled/circuit-crl-v1.ccs"
-	pkPath := "compiled/proving-crl-v1.key"
-	vkPath := "compiled/verifying-crl-v1.key"
-	// true: recompile, false: load circuit if exists
-	forceCompile := false
-
+func MockDataRevoked(t *testing.T) Inputs {
 	// == Generate test certificate ==
 	// Generate certificate key pair
 	certKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -200,7 +191,7 @@ func TestCRLRevoked(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	keyId := sha1.Sum(pubKeyBytes)
+	keyID := sha256.Sum256(pubKeyBytes)
 
 	// Create CA certificate template
 	caTemplate := &x509.Certificate{
@@ -214,11 +205,11 @@ func TestCRLRevoked(t *testing.T) {
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCRLSign | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 		IsCA:                  true,
-		SubjectKeyId:          keyId[:],
+		SubjectKeyId:          keyID[:],
 	}
 
 	// Create end-entity certificate template
-	serialNumber := big.NewInt(3333)
+	serialNumber := big.NewInt(2112)
 	certTemplate := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -232,7 +223,7 @@ func TestCRLRevoked(t *testing.T) {
 		BasicConstraintsValid: true,
 	}
 
-	// Create the certificate signed by CA
+	// Create the certificate
 	certDER, err := x509.CreateCertificate(rand.Reader, certTemplate, caTemplate, &certKey.PublicKey, caKey)
 	if err != nil {
 		t.Fatalf("Failed to create certificate: %v", err)
@@ -253,7 +244,7 @@ func TestCRLRevoked(t *testing.T) {
 			RevocationTime: time.Now(),
 		},
 		{
-			SerialNumber:   big.NewInt(3333),
+			SerialNumber:   big.NewInt(2222),
 			RevocationTime: time.Now(),
 		},
 	}
@@ -275,58 +266,8 @@ func TestCRLRevoked(t *testing.T) {
 	fmt.Printf("Certificate DER length: %d bytes\n", len(certDER))
 	fmt.Printf("CRL DER length: %d bytes\n", len(crlDER))
 
-	// Verify our certificate is NOT in the CRL
-	crl, err := x509.ParseRevocationList(crlDER)
-	if err != nil {
-		t.Fatalf("Failed to parse CRL: %v", err)
+	return Inputs{
+		CRL:  crlDER,
+		Cert: certDER,
 	}
-
-	isRevoked := false
-	for _, revokedCert := range crl.RevokedCertificateEntries {
-		if revokedCert.SerialNumber.Cmp(cert.SerialNumber) == 0 {
-			isRevoked = true
-			break
-		}
-	}
-
-	if !isRevoked {
-		t.Fatal("Test certificate should be revoked!")
-	}
-
-	fmt.Println("[OK] Verified: Certificate is in the CRL")
-
-	//  New circuit template
-	maxSerialLen := 20 // maximum serial number length in bytes
-
-	circuitTemplate := &crlrangeproof.CircuitCRL{
-		CertBytes:    make([]uints.U8, len(certDER)),
-		CRLBytes:     make([]uints.U8, len(crlDER)),
-		MaxSerialLen: maxSerialLen,
-	}
-
-	// Create witness assignment with actual values
-	assignment := &crlrangeproof.CircuitCRL{
-		CertBytes:    zkcore.BytesToU8Array(certDER),
-		CRLBytes:     zkcore.BytesToU8Array(crlDER),
-		MaxSerialLen: maxSerialLen,
-	}
-
-	// == Init the circuit ==
-	fmt.Println("\n--- Init the circuit ---")
-	startCircuit := time.Now()
-
-	ccs, pk, vk, err := zkcore.InitCircuit(ccsPath, pkPath, vkPath, forceCompile, circuitTemplate)
-	if err != nil {
-		t.Fatalf("Failed to initialize circuit: %v", err)
-	}
-
-	circuitTime := time.Since(startCircuit)
-	fmt.Printf("[OK] Circuit created/loaded successfully! (took %v)\n", circuitTime)
-
-	// == Run the circuit ==
-	fmt.Println("\n--- Running circuit verification ---")
-	zkcore.TestCircuitSimple(assignment, ccs, pk, vk)
-
-	fmt.Println("\n[OK] Circuit proof generated and verified successfully!")
-	fmt.Println("[OK] Certificate is proven to be revoked")
 }

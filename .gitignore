@@ -50,3 +50,5 @@ scripts/verify_payload.json
 examples
 compiled
 circuits/boilerplate/circuit.go
+db-crl
+longfellow/cpp/build

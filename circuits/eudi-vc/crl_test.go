@@ -4,7 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
@@ -43,7 +43,7 @@ func TestCRLNotRevoked(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	keyId := sha1.Sum(pubKeyBytes)
+	keyID := sha256.Sum256(pubKeyBytes)
 
 	// Create CA certificate template
 	caTemplate := &x509.Certificate{
@@ -57,7 +57,7 @@ func TestCRLNotRevoked(t *testing.T) {
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCRLSign | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 		IsCA:                  true,
-		SubjectKeyId:          keyId[:],
+		SubjectKeyId:          keyID[:],
 	}
 
 	// Create end-entity certificate template
@@ -204,7 +204,7 @@ func TestCRLRevoked(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	keyId := sha1.Sum(pubKeyBytes)
+	keyID := sha256.Sum256(pubKeyBytes)
 
 	// Create CA certificate template
 	caTemplate := &x509.Certificate{
@@ -218,7 +218,7 @@ func TestCRLRevoked(t *testing.T) {
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCRLSign | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 		IsCA:                  true,
-		SubjectKeyId:          keyId[:],
+		SubjectKeyId:          keyID[:],
 	}
 
 	// Create end-entity certificate template

@@ -73,10 +73,7 @@ func TestPoPCA(t *testing.T) {
 	tbsCert := cert.RawTBSCertificate
 
 	// Find public key position
-	pubKeyPosition, err := cdl.FindSubjectPublicKeyPositionInTBS(tbsCert)
-	if err != nil {
-		t.Errorf("finding subject public key position failed: %v", err)
-	}
+	pubKeyPosition := cdl.FindSubjectPublicKeyPositionInTBS(tbsCert)
 
 	// Extract the signature from the certificate
 	var certSig struct {
@@ -188,10 +185,7 @@ func TestPoP(t *testing.T) {
 	}
 
 	// Find public key position
-	pubKeyPosition, err := cdl.FindSubjectPublicKeyPosition(certDER)
-	if err != nil {
-		t.Errorf("finding subject public key position failed: %v", err)
-	}
+	pubKeyPosition := cdl.FindSubjectPublicKeyPosition(certDER)
 
 	cert, err := x509.ParseCertificate(certDER)
 	if err != nil {
@@ -306,10 +300,7 @@ func TestSubjectPublicKey(t *testing.T) {
 	}
 
 	// Find public key position
-	pubKeyPosition, err := cdl.FindSubjectPublicKeyPosition(certDER)
-	if err != nil {
-		t.Errorf("finding subject public key position failed: %v", err)
-	}
+	pubKeyPosition := cdl.FindSubjectPublicKeyPosition(certDER)
 
 	cert, err := x509.ParseCertificate(certDER)
 	if err != nil {

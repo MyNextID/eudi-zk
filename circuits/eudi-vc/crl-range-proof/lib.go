@@ -1,41 +1,10 @@
-// Package cdl implements VC exchange-related circuits
-package cdl
+package minicrl
 
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/mynextid/eudi-zk/zkcore"
 )
-
-// CircuitCRL defines a ZK circuit that verifies
-// 1. A certificate's serial number is NOT in a provided CRL
-// 2. The CRL signature is validated externally (assumed valid input)
-// Note: this approach is super inefficient as the CRL grows
-// BitString approach is probably more efficient, but it is encoded as hex+base64 ...
-type CircuitCRL struct {
-	// public inputs
-	CRLBytes []uints.U8 `gnark:",public"` // The full CRL in DER format
-
-	// private inputs
-	CertBytes []uints.U8 `gnark:",secret"` // The certificate to check
-
-	// Circuit parameters set at compile time
-	MaxSerialLen int `gnark:"-"` // Maximum serial number length in bytes
-}
-
-// Define implements the gnark Circuit interface
-func (c *CircuitCRL) Define(api frontend.API) error {
-	// Verify that the certificate's serial number is NOT in the CRL
-	return VerifySerialNotRevoked(api, c.CertBytes, c.CRLBytes, c.MaxSerialLen)
-}
-
-// NewCircuitCRL creates a new CRL verification circuit with specified sizes
-func NewCircuitCRL(maxCertSize, maxCRLSize int) *CircuitCRL {
-	return &CircuitCRL{
-		CertBytes: make([]uints.U8, maxCertSize),
-		CRLBytes:  make([]uints.U8, maxCRLSize),
-	}
-}
 
 // CheckSerialInCRLV2 verifies if a certificate serial number is present in a
 // CRL Returns 1 if the serial is found (revoked), 0 if not found (valid)
@@ -48,62 +17,65 @@ func CheckSerialInCRLV2(
 	index := frontend.Variable(0)
 
 	// Skip outer CRL SEQUENCE
-	tag := ReadByteAt(api, crlBytes, index)
+	tag := zkcore.ReadByteAt(api, crlBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 	index = api.Add(index, 1)
-	_, lengthBytes := ReadDERLength(api, crlBytes, index)
+	_, lengthBytes := zkcore.ReadDERLength(api, crlBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Enter TBSCertList SEQUENCE
-	tag = ReadByteAt(api, crlBytes, index)
+	tag = zkcore.ReadByteAt(api, crlBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 	index = api.Add(index, 1)
-	_, lengthBytes = ReadDERLength(api, crlBytes, index)
+	_, lengthBytes = zkcore.ReadDERLength(api, crlBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Field 1: Version (optional, INTEGER 0x02)
-	tag = ReadByteAt(api, crlBytes, index)
+	tag = zkcore.ReadByteAt(api, crlBytes, index)
 	hasVersion := api.IsZero(api.Sub(tag.Val, 0x02))
-	skipAmount := api.Select(hasVersion, SkipElement(api, crlBytes, index), 0)
+	skipAmount := api.Select(hasVersion, zkcore.SkipElement(api, crlBytes, index), 0)
 	index = api.Add(index, skipAmount)
 
 	// Field 2: Signature Algorithm (SEQUENCE 0x30)
-	tag = ReadByteAt(api, crlBytes, index)
+	tag = zkcore.ReadByteAt(api, crlBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = SkipElement(api, crlBytes, index)
+	skipAmount = zkcore.SkipElement(api, crlBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 3: Issuer DN (SEQUENCE 0x30)
-	tag = ReadByteAt(api, crlBytes, index)
+	tag = zkcore.ReadByteAt(api, crlBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = SkipElement(api, crlBytes, index)
+	skipAmount = zkcore.SkipElement(api, crlBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 4: thisUpdate (TIME 0x17 or 0x18)
-	skipAmount = SkipElement(api, crlBytes, index)
+	skipAmount = zkcore.SkipElement(api, crlBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 5: nextUpdate (optional, TIME 0x17 or 0x18)
-	tag = ReadByteAt(api, crlBytes, index)
+	tag = zkcore.ReadByteAt(api, crlBytes, index)
 	isTime := api.Or(
 		api.IsZero(api.Sub(tag.Val, 0x17)),
 		api.IsZero(api.Sub(tag.Val, 0x18)),
 	)
-	skipAmount = api.Select(isTime, SkipElement(api, crlBytes, index), 0)
+	skipAmount = api.Select(isTime, zkcore.SkipElement(api, crlBytes, index), 0)
 	index = api.Add(index, skipAmount)
 
 	// Field 6: revokedCertificates (optional, SEQUENCE 0x30)
 	// This is where we need to search for our serial number
-	tag = ReadByteAt(api, crlBytes, index)
+	tag = zkcore.ReadByteAt(api, crlBytes, index)
 	hasRevokedCerts := api.IsZero(api.Sub(tag.Val, 0x30))
 
-	// If no revoked certificates, serial is not in CRL
-	found := frontend.Variable(0)
+	// there must be exactly 2 revoked certificates in the list
+	api.AssertIsEqual(hasRevokedCerts, 1)
+
+	// Set revoked to false
+	revoked := frontend.Variable(0)
 
 	// Only search if there are revoked certificates
 	// We need to iterate through the sequence and check each entry
 	revokedSeqStart := api.Add(index, 1)
-	_, revokedLenBytes := ReadDERLength(api, crlBytes, api.Add(index, 1))
+	_, revokedLenBytes := zkcore.ReadDERLength(api, crlBytes, api.Add(index, 1))
 	revokedSeqDataStart := api.Add(revokedSeqStart, revokedLenBytes)
 
 	// Search through revoked certificates
@@ -114,18 +86,18 @@ func CheckSerialInCRLV2(
 	// the 1st entry must be < serialBytes
 	{
 		// Read entry SEQUENCE tag
-		entryTag := ReadByteAt(api, crlBytes, searchIndex)
+		entryTag := zkcore.ReadByteAt(api, crlBytes, searchIndex)
 		_ = api.IsZero(api.Sub(entryTag.Val, 0x30))
 
 		// Skip SEQUENCE tag and read length
 		serialIndex := api.Add(searchIndex, 1)
-		entryContentLen, entryLenBytes := ReadDERLength(api, crlBytes, serialIndex)
+		entryContentLen, entryLenBytes := zkcore.ReadDERLength(api, crlBytes, serialIndex)
 		serialIndex = api.Add(serialIndex, entryLenBytes)
 
 		// Now at serial number (INTEGER 0x02)
-		_ = ReadByteAt(api, crlBytes, serialIndex) // Verify it's 0x02 if needed
+		_ = zkcore.ReadByteAt(api, crlBytes, serialIndex) // Verify it's 0x02 if needed
 		serialIndex = api.Add(serialIndex, 1)
-		_, serialLenBytes := ReadDERLength(api, crlBytes, serialIndex)
+		_, serialLenBytes := zkcore.ReadDERLength(api, crlBytes, serialIndex)
 		serialIndex = api.Add(serialIndex, serialLenBytes)
 
 		// Compare serial numbers (fixed length comparison)
@@ -134,15 +106,15 @@ func CheckSerialInCRLV2(
 		sn := make([]uints.U8, maxSerialLen)
 
 		for i := range maxSerialLen {
-			buf := ReadByteAt(api, crlBytes, api.Add(serialIndex, i))
+			buf := zkcore.ReadByteAt(api, crlBytes, api.Add(serialIndex, i))
 			sn[i] = buf
 		}
 
 		isLessThan, _ := zkcore.IsSmaller(api, serialBytes, sn)
 
-		// Update found flag if we have a match and should process
+		// Update revoked flag if we have a match and should process
 		matchFound := api.And(hasRevokedCerts, isLessThan)
-		found = api.Select(matchFound, 1, found)
+		revoked = api.Select(matchFound, 1, revoked)
 
 		// Move to next entry
 		entrySize := api.Add(api.Add(1, entryLenBytes), entryContentLen)
@@ -153,18 +125,18 @@ func CheckSerialInCRLV2(
 	// the 2nd entry must be > serialBytes
 	{
 		// Read entry SEQUENCE tag
-		entryTag := ReadByteAt(api, crlBytes, searchIndex)
+		entryTag := zkcore.ReadByteAt(api, crlBytes, searchIndex)
 		_ = api.IsZero(api.Sub(entryTag.Val, 0x30))
 
 		// Skip SEQUENCE tag and read length
 		serialIndex := api.Add(searchIndex, 1)
-		_, entryLenBytes := ReadDERLength(api, crlBytes, serialIndex)
+		_, entryLenBytes := zkcore.ReadDERLength(api, crlBytes, serialIndex)
 		serialIndex = api.Add(serialIndex, entryLenBytes)
 
 		// Now at serial number (INTEGER 0x02)
-		_ = ReadByteAt(api, crlBytes, serialIndex) // Verify it's 0x02 if needed
+		_ = zkcore.ReadByteAt(api, crlBytes, serialIndex) // Verify it's 0x02 if needed
 		serialIndex = api.Add(serialIndex, 1)
-		_, serialLenBytes := ReadDERLength(api, crlBytes, serialIndex)
+		_, serialLenBytes := zkcore.ReadDERLength(api, crlBytes, serialIndex)
 		serialIndex = api.Add(serialIndex, serialLenBytes)
 
 		// Compare serial numbers (fixed length comparison)
@@ -173,20 +145,20 @@ func CheckSerialInCRLV2(
 		sn := make([]uints.U8, maxSerialLen)
 
 		for i := range maxSerialLen {
-			buf := ReadByteAt(api, crlBytes, api.Add(serialIndex, i))
+			buf := zkcore.ReadByteAt(api, crlBytes, api.Add(serialIndex, i))
 			sn[i] = buf
 		}
 
-		// here we reverse the order
+		// here we reverse the order of comparison
 		isLessThan, _ := zkcore.IsSmaller(api, sn, serialBytes)
 
-		// Update found flag if we have a match and should process
+		// Update revoked flag if we have a match and should process
 		matchFound := api.And(hasRevokedCerts, isLessThan)
-		found = api.Select(matchFound, 1, found)
+		revoked = api.Select(matchFound, 1, revoked)
 
 	}
 
-	return found
+	return revoked
 }
 
 // CheckSerialInCRL verifies if a certificate serial number is present in a CRL
@@ -200,53 +172,53 @@ func CheckSerialInCRL(
 	index := frontend.Variable(0)
 
 	// Skip outer CRL SEQUENCE
-	tag := ReadByteAt(api, crlBytes, index)
+	tag := zkcore.ReadByteAt(api, crlBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 	index = api.Add(index, 1)
-	_, lengthBytes := ReadDERLength(api, crlBytes, index)
+	_, lengthBytes := zkcore.ReadDERLength(api, crlBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Enter TBSCertList SEQUENCE
-	tag = ReadByteAt(api, crlBytes, index)
+	tag = zkcore.ReadByteAt(api, crlBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 	index = api.Add(index, 1)
-	_, lengthBytes = ReadDERLength(api, crlBytes, index)
+	_, lengthBytes = zkcore.ReadDERLength(api, crlBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Field 1: Version (optional, INTEGER 0x02)
-	tag = ReadByteAt(api, crlBytes, index)
+	tag = zkcore.ReadByteAt(api, crlBytes, index)
 	hasVersion := api.IsZero(api.Sub(tag.Val, 0x02))
-	skipAmount := api.Select(hasVersion, SkipElement(api, crlBytes, index), 0)
+	skipAmount := api.Select(hasVersion, zkcore.SkipElement(api, crlBytes, index), 0)
 	index = api.Add(index, skipAmount)
 
 	// Field 2: Signature Algorithm (SEQUENCE 0x30)
-	tag = ReadByteAt(api, crlBytes, index)
+	tag = zkcore.ReadByteAt(api, crlBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = SkipElement(api, crlBytes, index)
+	skipAmount = zkcore.SkipElement(api, crlBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 3: Issuer DN (SEQUENCE 0x30)
-	tag = ReadByteAt(api, crlBytes, index)
+	tag = zkcore.ReadByteAt(api, crlBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = SkipElement(api, crlBytes, index)
+	skipAmount = zkcore.SkipElement(api, crlBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 4: thisUpdate (TIME 0x17 or 0x18)
-	skipAmount = SkipElement(api, crlBytes, index)
+	skipAmount = zkcore.SkipElement(api, crlBytes, index)
 	index = api.Add(index, skipAmount)
 
 	// Field 5: nextUpdate (optional, TIME 0x17 or 0x18)
-	tag = ReadByteAt(api, crlBytes, index)
+	tag = zkcore.ReadByteAt(api, crlBytes, index)
 	isTime := api.Or(
 		api.IsZero(api.Sub(tag.Val, 0x17)),
 		api.IsZero(api.Sub(tag.Val, 0x18)),
 	)
-	skipAmount = api.Select(isTime, SkipElement(api, crlBytes, index), 0)
+	skipAmount = api.Select(isTime, zkcore.SkipElement(api, crlBytes, index), 0)
 	index = api.Add(index, skipAmount)
 
 	// Field 6: revokedCertificates (optional, SEQUENCE 0x30)
 	// This is where we need to search for our serial number
-	tag = ReadByteAt(api, crlBytes, index)
+	tag = zkcore.ReadByteAt(api, crlBytes, index)
 	hasRevokedCerts := api.IsZero(api.Sub(tag.Val, 0x30))
 
 	// If no revoked certificates, serial is not in CRL
@@ -255,7 +227,7 @@ func CheckSerialInCRL(
 	// Only search if there are revoked certificates
 	// We need to iterate through the sequence and check each entry
 	revokedSeqStart := api.Add(index, 1)
-	_, revokedLenBytes := ReadDERLength(api, crlBytes, api.Add(index, 1))
+	_, revokedLenBytes := zkcore.ReadDERLength(api, crlBytes, api.Add(index, 1))
 	revokedSeqDataStart := api.Add(revokedSeqStart, revokedLenBytes)
 
 	// Search through revoked certificates
@@ -270,18 +242,18 @@ func CheckSerialInCRL(
 		// Always process, but results won't matter if hasRevokedCerts is 0
 
 		// Read entry SEQUENCE tag
-		entryTag := ReadByteAt(api, crlBytes, searchIndex)
+		entryTag := zkcore.ReadByteAt(api, crlBytes, searchIndex)
 		_ = api.IsZero(api.Sub(entryTag.Val, 0x30))
 
 		// Skip SEQUENCE tag and read length
 		serialIndex := api.Add(searchIndex, 1)
-		entryContentLen, entryLenBytes := ReadDERLength(api, crlBytes, serialIndex)
+		entryContentLen, entryLenBytes := zkcore.ReadDERLength(api, crlBytes, serialIndex)
 		serialIndex = api.Add(serialIndex, entryLenBytes)
 
 		// Now at serial number (INTEGER 0x02)
-		_ = ReadByteAt(api, crlBytes, serialIndex) // Verify it's 0x02 if needed
+		_ = zkcore.ReadByteAt(api, crlBytes, serialIndex) // Verify it's 0x02 if needed
 		serialIndex = api.Add(serialIndex, 1)
-		_, serialLenBytes := ReadDERLength(api, crlBytes, serialIndex)
+		_, serialLenBytes := zkcore.ReadDERLength(api, crlBytes, serialIndex)
 		serialIndex = api.Add(serialIndex, serialLenBytes)
 
 		// Compare serial numbers (fixed length comparison)
@@ -311,7 +283,7 @@ func CompareSerialNumbers(
 	// Compare each byte up to maxSerialLen
 	allMatch := frontend.Variable(1)
 	for i := range maxSerialLen {
-		crlByte := ReadByteAt(api, crlBytes, api.Add(crlSerialStart, i))
+		crlByte := zkcore.ReadByteAt(api, crlBytes, api.Add(crlSerialStart, i))
 		byteMatch := api.IsZero(api.Sub(crlByte.Val, serialBytes[i].Val))
 		allMatch = api.And(allMatch, byteMatch)
 	}
@@ -328,39 +300,39 @@ func ExtractSerialFromCert(
 	index := frontend.Variable(0)
 
 	// Skip outer Certificate SEQUENCE
-	tag := ReadByteAt(api, certBytes, index)
+	tag := zkcore.ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 	index = api.Add(index, 1)
-	_, lengthBytes := ReadDERLength(api, certBytes, index)
+	_, lengthBytes := zkcore.ReadDERLength(api, certBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Enter TBSCertificate SEQUENCE
-	tag = ReadByteAt(api, certBytes, index)
+	tag = zkcore.ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x30)
 	index = api.Add(index, 1)
-	_, lengthBytes = ReadDERLength(api, certBytes, index)
+	_, lengthBytes = zkcore.ReadDERLength(api, certBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Field 1: Version [0] EXPLICIT (optional)
-	tag = ReadByteAt(api, certBytes, index)
+	tag = zkcore.ReadByteAt(api, certBytes, index)
 	hasVersion := api.IsZero(api.Sub(tag.Val, 0xA0))
-	skipAmount := api.Select(hasVersion, SkipElement(api, certBytes, index), 0)
+	skipAmount := api.Select(hasVersion, zkcore.SkipElement(api, certBytes, index), 0)
 	index = api.Add(index, skipAmount)
 
 	// Field 2: Serial Number (INTEGER 0x02)
-	tag = ReadByteAt(api, certBytes, index)
+	tag = zkcore.ReadByteAt(api, certBytes, index)
 	api.AssertIsEqual(tag.Val, 0x02)
 	index = api.Add(index, 1)
 
 	// Read serial length
-	_, lengthBytes = ReadDERLength(api, certBytes, index)
+	_, lengthBytes = zkcore.ReadDERLength(api, certBytes, index)
 	index = api.Add(index, lengthBytes)
 
 	// Extract serial bytes up to maxSerialLen
 	serialBytes := make([]uints.U8, maxSerialLen)
 
 	for i := range maxSerialLen {
-		buf := ReadByteAt(api, certBytes, api.Add(index, i))
+		buf := zkcore.ReadByteAt(api, certBytes, api.Add(index, i))
 		serialBytes[i] = buf
 	}
 

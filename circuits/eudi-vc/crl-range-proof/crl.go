@@ -1,388 +1,342 @@
-// Package crlrangeproof implements VC exchange-related circuits
-package crlrangeproof
+// Package minicrl implements the Mini CRL circuit for proving certificate non-revocation
+package minicrl
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
+	"github.com/mynextid/eudi-zk/circuits"
 	"github.com/mynextid/eudi-zk/zkcore"
 )
 
-// CircuitCRL defines a ZK circuit that verifies
-// 1. A certificate's serial number is NOT in a provided CRL
-// 2. The CRL signature is validated externally (assumed valid input)
-// Note: this approach is super inefficient as the CRL grows
-// BitString approach is probably more efficient, but it is encoded as hex+base64 ...
-type CircuitCRL struct {
-	// public inputs
-	CRLBytes []uints.U8 `gnark:",public"` // The full CRL in DER format
+// ========================================================================
+// CIRCUIT CONSTANTS
+// ========================================================================
 
-	// private inputs
-	CertBytes []uints.U8 `gnark:",secret"` // The certificate to check
+// Circuit input sizes
+const (
+	MaxCRLBytes  = 512 // Maximum size of Mini CRL in DER format
+	MaxCertBytes = 512 // Maximum size of Certificate in DER format
+	MaxSerialLen = 10  // Maximum certificate serial number length (10 bytes)
+)
 
-	// Circuit parameters set at compile time
-	MaxSerialLen int `gnark:"-"` // Maximum serial number length in bytes
+// ========================================================================
+// CIRCUIT DEFINITION
+// ========================================================================
+
+// DescriptionLong is a long circuit description
+const DescriptionLong = `
+MiniCRL defines a zero-knowledge circuit that proves a certificate's serial
+number is NOT present in a Certificate Revocation List (CRL) without revealing
+the certificate revocation identifier or the CRL.
+
+The circuit verifies that the certificate serial number does not fall within the
+range specified by two consecutive CRL entries, proving the certificate is valid
+and not revoked.
+
+Use case: Prove your certificate is not revoked without revealing your
+certificate details or the complete CRL contents.
+`
+
+// Circuit defines a ZK circuit that verifies certificate non-revocation
+// The circuit focuses on two main operations:
+//
+// - Extract the certificate serial number from the DER-encoded certificate
+// - Prove that the serial number is NOT in the range between two CRL entries
+type Circuit struct {
+	// ===== SECRET INPUTS (Private Witness) =====
+
+	// CertBytes is the DER-encoded X.509 certificate (secret)
+	// We extract the serial number from this without revealing the full cert
+	CertBytes [MaxCertBytes]uints.U8 `gnark:",secret"`
+
+	// ===== PRIVATE INPUTS (Known to Prover) =====
+
+	// CRLBytes is the Mini CRL in DER format
+	// Contains exactly two serial numbers
+	CRLBytes [MaxCRLBytes]uints.U8 `gnark:",secret"`
 }
 
 // Define implements the gnark Circuit interface
-func (c *CircuitCRL) Define(api frontend.API) error {
-	// Verify that the certificate's serial number is NOT in the CRL
-	VerifySerialNotRevoked(api, c.CertBytes, c.CRLBytes, c.MaxSerialLen)
+// This is the core of the zero-knowledge proof
+//
+// We prove: "I know a certificate whose serial number is NOT in the provided CRL"
+func (c *Circuit) Define(api frontend.API) error {
+	return VerifySerialNotRevoked(api, c.CertBytes[:], c.CRLBytes[:], MaxSerialLen)
+}
+
+// ========================================================================
+// WITNESS INPUT STRUCTS
+// ========================================================================
+
+// WitnessInput holds raw inputs before conversion to circuit witness
+type WitnessInput struct {
+	// Private inputs
+	CRLBytes  string // Base64url encoded DER-format Mini CRL
+	CertBytes string // Base64url encoded DER-format Certificate
+
+}
+
+// Validate performs input validation
+func (w *WitnessInput) Validate() error {
+	// Validate CRL bytes
+	crlBuf, err := base64.RawURLEncoding.DecodeString(w.CRLBytes)
+	if err != nil {
+		return fmt.Errorf("failed to decode CRL input: %v", err)
+	}
+	if len(crlBuf) > MaxCRLBytes {
+		return fmt.Errorf("CRL input exceeds maximum size %d, got %d", MaxCRLBytes, len(crlBuf))
+	}
+
+	// Validate certificate bytes
+	certBuf, err := base64.RawURLEncoding.DecodeString(w.CertBytes)
+	if err != nil {
+		return fmt.Errorf("failed to decode certificate input: %v", err)
+	}
+	if len(certBuf) > MaxCertBytes {
+		return fmt.Errorf("certificate input exceeds maximum size %d, got %d", MaxCertBytes, len(certBuf))
+	}
 
 	return nil
 }
 
-// NewCircuitCRL creates a new CRL verification circuit with specified sizes
-func NewCircuitCRL(maxCertSize, maxCRLSize int) *CircuitCRL {
-	return &CircuitCRL{
-		CertBytes: make([]uints.U8, maxCertSize),
-		CRLBytes:  make([]uints.U8, maxCRLSize),
+// CreateWitness creates a new witness with all inputs
+func (w *WitnessInput) CreateWitness() (frontend.Circuit, error) {
+	// Decode CRL bytes
+	crlBuf, err := base64.RawURLEncoding.DecodeString(w.CRLBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode CRL input: %v", err)
 	}
-}
-
-// CheckSerialInCRLV2 verifies if a certificate serial number is present in a
-// CRL Returns 1 if the serial is found (revoked), 0 if not found (valid)
-func CheckSerialInCRLV2(
-	api frontend.API,
-	crlBytes []uints.U8,
-	serialBytes []uints.U8,
-	maxSerialLen int,
-) frontend.Variable {
-	index := frontend.Variable(0)
-
-	// Skip outer CRL SEQUENCE
-	tag := zkcore.ReadByteAt(api, crlBytes, index)
-	api.AssertIsEqual(tag.Val, 0x30)
-	index = api.Add(index, 1)
-	_, lengthBytes := zkcore.ReadDERLength(api, crlBytes, index)
-	index = api.Add(index, lengthBytes)
-
-	// Enter TBSCertList SEQUENCE
-	tag = zkcore.ReadByteAt(api, crlBytes, index)
-	api.AssertIsEqual(tag.Val, 0x30)
-	index = api.Add(index, 1)
-	_, lengthBytes = zkcore.ReadDERLength(api, crlBytes, index)
-	index = api.Add(index, lengthBytes)
-
-	// Field 1: Version (optional, INTEGER 0x02)
-	tag = zkcore.ReadByteAt(api, crlBytes, index)
-	hasVersion := api.IsZero(api.Sub(tag.Val, 0x02))
-	skipAmount := api.Select(hasVersion, zkcore.SkipElement(api, crlBytes, index), 0)
-	index = api.Add(index, skipAmount)
-
-	// Field 2: Signature Algorithm (SEQUENCE 0x30)
-	tag = zkcore.ReadByteAt(api, crlBytes, index)
-	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = zkcore.SkipElement(api, crlBytes, index)
-	index = api.Add(index, skipAmount)
-
-	// Field 3: Issuer DN (SEQUENCE 0x30)
-	tag = zkcore.ReadByteAt(api, crlBytes, index)
-	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = zkcore.SkipElement(api, crlBytes, index)
-	index = api.Add(index, skipAmount)
-
-	// Field 4: thisUpdate (TIME 0x17 or 0x18)
-	skipAmount = zkcore.SkipElement(api, crlBytes, index)
-	index = api.Add(index, skipAmount)
-
-	// Field 5: nextUpdate (optional, TIME 0x17 or 0x18)
-	tag = zkcore.ReadByteAt(api, crlBytes, index)
-	isTime := api.Or(
-		api.IsZero(api.Sub(tag.Val, 0x17)),
-		api.IsZero(api.Sub(tag.Val, 0x18)),
-	)
-	skipAmount = api.Select(isTime, zkcore.SkipElement(api, crlBytes, index), 0)
-	index = api.Add(index, skipAmount)
-
-	// Field 6: revokedCertificates (optional, SEQUENCE 0x30)
-	// This is where we need to search for our serial number
-	tag = zkcore.ReadByteAt(api, crlBytes, index)
-	hasRevokedCerts := api.IsZero(api.Sub(tag.Val, 0x30))
-
-	// If no revoked certificates, serial is not in CRL
-	found := frontend.Variable(0)
-
-	// Only search if there are revoked certificates
-	// We need to iterate through the sequence and check each entry
-	revokedSeqStart := api.Add(index, 1)
-	_, revokedLenBytes := zkcore.ReadDERLength(api, crlBytes, api.Add(index, 1))
-	revokedSeqDataStart := api.Add(revokedSeqStart, revokedLenBytes)
-
-	// Search through revoked certificates
-	// Each entry is a SEQUENCE containing: serialNumber, revocationDate, [extensions]
-	searchIndex := revokedSeqDataStart
-
-	// check the 1st entry
-	// the 1st entry must be < serialBytes
-	{
-		// Read entry SEQUENCE tag
-		entryTag := zkcore.ReadByteAt(api, crlBytes, searchIndex)
-		_ = api.IsZero(api.Sub(entryTag.Val, 0x30))
-
-		// Skip SEQUENCE tag and read length
-		serialIndex := api.Add(searchIndex, 1)
-		entryContentLen, entryLenBytes := zkcore.ReadDERLength(api, crlBytes, serialIndex)
-		serialIndex = api.Add(serialIndex, entryLenBytes)
-
-		// Now at serial number (INTEGER 0x02)
-		_ = zkcore.ReadByteAt(api, crlBytes, serialIndex) // Verify it's 0x02 if needed
-		serialIndex = api.Add(serialIndex, 1)
-		_, serialLenBytes := zkcore.ReadDERLength(api, crlBytes, serialIndex)
-		serialIndex = api.Add(serialIndex, serialLenBytes)
-
-		// Compare serial numbers (fixed length comparison)
-
-		// Extract serial bytes up to maxSerialLen
-		sn := make([]uints.U8, maxSerialLen)
-
-		for i := range maxSerialLen {
-			buf := zkcore.ReadByteAt(api, crlBytes, api.Add(serialIndex, i))
-			sn[i] = buf
-		}
-
-		isLessThan, _ := zkcore.IsSmaller(api, serialBytes, sn)
-
-		// Update found flag if we have a match and should process
-		matchFound := api.And(hasRevokedCerts, isLessThan)
-		found = api.Select(matchFound, 1, found)
-
-		// Move to next entry
-		entrySize := api.Add(api.Add(1, entryLenBytes), entryContentLen)
-		searchIndex = api.Add(searchIndex, entrySize)
+	crlU8, err := zkcore.BytesToU8ArrayWithPadding(crlBuf, MaxCRLBytes)
+	if err != nil {
+		return nil, err
 	}
 
-	// check the 2nd entry
-	// the 2nd entry must be > serialBytes
-	{
-		// Read entry SEQUENCE tag
-		entryTag := zkcore.ReadByteAt(api, crlBytes, searchIndex)
-		_ = api.IsZero(api.Sub(entryTag.Val, 0x30))
-
-		// Skip SEQUENCE tag and read length
-		serialIndex := api.Add(searchIndex, 1)
-		_, entryLenBytes := zkcore.ReadDERLength(api, crlBytes, serialIndex)
-		serialIndex = api.Add(serialIndex, entryLenBytes)
-
-		// Now at serial number (INTEGER 0x02)
-		_ = zkcore.ReadByteAt(api, crlBytes, serialIndex) // Verify it's 0x02 if needed
-		serialIndex = api.Add(serialIndex, 1)
-		_, serialLenBytes := zkcore.ReadDERLength(api, crlBytes, serialIndex)
-		serialIndex = api.Add(serialIndex, serialLenBytes)
-
-		// Compare serial numbers (fixed length comparison)
-
-		// Extract serial bytes up to maxSerialLen
-		sn := make([]uints.U8, maxSerialLen)
-
-		for i := range maxSerialLen {
-			buf := zkcore.ReadByteAt(api, crlBytes, api.Add(serialIndex, i))
-			sn[i] = buf
-		}
-
-		// here we reverse the order
-		isLessThan, _ := zkcore.IsSmaller(api, sn, serialBytes)
-
-		// Update found flag if we have a match and should process
-		matchFound := api.And(hasRevokedCerts, isLessThan)
-		found = api.Select(matchFound, 1, found)
-
+	// Decode certificate bytes
+	certBuf, err := base64.RawURLEncoding.DecodeString(w.CertBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode certificate input: %v", err)
+	}
+	certU8, err := zkcore.BytesToU8ArrayWithPadding(certBuf, MaxCertBytes)
+	if err != nil {
+		return nil, err
 	}
 
-	return found
+	// Copy to fixed-size arrays
+	var crl [MaxCRLBytes]uints.U8
+	var cert [MaxCertBytes]uints.U8
+	copy(crl[:], crlU8)
+	copy(cert[:], certU8)
+
+	return &Circuit{
+		CRLBytes:  crl,
+		CertBytes: cert,
+	}, nil
 }
 
-// CheckSerialInCRL verifies if a certificate serial number is present in a CRL
-// Returns 1 if the serial is found (revoked), 0 if not found (valid)
-func CheckSerialInCRL(
-	api frontend.API,
-	crlBytes []uints.U8,
-	serialBytes []uints.U8,
-	maxSerialLen int,
-) frontend.Variable {
-	index := frontend.Variable(0)
+// CreatePublicWitness creates only the public inputs for verification
+func (w *WitnessInput) CreatePublicWitness() (frontend.Circuit, error) {
 
-	// Skip outer CRL SEQUENCE
-	tag := zkcore.ReadByteAt(api, crlBytes, index)
-	api.AssertIsEqual(tag.Val, 0x30)
-	index = api.Add(index, 1)
-	_, lengthBytes := zkcore.ReadDERLength(api, crlBytes, index)
-	index = api.Add(index, lengthBytes)
-
-	// Enter TBSCertList SEQUENCE
-	tag = zkcore.ReadByteAt(api, crlBytes, index)
-	api.AssertIsEqual(tag.Val, 0x30)
-	index = api.Add(index, 1)
-	_, lengthBytes = zkcore.ReadDERLength(api, crlBytes, index)
-	index = api.Add(index, lengthBytes)
-
-	// Field 1: Version (optional, INTEGER 0x02)
-	tag = zkcore.ReadByteAt(api, crlBytes, index)
-	hasVersion := api.IsZero(api.Sub(tag.Val, 0x02))
-	skipAmount := api.Select(hasVersion, zkcore.SkipElement(api, crlBytes, index), 0)
-	index = api.Add(index, skipAmount)
-
-	// Field 2: Signature Algorithm (SEQUENCE 0x30)
-	tag = zkcore.ReadByteAt(api, crlBytes, index)
-	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = zkcore.SkipElement(api, crlBytes, index)
-	index = api.Add(index, skipAmount)
-
-	// Field 3: Issuer DN (SEQUENCE 0x30)
-	tag = zkcore.ReadByteAt(api, crlBytes, index)
-	api.AssertIsEqual(tag.Val, 0x30)
-	skipAmount = zkcore.SkipElement(api, crlBytes, index)
-	index = api.Add(index, skipAmount)
-
-	// Field 4: thisUpdate (TIME 0x17 or 0x18)
-	skipAmount = zkcore.SkipElement(api, crlBytes, index)
-	index = api.Add(index, skipAmount)
-
-	// Field 5: nextUpdate (optional, TIME 0x17 or 0x18)
-	tag = zkcore.ReadByteAt(api, crlBytes, index)
-	isTime := api.Or(
-		api.IsZero(api.Sub(tag.Val, 0x17)),
-		api.IsZero(api.Sub(tag.Val, 0x18)),
-	)
-	skipAmount = api.Select(isTime, zkcore.SkipElement(api, crlBytes, index), 0)
-	index = api.Add(index, skipAmount)
-
-	// Field 6: revokedCertificates (optional, SEQUENCE 0x30)
-	// This is where we need to search for our serial number
-	tag = zkcore.ReadByteAt(api, crlBytes, index)
-	hasRevokedCerts := api.IsZero(api.Sub(tag.Val, 0x30))
-
-	// If no revoked certificates, serial is not in CRL
-	found := frontend.Variable(0)
-
-	// Only search if there are revoked certificates
-	// We need to iterate through the sequence and check each entry
-	revokedSeqStart := api.Add(index, 1)
-	_, revokedLenBytes := zkcore.ReadDERLength(api, crlBytes, api.Add(index, 1))
-	revokedSeqDataStart := api.Add(revokedSeqStart, revokedLenBytes)
-
-	// Search through revoked certificates
-	// Each entry is a SEQUENCE containing: serialNumber, revocationDate, [extensions]
-	searchIndex := revokedSeqDataStart
-
-	// Simplified: just iterate a fixed number of times
-	// The user should set this based on their CRL size
-	maxEntries := 2 // Adjust based on your CRL
-
-	for range maxEntries {
-		// Always process, but results won't matter if hasRevokedCerts is 0
-
-		// Read entry SEQUENCE tag
-		entryTag := zkcore.ReadByteAt(api, crlBytes, searchIndex)
-		_ = api.IsZero(api.Sub(entryTag.Val, 0x30))
-
-		// Skip SEQUENCE tag and read length
-		serialIndex := api.Add(searchIndex, 1)
-		entryContentLen, entryLenBytes := zkcore.ReadDERLength(api, crlBytes, serialIndex)
-		serialIndex = api.Add(serialIndex, entryLenBytes)
-
-		// Now at serial number (INTEGER 0x02)
-		_ = zkcore.ReadByteAt(api, crlBytes, serialIndex) // Verify it's 0x02 if needed
-		serialIndex = api.Add(serialIndex, 1)
-		_, serialLenBytes := zkcore.ReadDERLength(api, crlBytes, serialIndex)
-		serialIndex = api.Add(serialIndex, serialLenBytes)
-
-		// Compare serial numbers (fixed length comparison)
-		serialMatch := CompareSerialNumbers(api, crlBytes, serialIndex, serialBytes, maxSerialLen)
-
-		// Update found flag if we have a match and should process
-		matchFound := api.And(hasRevokedCerts, serialMatch)
-		found = api.Select(matchFound, 1, found)
-
-		// Move to next entry
-		entrySize := api.Add(api.Add(1, entryLenBytes), entryContentLen)
-		searchIndex = api.Add(searchIndex, entrySize)
+	// Create empty arrays for private/secret inputs
+	crlU8, err := zkcore.BytesToU8ArrayWithPadding([]byte{}, MaxCRLBytes)
+	if err != nil {
+		return nil, err
+	}
+	certU8, err := zkcore.BytesToU8ArrayWithPadding([]byte{}, MaxCertBytes)
+	if err != nil {
+		return nil, err
 	}
 
-	return found
+	var crl [MaxCRLBytes]uints.U8
+	var cert [MaxCertBytes]uints.U8
+	copy(crl[:], crlU8)
+	copy(cert[:], certU8)
+
+	return &Circuit{
+		CRLBytes:  crl,
+		CertBytes: cert,
+	}, nil
 }
 
-// CompareSerialNumbers compares a serial number in the CRL with the provided serial
-// Uses fixed-length comparison (maxSerialLen)
-func CompareSerialNumbers(
-	api frontend.API,
-	crlBytes []uints.U8,
-	crlSerialStart frontend.Variable,
-	serialBytes []uints.U8,
-	maxSerialLen int,
-) frontend.Variable {
-	// Compare each byte up to maxSerialLen
-	allMatch := frontend.Variable(1)
-	for i := range maxSerialLen {
-		crlByte := zkcore.ReadByteAt(api, crlBytes, api.Add(crlSerialStart, i))
-		byteMatch := api.IsZero(api.Sub(crlByte.Val, serialBytes[i].Val))
-		allMatch = api.And(allMatch, byteMatch)
+// ========================================================================
+// API DATA MODELS - JSON structures for HTTP endpoints
+// ========================================================================
+
+// PrivateInput defines the JSON structure for private inputs sent via API
+type PrivateInput struct {
+	// CRLBytes contains base64url encoded DER-format Mini CRL
+	CRLBytes string `json:"crl_bytes" description:"BASE64URL encoded Mini CRL in DER format"`
+
+	// CertBytes contains base64url encoded DER-format certificate
+	CertBytes string `json:"cert_bytes" description:"BASE64URL encoded X.509 certificate in DER format"`
+}
+
+// PublicInput defines the JSON structure for public inputs sent via API
+type PublicInput struct {
+}
+
+// Constraints defines the circuit constraints
+var Constraints = map[string]circuits.Constraints{
+	"crl_bytes": {
+		Max: MaxCRLBytes,
+	},
+	"cert_bytes": {
+		Max: MaxCertBytes,
+	},
+	"serial_number": {
+		Max: MaxSerialLen,
+	},
+}
+
+// ========================================================================
+// PROVE ENDPOINT - POST /prove
+// ========================================================================
+
+// ProveRequest defines the request body for generating a zero-knowledge proof
+type ProveRequest struct {
+	Public  PublicInput  `json:"public" description:"Public ZK circuit inputs (CRL hash)"`
+	Private PrivateInput `json:"private" description:"Private ZK circuit inputs (CRL and certificate)"`
+}
+
+// ProveResponse defines the response body containing the generated proof
+type ProveResponse struct {
+	// Proof is the base64url encoded zero-knowledge proof
+	Proof string `json:"proof" description:"BASE64URL encoded ZK proof of non-revocation"`
+}
+
+// ========================================================================
+// VERIFY ENDPOINT - POST /verify
+// ========================================================================
+
+// VerifyRequest defines the request body for verifying a zero-knowledge proof
+type VerifyRequest struct {
+	Public PublicInput `json:"public" description:"Public ZK circuit inputs (CRL hash)"`
+	Proof  string      `json:"proof" description:"BASE64URL encoded ZK proof to verify"`
+}
+
+// VerifyResponse defines the response body from proof verification
+type VerifyResponse struct {
+	// Success indicates if the verification process completed
+	Success string `json:"success"`
+
+	// Valid indicates if the proof is mathematically valid
+	Valid bool `json:"valid"`
+
+	// Message contains optional error or status information
+	Message *string `json:"message,omitempty"`
+}
+
+// ========================================================================
+// INPUT PARSER - Converts API JSON to circuit format
+// ========================================================================
+
+// API implements the InputParser interface for this circuit
+type API struct{}
+
+// Parse converts JSON-encoded API inputs into a populated circuit instance
+func (api *API) Parse(publicInputJSON, privateInputJSON []byte) (frontend.Circuit, error) {
+	// Step 1: Parse public input JSON
+	var publicInput PublicInput
+	if err := json.Unmarshal(publicInputJSON, &publicInput); err != nil {
+		return nil, fmt.Errorf("failed to parse public input JSON: %w", err)
 	}
 
-	return allMatch
-}
-
-// ExtractSerialFromCert extracts the serial number bytes from a certificate
-func ExtractSerialFromCert(
-	api frontend.API,
-	certBytes []uints.U8,
-	maxSerialLen int,
-) []uints.U8 {
-	index := frontend.Variable(0)
-
-	// Skip outer Certificate SEQUENCE
-	tag := zkcore.ReadByteAt(api, certBytes, index)
-	api.AssertIsEqual(tag.Val, 0x30)
-	index = api.Add(index, 1)
-	_, lengthBytes := zkcore.ReadDERLength(api, certBytes, index)
-	index = api.Add(index, lengthBytes)
-
-	// Enter TBSCertificate SEQUENCE
-	tag = zkcore.ReadByteAt(api, certBytes, index)
-	api.AssertIsEqual(tag.Val, 0x30)
-	index = api.Add(index, 1)
-	_, lengthBytes = zkcore.ReadDERLength(api, certBytes, index)
-	index = api.Add(index, lengthBytes)
-
-	// Field 1: Version [0] EXPLICIT (optional)
-	tag = zkcore.ReadByteAt(api, certBytes, index)
-	hasVersion := api.IsZero(api.Sub(tag.Val, 0xA0))
-	skipAmount := api.Select(hasVersion, zkcore.SkipElement(api, certBytes, index), 0)
-	index = api.Add(index, skipAmount)
-
-	// Field 2: Serial Number (INTEGER 0x02)
-	tag = zkcore.ReadByteAt(api, certBytes, index)
-	api.AssertIsEqual(tag.Val, 0x02)
-	index = api.Add(index, 1)
-
-	// Read serial length
-	_, lengthBytes = zkcore.ReadDERLength(api, certBytes, index)
-	index = api.Add(index, lengthBytes)
-
-	// Extract serial bytes up to maxSerialLen
-	serialBytes := make([]uints.U8, maxSerialLen)
-
-	for i := range maxSerialLen {
-		buf := zkcore.ReadByteAt(api, certBytes, api.Add(index, i))
-		serialBytes[i] = buf
+	// Step 2: Handle public-only witness (for verification)
+	if privateInputJSON == nil {
+		w := WitnessInput{}
+		return w.CreatePublicWitness()
 	}
 
-	return serialBytes
+	// Step 3: Parse private input JSON
+	var privateInput PrivateInput
+	if err := json.Unmarshal(privateInputJSON, &privateInput); err != nil {
+		return nil, fmt.Errorf("failed to parse private input JSON: %w", err)
+	}
+
+	// Step 4: Create full witness
+	w := WitnessInput{
+		CRLBytes:  privateInput.CRLBytes,
+		CertBytes: privateInput.CertBytes,
+	}
+
+	// Validate inputs
+	if err := w.Validate(); err != nil {
+		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	return w.CreateWitness()
 }
 
-// VerifySerialNotRevoked is a high-level function that extracts the serial
-// from a certificate and checks it against a CRL
-func VerifySerialNotRevoked(
-	api frontend.API,
-	certBytes []uints.U8,
-	crlBytes []uints.U8,
-	maxSerialLen int,
-) {
-	// Extract serial from certificate
-	serialBytes := ExtractSerialFromCert(api, certBytes, maxSerialLen)
+// ========================================================================
+// CIRCUIT REGISTRATION - Metadata for the framework
+// ========================================================================
 
-	// Check if serial is in CRL
-	isRevoked := CheckSerialInCRLV2(api, crlBytes, serialBytes, maxSerialLen)
+// Info contains all metadata needed to register this circuit with the framework
+var Info = &circuits.CircuitInfo{
+	// Name is the circuit identifier used in API routes
+	Name: "mini-crl",
 
-	// Assert the certificate is NOT revoked
-	api.AssertIsEqual(isRevoked, 0)
+	// Description explains what this circuit proves
+	Description: "Proves that a certificate's serial number is NOT present in a Certificate Revocation List (CRL) without revealing the certificate details. Verifies non-revocation status using DER-encoded certificates and Mini CRL format.",
+
+	LongDescription: DescriptionLong,
+
+	// Version enables API versioning
+	Version: 1,
+
+	// Circuit is a template instance with properly sized arrays
+	Circuit: &Circuit{
+		CRLBytes:  [MaxCRLBytes]uints.U8{},
+		CertBytes: [MaxCertBytes]uints.U8{},
+	},
+
+	// InputParser converts JSON API requests into circuit inputs
+	InputParser: &API{},
+
+	// EndpointInfo defines API documentation
+	EndpointInfo: &circuits.EndpointInfo{
+		Constraints: Constraints,
+		Prove: circuits.Endpoints{
+			Request:  circuits.CreateSchemaInfo("application/json", ProveRequest{}, nil),
+			Response: circuits.CreateSchemaInfo("application/json", ProveResponse{}, nil),
+		},
+		Verify: circuits.Endpoints{
+			Request:  circuits.CreateSchemaInfo("application/json", VerifyRequest{}, nil),
+			Response: circuits.CreateSchemaInfo("application/json", VerifyResponse{}, nil),
+		},
+	},
 }
+
+/*
+// Package minicrl implements the Mini CRL circuit
+package minicrl
+
+import (
+	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/std/math/uints"
+)
+
+// Circuit defines a ZK circuit that verifies
+// The circuit focuses on two main operations:
+//
+// - extract the certificate serial number
+// - prove that the serial number is in the range between the two CRL entries
+type Circuit struct {
+	// private inputs
+	CRLBytes  []uints.U8 `gnark:",private"` // Mini CRL in DER format
+	CertBytes []uints.U8 `gnark:",secret"`  // Certificate in DER format
+
+	// Circuit parameters set at compile time
+	MaxSerialLen int `gnark:"-"` // Maximum serial number length
+}
+
+// Define implements the gnark Circuit interface
+func (c *Circuit) Define(api frontend.API) error {
+	// Verify that the certificate's serial number is NOT in the CRL
+	return VerifySerialNotRevoked(api, c.CertBytes, c.CRLBytes, c.MaxSerialLen)
+}
+
+*/

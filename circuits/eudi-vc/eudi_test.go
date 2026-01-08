@@ -193,10 +193,7 @@ func TestEUDI(t *testing.T) {
 	tbsCert := cert.RawTBSCertificate
 
 	// Find public key position
-	pubKeyPosition, err := cdl.FindSubjectPublicKeyPositionInTBS(tbsCert)
-	if err != nil {
-		t.Errorf("finding subject public key position failed: %v", err)
-	}
+	pubKeyPosition := cdl.FindSubjectPublicKeyPositionInTBS(tbsCert)
 
 	// Extract the signature from the certificate
 	var certSig struct {
