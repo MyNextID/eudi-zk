@@ -50,3 +50,8 @@ scripts/verify_payload.json
 examples
 compiled
 circuits/boilerplate/circuit.go
+longfellow/vendor/longfellow-zk/clang-build-release
+longfellow/cpp/build
+longfellow/vendor/longfellow-zk
+longfellow/readme-internal.md
+longfellow/go-longfellow-zk/longfellow.go
