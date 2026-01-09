@@ -388,11 +388,6 @@ namespace proofs
         std::cout << "[OK] Commitment received" << std::endl;
 
         // Verify the proof using only public inputs
-        // This checks:
-        // 1. Polynomial commitments are well-formed
-        // 2. Proof satisfies all circuit constraints
-        // 3. Proof is consistent with public inputs
-        // 4. No cheating is detected (soundness)
         bool result = verifier.verify(zkproof, PublicWitness, transcript);
 
         if (result)

@@ -52,9 +52,13 @@ Start exploring the circuits:
 - **Over18 circuit:** [circuits/temporal](./circuits/temporal/README.md)
 - **EUDI/eIDAS circuits:** [circuits/eudi-vc/](./circuits/eudi-vc/README.md)
 
-Test the circuits:
+Test the circuits built using Gnark ZK framewrok:
 
 - [ZKPI](./cmd/README.md) a tool for easy ZKP creation and validation
+
+Test the circuits built using Longfellow-ZK framwork:
+
+- [longfellow](./longfellow/README.md)
 
 Other tools and libraries
 

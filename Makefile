@@ -21,7 +21,7 @@ export CGO_CFLAGS := -I/opt/homebrew/include
 export CGO_LDFLAGS := -L/opt/homebrew/lib -L$(WRAPPER_LIB_DIR) -Wl,-rpath,$(WRAPPER_LIB_DIR)
 
 # Go flags
-VERSION ?= "0.3.0-dev"
+VERSION ?= "0.4.0-dev"
 COMMIT  ?= $(shell git rev-parse --short HEAD)
 DATE    ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
@@ -34,8 +34,10 @@ all: help
 
 help:
 	@echo "Available targets:"
-	@echo "  init           - Initialize submodules and dependencies"
+	@echo "  build-zkpi     - Build Go ZKPI service"
+	@echo "  install-zkpi   - Install Go ZKPI service"
 	@echo "  test-go        - Run Go tests"
+	@echo "  init           - Initialize submodules and dependencies"
 	@echo "  build-wrapper  - Build C++ wrapper library"
 	@echo "  test-cpp       - Run C++ tests"
 	@echo "  test-all       - Run both C++ and Go tests"
@@ -68,13 +70,6 @@ build-wrapper: build-longfellow
 	cd $(BUILD_DIR) && \
 	$(CMAKE) .. && \
 	make -j8
-
-# pending
-# 
-# build-go: build-wrapper
-# 	@echo "Building Go packages..."
-# 	@echo "Using CGO_LDFLAGS: $(CGO_LDFLAGS)"
-# 	go build -v ./...
 
 # Run C++ tests
 test-cpp: build-wrapper
