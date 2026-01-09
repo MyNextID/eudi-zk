@@ -10,17 +10,20 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/mynextid/eudi-zk/circuits"
+	status "github.com/mynextid/eudi-zk/server/crl-service"
 )
 
 // Server handles HTTP requests for ZK proof operations
 type Server struct {
-	registry *CircuitRegistry
+	registry   *CircuitRegistry
+	CrlService *status.CRLService
 }
 
 // NewServer creates a new HTTP server
 func NewServer(registry *CircuitRegistry) *Server {
 	return &Server{
-		registry: registry,
+		registry:   registry,
+		CrlService: status.InitCRLService(),
 	}
 }
 

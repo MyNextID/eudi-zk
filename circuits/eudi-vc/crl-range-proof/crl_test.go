@@ -69,12 +69,12 @@ func TestCompareBytesAPI(t *testing.T) {
 
 }
 
-type Inputs struct {
+type Data struct {
 	CRL  []byte
 	Cert []byte
 }
 
-func MockData(t *testing.T) Inputs {
+func MockData(t *testing.T) Data {
 	// == Generate test certificate ==
 	// Generate certificate key pair
 	certKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -167,13 +167,13 @@ func MockData(t *testing.T) Inputs {
 	fmt.Printf("Certificate DER length: %d bytes\n", len(certDER))
 	fmt.Printf("CRL DER length: %d bytes\n", len(crlDER))
 
-	return Inputs{
+	return Data{
 		CRL:  crlDER,
 		Cert: certDER,
 	}
 }
 
-func MockDataRevoked(t *testing.T) Inputs {
+func MockDataRevoked(t *testing.T) Data {
 	// == Generate test certificate ==
 	// Generate certificate key pair
 	certKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -266,7 +266,7 @@ func MockDataRevoked(t *testing.T) Inputs {
 	fmt.Printf("Certificate DER length: %d bytes\n", len(certDER))
 	fmt.Printf("CRL DER length: %d bytes\n", len(crlDER))
 
-	return Inputs{
+	return Data{
 		CRL:  crlDER,
 		Cert: certDER,
 	}

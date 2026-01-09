@@ -49,6 +49,9 @@ func setupRouter(server *api.Server, cfg *Config, logger Logger) *chi.Mux {
 	r.Post("/prove/{circuit}", server.HandleProve)
 	r.Post("/verify/{circuit}", server.HandleVerify)
 
+	// Credential status routes
+	// TODO: expose the status/crl services here
+
 	// Pprof (debug only)
 	// if cfg.EnablePprof {
 	// 	r.Mount("/debug", middleware.Profiler())

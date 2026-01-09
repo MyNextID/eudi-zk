@@ -9,6 +9,7 @@ import (
 	comparelex "github.com/mynextid/eudi-zk/circuits/basic-circuits/compare-lexicographically"
 	decodeb64 "github.com/mynextid/eudi-zk/circuits/basic-circuits/decode-base64url"
 	decodehex "github.com/mynextid/eudi-zk/circuits/basic-circuits/decode-hex"
+	minicrl "github.com/mynextid/eudi-zk/circuits/eudi-vc/crl-range-proof"
 	overxx "github.com/mynextid/eudi-zk/circuits/temporal"
 	verifyjwscert "github.com/mynextid/eudi-zk/circuits/verify-jws-cert"
 )
@@ -28,6 +29,7 @@ func init() {
 		assertissubset.Info,
 		overxx.Info,
 		verifyjwscert.Info,
+		minicrl.Info,
 	}
 
 	for _, c := range circuitList {
