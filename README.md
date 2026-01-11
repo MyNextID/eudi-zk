@@ -7,23 +7,23 @@ This repository implements zero-knowledge proof circuits for the [eIDAS
 Services)](https://eur-lex.europa.eu/eli/reg/2014/910/oj/eng), [EUDI (European
 Digital Identity)](https://eur-lex.europa.eu/eli/reg/2024/1183/oj/eng)  and
 other digital identity ecosystems using
-[Gnark](https://docs.gnark.consensys.io/), a Go-based zk-SNARKs framework.
+[Gnark](https://docs.gnark.consensys.io/), a Go-based zk-SNARKs framework, and
+[Longfellow-ZK](https://github.com/google/longfellow-zk/).
 
 **Why Gnark?** We chose Gnark for rapid prototyping due to its
-developer-friendly API and readable codebase. These reference implementations
-demonstrate core ZKP capabilities but are not production-optimized.
+developer-friendly API and readable codebase.
 
-**Production Implementation:** Our future system is being built using
-[Longfellow-ZK](https://github.com/google/longfellow-zk), which offers superior
-performance for:
+**Why Longfellow-ZK?** We chose Longfellow-ZK for it's optimization for the
+established cryptographic suites and superior performance for server-side proof
+generation with HSM-protected keys and resource-constrained devices using
+standard cryptographic keys.
 
-- Server-side proof generation with HSM-protected keys
-- Resource-constrained devices using standard cryptographic keys
+All reference implementations demonstrate core ZKP capabilities but are not
+production-optimized.
 
-All the circuits presented here are framework-agnostic and can be implemented in
-alternative ZKP systems like
-[Longfellow-ZK](https://github.com/google/longfellow-zk/) or
-[zkID/OpenAC](https://pse.dev/projects/zk-id) or other.
+All the circuits presented in this repository are framework-agnostic and can be
+implemented in alternative ZKP systems like
+[zkID/OpenAC](https://pse.dev/projects/zk-id) and similar.
 
 ## Motivation
 
@@ -36,8 +36,8 @@ high operational complexity and tight coupling between issuers and wallets.
 
 **Demonstrating infrastructure reusability.**
 We aim to show that existing e-signing and e-sealing infrastructure, such as
-eIDAS (v1) can be reused as-is to introduce efficient identity wallet framework,
-requiring only the addition of ZKP circuits.
+eIDAS (v1), can be reused as-is to introduce efficient identity wallet
+framework, requiring only the addition of ZKP circuits.
 
 With ZK circuits we can achieve different levels of
 linkability/pseudonymity/anonymity as described in
@@ -52,9 +52,10 @@ Start exploring the circuits:
 - **Over18 circuit:** [circuits/temporal](./circuits/temporal/README.md)
 - **EUDI/eIDAS circuits:** [circuits/eudi-vc/](./circuits/eudi-vc/README.md)
 
-Test the circuits built using Gnark ZK framewrok:
+Command line tool and API services:
 
-- [ZKPI](./cmd/README.md) a tool for easy ZKP creation and validation
+- [ZKPI](./cmd/README.md) a tool for easy ZKP creation and validation, and
+testing revocation capabilities (mini CRL and domain-bound CRL).
 
 Test the circuits built using Longfellow-ZK framwork:
 
@@ -157,6 +158,7 @@ Please ensure code follows existing patterns.
 ## Acknowledgments
 
 - [gnark](https://github.com/Consensys/gnark) - Zero-knowledge proof framework
+- [Longfellow-ZK](https://github.com/google/longfellow-zk) - Zero-knowledge proof framework
 - [Cobra](https://github.com/spf13/cobra) - CLI framework
 - [Chi](https://github.com/go-chi/chi) - HTTP router
 
