@@ -62,6 +62,7 @@ Test the circuits built using Longfellow-ZK framwork:
 
 Other tools and libraries
 
+- [CRL Service](./server/crl-service/README.md) a demo implementation of a CRL service supporting mini CRL and Domain-Bound CRL
 - [CAdES](./CAdES/README.md) core implementation of the CAdES-BES signer. A
 [CAdES-BES signature](https://www.etsi.org/deliver/etsi_ts/103100_103199/103173/02.02.01_60/ts_103173v020201p.pdf) is a CMS/PKCS#7 signature that includes the signer's
 certificate additional  signed attributes and is encoded using DER. It's the

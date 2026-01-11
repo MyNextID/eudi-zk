@@ -80,11 +80,12 @@ func (s *Server) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 			GoVersion:   runtime.Version(),
 		},
 		Links: map[string]string{
-			"discovery": "/",
-			"circuits":  "/circuits",
-			"prove":     "/prove",
-			"verify":    "/verify",
-			"health":    "/health",
+			"discovery":   "/",
+			"circuits":    "/circuits",
+			"prove":       "/prove",
+			"verify":      "/verify",
+			"crlServices": "/crl-services",
+			"health":      "/health",
 		},
 		Endpoints: map[string]EndpointInfo{
 			"discovery": {

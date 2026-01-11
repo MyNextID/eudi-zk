@@ -41,7 +41,7 @@ ONLINE DOCUMENTATION
   https://github.com/MyNextID/eudi-zk
 
 COPYRIGHT
-  (c) 2025 MyNextID/Netis d.o.o.
+  (c) 2026 MyNextID/Netis d.o.o.
 
 LICENSE
   Licensed under Apache2.0

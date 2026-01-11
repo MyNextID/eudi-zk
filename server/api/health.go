@@ -33,7 +33,7 @@ type Definition struct {
 	Info    *EndpointInfo `json:"info"`
 }
 
-// Endpoint info
+// HealthDefinition returns health endpoint info
 var HealthDefinition = Definition{
 	Name:    "health",
 	Version: 1,

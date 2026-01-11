@@ -18,7 +18,9 @@ func (cr CircuitRegistry) LoadAll() error {
 	for _, v := range CircuitList {
 		err := cr.LoadCircuit(v)
 		if err != nil {
-			return err
+			// TODO: define the logic
+			fmt.Println(err)
+			// return err
 		}
 	}
 
@@ -51,6 +53,7 @@ func (cr CircuitRegistry) LoadCircuit(ci *circuits.CircuitInfo) error {
 }
 
 // NewCircuitRegistry creates a new registry
+// For now we just try to load what we can; errors are ignored
 func NewCircuitRegistry(dir string) (*CircuitRegistry, error) {
 	// Create a new circuit
 	cr := &CircuitRegistry{
@@ -58,11 +61,19 @@ func NewCircuitRegistry(dir string) (*CircuitRegistry, error) {
 		circuits: make(map[string]*circuits.Circuit),
 	}
 
+	// TODO: manage the errors correctly
+	go func() {
+		err := cr.LoadAll()
+		if err != nil {
+			panic(fmt.Errorf("failed to load circuits: %v", err))
+		}
+	}()
+
 	// load known circuits
-	err := cr.LoadAll()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load circuits: %v", err)
-	}
+	// err := cr.LoadAll()
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to load circuits: %v", err)
+	// }
 
 	return cr, nil
 }

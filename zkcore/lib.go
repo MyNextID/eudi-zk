@@ -699,3 +699,77 @@ func StructToMap(input any) (map[string]any, error) {
 	}
 	return result, nil
 }
+
+// ReadByteAt reads a byte at a given index (variable index)
+func ReadByteAt(
+	api frontend.API,
+
+	data []uints.U8,
+	index frontend.Variable,
+) uints.U8 {
+	result := uints.NewU8(0)
+	for i := range data {
+		isMatch := api.IsZero(api.Sub(index, i))
+		result.Val = api.Select(isMatch, data[i].Val, result.Val)
+	}
+	return result
+}
+
+// ReadDERLength reads a DER-encoded length and returns (length_value, bytes_used_for_length)
+func ReadDERLength(
+	api frontend.API,
+
+	data []uints.U8,
+	index frontend.Variable,
+) (frontend.Variable, frontend.Variable) {
+	lengthByte := ReadByteAt(api, data, index)
+
+	// Check if short form (< 0x80) or long form (>= 0x80)
+	bits := api.ToBinary(lengthByte.Val, 8)
+	isShortForm := api.IsZero(bits[7])
+
+	// Short form: length is the value itself, uses 1 byte
+	shortLength := lengthByte.Val
+	shortBytes := frontend.Variable(1)
+
+	// Long form: need to read multiple bytes
+	numLengthBytes := api.Sub(lengthByte.Val, 0x80)
+
+	// Read up to 2 bytes for length (handles most certificates)
+	byte1 := ReadByteAt(api, data, api.Add(index, 1))
+	byte2 := ReadByteAt(api, data, api.Add(index, 2))
+
+	// Calculate long form length
+	// If numLengthBytes == 1: just byte1
+	// If numLengthBytes == 2: (byte1 << 8) | byte2
+	isOneByte := api.IsZero(api.Sub(numLengthBytes, 1))
+	longLength := api.Select(
+		isOneByte,
+		byte1.Val,
+		api.Add(api.Mul(byte1.Val, 256), byte2.Val),
+	)
+	longBytes := api.Add(numLengthBytes, 1) // 1 for the length byte itself
+
+	// Return the correct values based on form
+	length := api.Select(isShortForm, shortLength, longLength)
+	bytesUsed := api.Select(isShortForm, shortBytes, longBytes)
+
+	return length, bytesUsed
+}
+
+// SkipElement returns the number of bytes to skip for a complete DER element
+func SkipElement(
+	api frontend.API,
+
+	data []uints.U8,
+	index frontend.Variable,
+) frontend.Variable {
+	// Skip tag (1 byte)
+	lengthIndex := api.Add(index, 1)
+
+	// Read length
+	contentLength, lengthBytes := ReadDERLength(api, data, lengthIndex)
+
+	// Total bytes to skip = 1 (tag) + lengthBytes + contentLength
+	return api.Add(api.Add(1, lengthBytes), contentLength)
+}
