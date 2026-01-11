@@ -51,5 +51,7 @@ examples
 compiled
 circuits/boilerplate/circuit.go
 longfellow/cpp/build
-crl-service
+crl-service/archive
 db-crl
+server/crl-service/handlers_test.go
+server/crl-service/revoke-diagnostics_test.go

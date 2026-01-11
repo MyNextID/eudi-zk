@@ -18,7 +18,9 @@ func (cr CircuitRegistry) LoadAll() error {
 	for _, v := range CircuitList {
 		err := cr.LoadCircuit(v)
 		if err != nil {
-			return err
+			// TODO: define the logic
+			fmt.Println(err)
+			// return err
 		}
 	}
 
