@@ -57,7 +57,7 @@ Command line tool and API services:
 - [ZKPI](./cmd/README.md) a tool for easy ZKP creation and validation, and
 testing revocation capabilities (mini CRL and domain-bound CRL).
 
-Test the circuits built using Longfellow-ZK framwork:
+Test the circuits built using Longfellow-ZK framework:
 
 - [longfellow](./longfellow/README.md)
 
