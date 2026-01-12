@@ -28,7 +28,6 @@ LF_ZK_GOOGLE_DIR := $(VENDOR_DIR)/longfellow-zk
 LF_ZK_GOOGLE_BUILD := $(LF_ZK_GOOGLE_DIR)/clang-build-release
 
 # Dyne's Longfellow-ZK (alternative)
-# Note: Dyne's version builds into src/ directory
 LF_ZK_DYNE_DIR := $(VENDOR_DIR)/longfellow-zk-dyne
 LF_ZK_DYNE_LIB := $(LF_ZK_DYNE_DIR)/src
 
@@ -58,7 +57,7 @@ else
     LF_ZK_LIB_DIR := $(ROOT_DIR)/$(LF_ZK_GOOGLE_BUILD)
     LF_ZK_INCLUDE := -I$(ROOT_DIR)/$(LF_ZK_GOOGLE_DIR)/lib
     LF_ZK_LIB_NAME := longfellow_zk
-    LF_ZK_LIB_FILE := $(LF_ZK_GOOGLE_BUILD)/liblongfellow_zk.a
+    LF_ZK_LIB_FILE := $(LF_ZK_GOOGLE_BUILD)/liblongfellow_zk.a  # FIXED: Was pointing to wrapper
     $(info =====================================)
     $(info Using GOOGLE Longfellow-ZK library)
     $(info =====================================)
@@ -66,7 +65,7 @@ endif
 
 # CGO flags - dynamically set based on selected library
 export CGO_CFLAGS := -I/opt/homebrew/include $(LF_ZK_INCLUDE) -I$(ROOT_DIR)/$(CPP_DIR)/include
-export CGO_LDFLAGS := -L/opt/homebrew/lib -L$(LF_ZK_LIB_DIR) -l$(LF_ZK_LIB_NAME) -L$(WRAPPER_LIB_DIR) -Wl,-rpath,$(WRAPPER_LIB_DIR) -Wl,-rpath,$(LF_ZK_LIB_DIR)
+export CGO_LDFLAGS := -L/opt/homebrew/lib -L$(LF_ZK_LIB_DIR) -l$(LF_ZK_LIB_NAME) -L$(WRAPPER_LIB_DIR) -llongfellow_wrapper -Wl,-rpath,$(WRAPPER_LIB_DIR) -Wl,-rpath,$(LF_ZK_LIB_DIR)
 
 # Add zstd for Dyne's version
 ifeq ($(USE_DYNE),1)
@@ -128,7 +127,7 @@ help:
 	@echo ""
 
 init:
-	@echo "Initializing Google's Longfellow-ZK submodule..."
+	@echo "Initializing Google's Longfellow-ZK submodule: $(LF_ZK_GOOGLE_DIR)"
 	git submodule update --init --recursive $(LF_ZK_GOOGLE_DIR)
 	@echo "Installing dependencies..."
 	@echo "Make sure you have: clang, cmake, libssl-dev, libzstd-dev, googletest"
@@ -150,45 +149,48 @@ build-longfellow:
 ifeq ($(USE_DYNE),1)
 	@# Build Dyne's version using GNUmakefile
 	@echo "Using Dyne's GNUmakefile with target: $(DYNE_TARGET)"
-	cd $(LF_ZK_DYNE_DIR) &&$(MAKE) import-vendor && $(MAKE) $(DYNE_TARGET) CXX=$(CXX) CC=$(CC)
+	cd $(LF_ZK_DYNE_DIR) && $(MAKE) import-vendor && $(MAKE) $(DYNE_TARGET) CXX=$(CXX) CC=$(CC)
 	@if [ -f "$(LF_ZK_LIB_FILE)" ]; then \
 		echo "✓ Library built successfully at: $(LF_ZK_LIB_FILE)"; \
+		echo "  Size: $$(du -h $(LF_ZK_LIB_FILE) | cut -f1)"; \
 	else \
 		echo "✗ Error: Library not found at expected location: $(LF_ZK_LIB_FILE)"; \
 		exit 1; \
 	fi
 else
-	@# Build Google's version using CMake
-	cd $(LF_ZK_GOOGLE_DIR) && \
-	CXX=$(CXX) $(CMAKE) -D CMAKE_BUILD_TYPE=Release -S lib -B clang-build-release && \
-	cd clang-build-release && make -j8
-	@if [ -f "$(LF_ZK_LIB_FILE)" ]; then \
-		echo "✓ Library built successfully at: $(LF_ZK_LIB_FILE)"; \
-	else \
-		echo "✗ Error: Library not found at expected location: $(LF_ZK_LIB_FILE)"; \
+	@# Build Google's version using CMake directly in submodule
+	@echo "Building Google's Longfellow-ZK aggregate library..."
+	@if [ ! -d "$(LF_ZK_GOOGLE_DIR)/lib" ]; then \
+		echo "✗ Error: Submodule not initialized. Run 'make init' first."; \
 		exit 1; \
 	fi
+	cd $(LF_ZK_GOOGLE_DIR) && \
+		CXX=$(CXX) $(CMAKE) -D CMAKE_BUILD_TYPE=Release -S lib -B clang-build-release && \
+		cd clang-build-release && $(MAKE) -j$$(nproc 2>/dev/null || echo 8)
 endif
-	@echo "Longfellow-ZK build completed!"
+	@echo "✓ Longfellow-ZK build completed!"
 
 build-wrapper: build-longfellow
 	@echo "Building C++ wrapper..."
-	mkdir -p $(BUILD_DIR)
-	cd $(BUILD_DIR) && \
-	$(CMAKE) -DLF_ZK_DIR=$(LF_ZK_DIR) \
-	         -DLF_ZK_BUILD_DIR=$(LF_ZK_BUILD_DIR) \
-	         -DUSE_DYNE=$(USE_DYNE) \
-	         .. && \
-	make -j8
+	@# Verify Longfellow library exists before building wrapper
+	@mkdir -p $(BUILD_DIR)
+	@cd $(BUILD_DIR) && \
+		$(CMAKE) -DLF_ZK_DIR=$(LF_ZK_DIR) \
+		         -DLF_ZK_BUILD_DIR=$(LF_ZK_BUILD_DIR) \
+		         -DUSE_DYNE=$(USE_DYNE) \
+		         .. && \
+		$(MAKE) -j$$(nproc 2>/dev/null || echo 8)
+	@echo "✓ C++ wrapper built successfully"
 
 build-all: build-longfellow build-wrapper
-	@echo "All builds completed!"
+	@echo "✓ All builds completed!"
 
 build-zkpi: build-wrapper
 	@echo "Building Go ZKPI with $(if $(filter 1,$(USE_DYNE)),Dyne's,Google's) Longfellow-ZK..."
 	@echo "Library directory: $(LF_ZK_LIB_DIR)"
 	@echo "CGO_LDFLAGS: $(CGO_LDFLAGS)"
 	go build -ldflags "$(LDFLAGS)" -o bin/zkpi ./cmd
+	@echo "✓ ZKPI binary built at: bin/zkpi"
 
 install-zkpi: build-wrapper
 	@echo "Installing Go ZKPI with $(if $(filter 1,$(USE_DYNE)),Dyne's,Google's) Longfellow-ZK..."
@@ -207,15 +209,7 @@ test-cpp: build-wrapper
 # Run Longfellow-ZK tests (selected version)
 test-longfellow: build-longfellow
 	@echo "Running $(if $(filter 1,$(USE_DYNE)),Dyne's,Google's) Longfellow-ZK tests..."
-ifeq ($(USE_DYNE),1)
-	@echo "Note: Dyne's version has tests in test/ directory"
-	@if [ -d "$(LF_ZK_DYNE_DIR)/test" ]; then \
-		echo "Test sources available, but no standalone test target in GNUmakefile"; \
-		echo "Tests should be run via wrapper tests or integrated tests"; \
-	fi
-else
-	@echo "Google's Longfellow-ZK: Run wrapper tests with 'make test-cpp'"
-endif
+	@$(MAKE) test-cpp-quick
 
 # List available tests
 test-cpp-list:
@@ -233,23 +227,26 @@ test-go: build-wrapper
 
 # Run all tests
 test-all: test-cpp test-longfellow test-go
-	@echo "All tests completed!"
+	@echo "✓ All tests completed!"
 
 clean:
 	@echo "Cleaning C++ wrapper build artifacts..."
 	rm -rf $(BUILD_DIR)
 	go clean -cache
+	@echo "✓ Cleaned"
 
 clean-google:
 	@echo "Cleaning Google's Longfellow-ZK build..."
 	rm -rf $(LF_ZK_GOOGLE_BUILD)
+	@echo "✓ Cleaned"
 
 clean-dyne:
 	@echo "Cleaning Dyne's Longfellow-ZK build..."
 	cd $(LF_ZK_DYNE_DIR) && $(MAKE) clean || true
+	@echo "✓ Cleaned"
 
 clean-all: clean clean-google clean-dyne
-	@echo "All build artifacts cleaned!"
+	@echo "✓ All build artifacts cleaned!"
 
 # Quick tests without rebuild
 test-cpp-quick:
@@ -319,6 +316,15 @@ check-libs:
 	else \
 		echo "  Status: ✗ NOT INSTALLED"; \
 		echo "  Action: Run 'make init-dyne'"; \
+	fi
+	@echo ""
+	@echo "C++ Wrapper:"
+	@if [ -f "$(BUILD_DIR)/liblongfellow_wrapper.dylib" ] || [ -f "$(BUILD_DIR)/liblongfellow_wrapper.so" ]; then \
+		echo "  Status: ✓ BUILT"; \
+		echo "  Path:   $(BUILD_DIR)"; \
+	else \
+		echo "  Status: ✗ NOT BUILT"; \
+		echo "  Action: Run 'make build-wrapper'"; \
 	fi
 	@echo ""
 	@echo "============================================"

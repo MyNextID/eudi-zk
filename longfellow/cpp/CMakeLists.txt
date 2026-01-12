@@ -15,8 +15,6 @@ endif()
 # Find OpenSSL (required by Longfellow)
 find_package(OpenSSL REQUIRED)
 find_package(zstd REQUIRED)
-
-# Find zstd (required by Longfellow)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ZSTD REQUIRED libzstd)
 
@@ -24,23 +22,21 @@ pkg_check_modules(ZSTD REQUIRED libzstd)
 set(LONGFELLOW_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../vendor/longfellow-zk")
 set(LONGFELLOW_BUILD_DIR "${LONGFELLOW_DIR}/clang-build-release")
 
-# Check if Longfellow is built
+# Validate that Longfellow is built (don't build it here)
 if(NOT EXISTS "${LONGFELLOW_BUILD_DIR}")
-    message(STATUS "Longfellow not built yet. Building...")
-    execute_process(
-        COMMAND bash -c "cd ${LONGFELLOW_DIR} && CXX=clang++ cmake -D CMAKE_BUILD_TYPE=Release -S lib -B clang-build-release && cd clang-build-release && make -j4"
-        RESULT_VARIABLE BUILD_RESULT
-    )
-    if(NOT BUILD_RESULT EQUAL 0)
-        message(FATAL_ERROR "Failed to build Longfellow-ZK")
-    endif()
+    message(FATAL_ERROR 
+        "Longfellow-ZK not built. Run 'make build-longfellow' first.\n"
+        "Expected build directory: ${LONGFELLOW_BUILD_DIR}")
 endif()
 
 # Find the actual Longfellow library file
 file(GLOB_RECURSE LONGFELLOW_LIB "${LONGFELLOW_BUILD_DIR}/*.a")
 if(NOT LONGFELLOW_LIB)
-    message(FATAL_ERROR "Could not find Longfellow library in ${LONGFELLOW_BUILD_DIR}")
+    message(FATAL_ERROR 
+        "Could not find Longfellow library in ${LONGFELLOW_BUILD_DIR}\n"
+        "Run 'make build-longfellow' first.")
 endif()
+
 list(GET LONGFELLOW_LIB 0 LONGFELLOW_LIB)  # Take first .a file if multiple found
 message(STATUS "Found Longfellow library: ${LONGFELLOW_LIB}")
 
@@ -53,16 +49,13 @@ include_directories(
 )
 
 # ============== Shared Library (for CGo) ==============
-# Source files for the wrapper library
 set(WRAPPER_SOURCES
     src/ecdsa-circuit.cpp
     src/ecdsa_c.cpp
 )
 
-# Create shared library (for CGo)
 add_library(longfellow_wrapper SHARED ${WRAPPER_SOURCES})
 
-# Link libraries
 target_link_libraries(longfellow_wrapper
     ${LONGFELLOW_LIB}
     OpenSSL::SSL
@@ -70,7 +63,6 @@ target_link_libraries(longfellow_wrapper
     ${ZSTD_LIBRARIES}
 )
 
-# Set library output name
 set_target_properties(longfellow_wrapper PROPERTIES
     OUTPUT_NAME "longfellow_wrapper"
     VERSION ${PROJECT_VERSION}
@@ -88,13 +80,10 @@ install(FILES include/ecdsa_c.h
 )
 
 # ============== Testing ==============
-# Enable testing
 enable_testing()
-
-# Find Google Test
 find_package(GTest REQUIRED)
 
-# Test executable
+# ECDSA tests
 add_executable(ecdsa_tests
     src/ecdsa-circuit.cpp
     src/ecdsa-circuit_test.cpp
@@ -102,12 +91,6 @@ add_executable(ecdsa_tests
     src/compare-bytes_test.cpp
 )
 
-add_executable(compare_bytes_tests
-    src/compare-bytes.cpp
-    src/compare-bytes_test.cpp
-)
-
-# Include directories for tests
 target_include_directories(ecdsa_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${LONGFELLOW_DIR}/lib
@@ -116,16 +99,6 @@ target_include_directories(ecdsa_tests PRIVATE
     ${GTEST_INCLUDE_DIRS}
 )
 
-# Include directories for tests
-target_include_directories(compare_bytes_tests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${LONGFELLOW_DIR}/lib
-    ${OPENSSL_INCLUDE_DIR}
-    ${ZSTD_INCLUDE_DIRS}
-    ${GTEST_INCLUDE_DIRS}
-)
-
-# Link libraries for tests
 target_link_libraries(ecdsa_tests
     ${LONGFELLOW_LIB}
     OpenSSL::SSL
@@ -136,7 +109,22 @@ target_link_libraries(ecdsa_tests
     pthread
 )
 
-# Link libraries for tests
+add_test(NAME ecdsa_tests COMMAND ecdsa_tests)
+
+# Compare bytes tests
+add_executable(compare_bytes_tests
+    src/compare-bytes.cpp
+    src/compare-bytes_test.cpp
+)
+
+target_include_directories(compare_bytes_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${LONGFELLOW_DIR}/lib
+    ${OPENSSL_INCLUDE_DIR}
+    ${ZSTD_INCLUDE_DIRS}
+    ${GTEST_INCLUDE_DIRS}
+)
+
 target_link_libraries(compare_bytes_tests
     ${LONGFELLOW_LIB}
     OpenSSL::SSL
@@ -147,8 +135,4 @@ target_link_libraries(compare_bytes_tests
     pthread
 )
 
-# Register test with CTest
-add_test(NAME ecdsa_tests COMMAND ecdsa_tests)
-
-# Register test with CTest
 add_test(NAME compare_bytes_tests COMMAND compare_bytes_tests)
