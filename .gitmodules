@@ -6,4 +6,4 @@
 [submodule "longfellow/vendor/longfellow-zk-dyne"]
 	path = longfellow/vendor/longfellow-zk-dyne
 	url = https://github.com/dyne/longfellow-zk.git
-        branch = main
+	branch = main
