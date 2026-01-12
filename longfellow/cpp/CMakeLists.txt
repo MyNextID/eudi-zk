@@ -98,10 +98,26 @@ find_package(GTest REQUIRED)
 add_executable(ecdsa_tests
     src/ecdsa-circuit.cpp
     src/ecdsa-circuit_test.cpp
+    src/compare-bytes.cpp
+    src/compare-bytes_test.cpp
+)
+
+add_executable(compare_bytes_tests
+    src/compare-bytes.cpp
+    src/compare-bytes_test.cpp
 )
 
 # Include directories for tests
 target_include_directories(ecdsa_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${LONGFELLOW_DIR}/lib
+    ${OPENSSL_INCLUDE_DIR}
+    ${ZSTD_INCLUDE_DIRS}
+    ${GTEST_INCLUDE_DIRS}
+)
+
+# Include directories for tests
+target_include_directories(compare_bytes_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${LONGFELLOW_DIR}/lib
     ${OPENSSL_INCLUDE_DIR}
@@ -120,5 +136,19 @@ target_link_libraries(ecdsa_tests
     pthread
 )
 
+# Link libraries for tests
+target_link_libraries(compare_bytes_tests
+    ${LONGFELLOW_LIB}
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    ${ZSTD_LIBRARIES}
+    GTest::GTest
+    GTest::Main
+    pthread
+)
+
 # Register test with CTest
 add_test(NAME ecdsa_tests COMMAND ecdsa_tests)
+
+# Register test with CTest
+add_test(NAME compare_bytes_tests COMMAND compare_bytes_tests)
