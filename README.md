@@ -30,9 +30,10 @@ implemented in alternative ZKP systems like
 The main motivations for this work are:
 
 **Complexity of credential management with salt-hash table-based selective disclosure.**
-Achieving even the simplest form of unlinkability requires one-time credentials
-where batches must be managed by both the issuer and the wallet. This creates
-high operational complexity and tight coupling between issuers and wallets.
+Achieving even the simplest form of [unlinkability](./docs/unlinkability.md)
+requires issuing one-time credentials (batch credential issuance). Credential
+batches must be managed by both the issuer and the wallet. This creates high
+operational complexity and tight coupling between issuers and wallets.
 
 **Demonstrating infrastructure reusability.**
 We aim to show that existing e-signing and e-sealing infrastructure, such as

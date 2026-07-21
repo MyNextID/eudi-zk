@@ -43,7 +43,7 @@ and all required dependencies.
 
 **Elliptic Curves:**
 
-- secp256r1 (P-256) - commonly used in eIDAS certificates
+- secp256r1 (P-256) - commonly used in eIDAS and EUDI
 
 **Hash Functions:**
 
@@ -89,7 +89,7 @@ trusted QTSP," while simultaneously concealing:
 
 ### 4. VC Verification
 
-NOTE: refactoring is in progres
+NOTE: refactoring is in progress
 
 **Location:** [eudi-vc](./eudi-vc/README.md)
 
@@ -101,6 +101,17 @@ Circuits for validating VC signatures and holder binging proofs
 - VC signature is verified with the public key of the issuer (public input)
 - VC contains the my (subject's) public key
 - Without revealing the certificate or the public key
+
+## 5. Proving distance between two vectors is below a threshold
+
+**Location:** [biometric-comparison](./biometric-comparison/README.md)
+
+This simple circuit proves that the squared L2 distance between a private vector
+and a public vector is below a public threshold. The private vector is assumed
+to come from a digitally signed certificate or credential, verified by a
+separate composing circuit that binds this proof to that credential; the public
+vector carries no such assumption (e.g. it can come from a face-scanning device
+at the point of verification).
 
 ## Repository Structure
 

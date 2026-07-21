@@ -50,10 +50,10 @@ func randomEmbedding(r *rand.Rand, dim int) []float64 {
 
 // perturbEmbedding returns a copy of vec with independent noise of the given
 // per-coordinate magnitude added, then re-normalized back to a unit vector.
-// Re-normalizing is important: the circuit's threshold semantics (and, since
-// the last review round, WitnessInput.Validate) assume both embeddings are
-// L2-normalized, so a "close but still a valid embedding" test fixture has
-// to preserve that, not just add noise and stop.
+// Re-normalizing is important: the circuit's threshold semantics (and
+// WitnessInput.Validate) assume both embeddings are L2-normalized, so a
+// "close but still a valid embedding" test fixture has to preserve that,
+// not just add noise and stop.
 func perturbEmbedding(r *rand.Rand, vec []float64, magnitude float64) []float64 {
 	out := make([]float64, len(vec))
 	for i, v := range vec {
@@ -78,6 +78,8 @@ func TestFaceMatch_WithinThreshold(t *testing.T) {
 	saveExamplePayload := true
 
 	// == create dummy data ==
+	// reference: private, assumed sourced from a signed e-ID credential.
+	// probe: public, e.g. a live face scan - no provenance assumed.
 	r := rand.New(rand.NewSource(1))
 	reference := randomEmbedding(r, assertfacematch.EmbeddingLen)
 	probe := perturbEmbedding(r, reference, 0.01) // small perturbation -> same person
@@ -91,13 +93,13 @@ func TestFaceMatch_WithinThreshold(t *testing.T) {
 	}
 
 	pvtIn := assertfacematch.PrivateInput{
-		ProbeEmbedding: encodeEmbedding(probe),
+		ReferenceEmbedding: encodeEmbedding(reference),
 	}
 	pvtInBuf, _ := json.Marshal(pvtIn)
 
 	pubIn := assertfacematch.PublicInput{
-		ReferenceEmbedding: encodeEmbedding(reference),
-		Threshold:          threshold,
+		ProbeEmbedding: encodeEmbedding(probe),
+		Threshold:      threshold,
 	}
 	pubInBuf, _ := json.Marshal(pubIn)
 
@@ -142,13 +144,13 @@ func TestFaceMatch_ExceedsThreshold(t *testing.T) {
 	}
 
 	pvtIn := assertfacematch.PrivateInput{
-		ProbeEmbedding: encodeEmbedding(probe),
+		ReferenceEmbedding: encodeEmbedding(reference),
 	}
 	pvtInBuf, _ := json.Marshal(pvtIn)
 
 	pubIn := assertfacematch.PublicInput{
-		ReferenceEmbedding: encodeEmbedding(reference),
-		Threshold:          threshold,
+		ProbeEmbedding: encodeEmbedding(probe),
+		Threshold:      threshold,
 	}
 	pubInBuf, _ := json.Marshal(pubIn)
 
@@ -171,13 +173,13 @@ func TestFaceMatch_InvalidEmbeddingDimension(t *testing.T) {
 	wrongSizeProbe := randomEmbedding(r, assertfacematch.EmbeddingLen/2) // wrong dimension
 
 	pvtIn := assertfacematch.PrivateInput{
-		ProbeEmbedding: encodeEmbedding(wrongSizeProbe),
+		ReferenceEmbedding: encodeEmbedding(reference),
 	}
 	pvtInBuf, _ := json.Marshal(pvtIn)
 
 	pubIn := assertfacematch.PublicInput{
-		ReferenceEmbedding: encodeEmbedding(reference),
-		Threshold:          1.0,
+		ProbeEmbedding: encodeEmbedding(wrongSizeProbe),
+		Threshold:      1.0,
 	}
 	pubInBuf, _ := json.Marshal(pubIn)
 
@@ -204,12 +206,12 @@ func TestFaceMatch_VerifyFailsOnTamperedThreshold(t *testing.T) {
 		t.Fatalf("zk circuit compilation failed: %v", err)
 	}
 
-	pvtIn := assertfacematch.PrivateInput{ProbeEmbedding: encodeEmbedding(probe)}
+	pvtIn := assertfacematch.PrivateInput{ReferenceEmbedding: encodeEmbedding(reference)}
 	pvtInBuf, _ := json.Marshal(pvtIn)
 
 	pubIn := assertfacematch.PublicInput{
-		ReferenceEmbedding: encodeEmbedding(reference),
-		Threshold:          threshold,
+		ProbeEmbedding: encodeEmbedding(probe),
+		Threshold:      threshold,
 	}
 	pubInBuf, _ := json.Marshal(pubIn)
 
@@ -223,8 +225,8 @@ func TestFaceMatch_VerifyFailsOnTamperedThreshold(t *testing.T) {
 	// threshold was met just by having the verifier re-check with a looser
 	// one after the fact.
 	tamperedPubIn := assertfacematch.PublicInput{
-		ReferenceEmbedding: encodeEmbedding(reference),
-		Threshold:          threshold * 3, // still <= MaxThreshold, just different
+		ProbeEmbedding: encodeEmbedding(probe),
+		Threshold:      threshold * 3, // still <= MaxThreshold, just different
 	}
 	tamperedPubInBuf, _ := json.Marshal(tamperedPubIn)
 
@@ -234,11 +236,11 @@ func TestFaceMatch_VerifyFailsOnTamperedThreshold(t *testing.T) {
 	}
 }
 
-func TestFaceMatch_VerifyFailsOnMismatchedReference(t *testing.T) {
+func TestFaceMatch_VerifyFailsOnMismatchedProbe(t *testing.T) {
 	r := rand.New(rand.NewSource(5))
 	reference := randomEmbedding(r, assertfacematch.EmbeddingLen)
 	probe := perturbEmbedding(r, reference, 0.01)
-	otherReference := randomEmbedding(r, assertfacematch.EmbeddingLen)
+	otherProbe := randomEmbedding(r, assertfacematch.EmbeddingLen)
 
 	dist := euclideanDistance(reference, probe)
 	threshold := dist * 1.5
@@ -248,12 +250,12 @@ func TestFaceMatch_VerifyFailsOnMismatchedReference(t *testing.T) {
 		t.Fatalf("zk circuit compilation failed: %v", err)
 	}
 
-	pvtIn := assertfacematch.PrivateInput{ProbeEmbedding: encodeEmbedding(probe)}
+	pvtIn := assertfacematch.PrivateInput{ReferenceEmbedding: encodeEmbedding(reference)}
 	pvtInBuf, _ := json.Marshal(pvtIn)
 
 	pubIn := assertfacematch.PublicInput{
-		ReferenceEmbedding: encodeEmbedding(reference),
-		Threshold:          threshold,
+		ProbeEmbedding: encodeEmbedding(probe),
+		Threshold:      threshold,
 	}
 	pubInBuf, _ := json.Marshal(pubIn)
 
@@ -262,26 +264,32 @@ func TestFaceMatch_VerifyFailsOnMismatchedReference(t *testing.T) {
 		t.Fatalf("failed to create a proof: %v", err)
 	}
 
-	// Verify against a swapped-in reference embedding that was never part
-	// of the proof. Must fail, otherwise a proof made against one enrolled
-	// identity could be replayed as "proof" against a different one.
+	// Verify against a swapped-in probe embedding that was never part of
+	// the proof. Must fail, otherwise a proof made against one probe
+	// capture could be replayed as "proof" against a different capture
+	// (e.g. against a different verification session's live scan).
 	swappedPubIn := assertfacematch.PublicInput{
-		ReferenceEmbedding: encodeEmbedding(otherReference),
-		Threshold:          threshold,
+		ProbeEmbedding: encodeEmbedding(otherProbe),
+		Threshold:      threshold,
 	}
 	swappedPubInBuf, _ := json.Marshal(swappedPubIn)
 
 	err = zkc.VerifyWithJSON(swappedPubInBuf, proof)
 	if err == nil {
-		t.Fatal("expected verification to fail against a mismatched reference embedding, but it succeeded")
+		t.Fatal("expected verification to fail against a mismatched probe embedding, but it succeeded")
 	}
 }
 
-// --- Input validation added in the last hardening pass. These are checked
-// directly against WitnessInput.Validate() rather than through a full
-// Compile/Prove cycle: they're testing Go-level input validation, not
-// circuit satisfiability, so there's no need to pay for circuit compilation
-// and proving in every case. ---
+// --- Input validation. These are checked directly against
+// WitnessInput.Validate() rather than through a full Compile/Prove cycle:
+// they're testing Go-level input validation, not circuit satisfiability, so
+// there's no need to pay for circuit compilation and proving in every case.
+//
+// Note the required/optional split: ProbeEmbedding (public) is always
+// required by Validate(); ReferenceEmbedding (private) is optional and nil
+// in the verification-only case, since the verifier never has it. Every
+// case below that isn't specifically testing the probe-dimension check
+// supplies a valid ProbeEmbedding so it can reach the check being tested. ---
 
 func TestWitnessInput_Validate(t *testing.T) {
 	r := rand.New(rand.NewSource(6))
@@ -293,16 +301,23 @@ func TestWitnessInput_Validate(t *testing.T) {
 	// inside MaxCoordAbs, so this exercises checkNormalized specifically
 	// rather than tripping the (earlier-run) per-coordinate bounds check.
 	unnormalized := make([]float64, assertfacematch.EmbeddingLen)
-	copy(unnormalized, validRef)
+	copy(unnormalized, validProbe)
 	unnormalized[0] += 0.5
 
-	nonFiniteRef := make([]float64, assertfacematch.EmbeddingLen)
-	copy(nonFiniteRef, validRef)
-	nonFiniteRef[0] = math.NaN()
+	nonFiniteVec := make([]float64, assertfacematch.EmbeddingLen)
+	copy(nonFiniteVec, validProbe)
+	nonFiniteVec[0] = math.NaN()
 
-	infRef := make([]float64, assertfacematch.EmbeddingLen)
-	copy(infRef, validRef)
-	infRef[0] = math.Inf(1)
+	infVec := make([]float64, assertfacematch.EmbeddingLen)
+	copy(infVec, validProbe)
+	infVec[0] = math.Inf(1)
+
+	outOfBoundsVec := func() []float64 {
+		v := make([]float64, assertfacematch.EmbeddingLen)
+		v[0] = float64(assertfacematch.MaxCoordAbs)/assertfacematch.FixedPointScale + 10
+		v[1] = 1 // avoid an all-zero vector tripping normalization first
+		return v
+	}()
 
 	tests := []struct {
 		name      string
@@ -320,16 +335,26 @@ func TestWitnessInput_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "valid reference only (verification case, no probe)",
+			name: "valid probe only (verification case, no reference)",
 			w: assertfacematch.WitnessInput{
-				ReferenceEmbedding: validRef,
-				Threshold:          0.5,
+				ProbeEmbedding: validProbe,
+				Threshold:      0.5,
 			},
 			wantErr: false,
 		},
 		{
-			name: "wrong reference dimension",
+			name: "wrong probe dimension",
 			w: assertfacematch.WitnessInput{
+				ProbeEmbedding: validProbe[:assertfacematch.EmbeddingLen-1],
+				Threshold:      0.5,
+			},
+			wantErr:   true,
+			errSubstr: "dimensions",
+		},
+		{
+			name: "wrong reference dimension (when present)",
+			w: assertfacematch.WitnessInput{
+				ProbeEmbedding:     validProbe,
 				ReferenceEmbedding: validRef[:assertfacematch.EmbeddingLen-1],
 				Threshold:          0.5,
 			},
@@ -339,8 +364,8 @@ func TestWitnessInput_Validate(t *testing.T) {
 		{
 			name: "negative threshold",
 			w: assertfacematch.WitnessInput{
-				ReferenceEmbedding: validRef,
-				Threshold:          -0.1,
+				ProbeEmbedding: validProbe,
+				Threshold:      -0.1,
 			},
 			wantErr:   true,
 			errSubstr: "non-negative",
@@ -348,8 +373,8 @@ func TestWitnessInput_Validate(t *testing.T) {
 		{
 			name: "threshold above MaxThreshold",
 			w: assertfacematch.WitnessInput{
-				ReferenceEmbedding: validRef,
-				Threshold:          assertfacematch.MaxThreshold + 0.1,
+				ProbeEmbedding: validProbe,
+				Threshold:      assertfacematch.MaxThreshold + 0.1,
 			},
 			wantErr:   true,
 			errSubstr: "exceeds maximum",
@@ -357,8 +382,8 @@ func TestWitnessInput_Validate(t *testing.T) {
 		{
 			name: "NaN threshold",
 			w: assertfacematch.WitnessInput{
-				ReferenceEmbedding: validRef,
-				Threshold:          math.NaN(),
+				ProbeEmbedding: validProbe,
+				Threshold:      math.NaN(),
 			},
 			wantErr:   true,
 			errSubstr: "not finite",
@@ -366,15 +391,25 @@ func TestWitnessInput_Validate(t *testing.T) {
 		{
 			name: "Inf threshold",
 			w: assertfacematch.WitnessInput{
-				ReferenceEmbedding: validRef,
-				Threshold:          math.Inf(1),
+				ProbeEmbedding: validProbe,
+				Threshold:      math.Inf(1),
 			},
 			wantErr:   true,
 			errSubstr: "not finite",
 		},
 		{
+			name: "unnormalized probe embedding",
+			w: assertfacematch.WitnessInput{
+				ProbeEmbedding: unnormalized,
+				Threshold:      0.5,
+			},
+			wantErr:   true,
+			errSubstr: "normalized",
+		},
+		{
 			name: "unnormalized reference embedding",
 			w: assertfacematch.WitnessInput{
+				ProbeEmbedding:     validProbe,
 				ReferenceEmbedding: unnormalized,
 				Threshold:          0.5,
 			},
@@ -382,41 +417,44 @@ func TestWitnessInput_Validate(t *testing.T) {
 			errSubstr: "normalized",
 		},
 		{
-			name: "unnormalized probe embedding",
+			name: "non-finite (NaN) coordinate in probe embedding",
 			w: assertfacematch.WitnessInput{
-				ProbeEmbedding:     unnormalized,
-				ReferenceEmbedding: validRef,
-				Threshold:          0.5,
+				ProbeEmbedding: nonFiniteVec,
+				Threshold:      0.5,
 			},
-			wantErr:   true,
-			errSubstr: "normalized",
+			wantErr: true,
+		},
+		{
+			name: "non-finite (Inf) coordinate in probe embedding",
+			w: assertfacematch.WitnessInput{
+				ProbeEmbedding: infVec,
+				Threshold:      0.5,
+			},
+			wantErr: true,
 		},
 		{
 			name: "non-finite (NaN) coordinate in reference embedding",
 			w: assertfacematch.WitnessInput{
-				ReferenceEmbedding: nonFiniteRef,
+				ProbeEmbedding:     validProbe,
+				ReferenceEmbedding: nonFiniteVec,
 				Threshold:          0.5,
 			},
 			wantErr: true,
 		},
 		{
-			name: "non-finite (Inf) coordinate in reference embedding",
+			name: "coordinate magnitude beyond MaxCoordAbs after quantization (probe)",
 			w: assertfacematch.WitnessInput{
-				ReferenceEmbedding: infRef,
-				Threshold:          0.5,
+				ProbeEmbedding: outOfBoundsVec,
+				Threshold:      0.5,
 			},
 			wantErr: true,
 		},
 		{
-			name: "coordinate magnitude beyond MaxCoordAbs after quantization",
+			name: "coordinate magnitude beyond MaxCoordAbs after quantization (reference)",
 			w: assertfacematch.WitnessInput{
-				ReferenceEmbedding: func() []float64 {
-					v := make([]float64, assertfacematch.EmbeddingLen)
-					v[0] = float64(assertfacematch.MaxCoordAbs)/assertfacematch.FixedPointScale + 10
-					v[1] = 1 // avoid an all-zero vector tripping normalization first
-					return v
-				}(),
-				Threshold: 0.5,
+				ProbeEmbedding:     validProbe,
+				ReferenceEmbedding: outOfBoundsVec,
+				Threshold:          0.5,
 			},
 			wantErr: true,
 		},
@@ -452,12 +490,12 @@ func TestFaceMatch_ProveRejectsInvalidThreshold(t *testing.T) {
 	reference := randomEmbedding(r, assertfacematch.EmbeddingLen)
 	probe := perturbEmbedding(r, reference, 0.01)
 
-	pvtIn := assertfacematch.PrivateInput{ProbeEmbedding: encodeEmbedding(probe)}
+	pvtIn := assertfacematch.PrivateInput{ReferenceEmbedding: encodeEmbedding(reference)}
 	pvtInBuf, _ := json.Marshal(pvtIn)
 
 	pubIn := assertfacematch.PublicInput{
-		ReferenceEmbedding: encodeEmbedding(reference),
-		Threshold:          assertfacematch.MaxThreshold + 1, // out of range
+		ProbeEmbedding: encodeEmbedding(probe),
+		Threshold:      assertfacematch.MaxThreshold + 1, // out of range
 	}
 	pubInBuf, _ := json.Marshal(pubIn)
 
