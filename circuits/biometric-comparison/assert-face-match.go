@@ -1,5 +1,5 @@
-// Package assertfacematch contains a ZK circuit that proves a private face
-// embedding is "close enough" (within a public threshold) to a public
+// Package assertfacematch contains a ZK circuit that proves a public face
+// embedding is "close enough" (within a public threshold) to a private
 // reference face embedding, without revealing the private embedding.
 package assertfacematch
 
@@ -64,14 +64,15 @@ const (
 
 // DescriptionLong is a long circuit description
 const DescriptionLong = `
-CircuitFaceMatch defines a zero-knowledge circuit that proves a private
-("probe") face embedding is within a public distance threshold of a public
-("reference") face embedding, without revealing the probe embedding.
+CircuitFaceMatch defines a zero-knowledge circuit that proves a public
+("probe") face embedding is within a public distance threshold of a private
+("reference") face embedding, without revealing the reference embedding.
 
 The circuit:
-1. Takes a secret, fixed-point-quantized face embedding vector as private
-witness
-2. Takes a public, fixed-point-quantized face embedding vector as public input
+1. Takes a secret, fixed-point-quantized face embedding vector (the
+reference) as private witness
+2. Takes a public, fixed-point-quantized face embedding vector (the probe)
+as public input
 3. Takes a public squared-distance threshold as public input
 4. Computes the squared Euclidean distance between the two embeddings
 5. Asserts that squared distance <= squared threshold
@@ -85,43 +86,43 @@ unavailable in R1CS arithmetic, this circuit intentionally works with:
 so that the entire comparison reduces to subtraction, multiplication, and a
 single range-check-based inequality assertion.
 
-Trust assumption about the reference embedding: this circuit assumes the caller
-supplies ReferenceEmbedding as extracted from a digitally signed e-ID
-credential, verified by the caller *before* it ever reaches this circuit or API.
-The circuit itself does not check any signature over the reference embedding,
-and does not know or care where it came from - that trust boundary lives
-entirely outside this package. This assumption rules out one specific attack (a
-party fabricating an arbitrary "reference" to forge a match), because any
-reference used has to trace back to a genuine, signed credential. It does *not*
-by itself rule out an adaptive-query attack in which a verifier who controls
-when/how often proofs are checked reuses the same genuine signed reference
-across many proof attempts with different public thresholds, using pass/fail as
-a 1-bit oracle to slowly narrow down the private probe embedding. Callers should
-still rate-limit verification attempts and treat the reference embedding (and
-its issuing credential) as fixed per identity rather than something re-derived
-per query. This circuit also does not bind proofs to a session, nonce, or
-liveness check; replay of a captured proof (or a captured quantized probe
-embedding) is a concern for the calling protocol, not something this circuit
-addresses.
+Trust assumption about the reference embedding: this circuit assumes the
+prover supplies ReferenceEmbedding as extracted from a digitally signed e-ID
+credential. The circuit itself does not check any signature over the
+reference embedding, and does not know or care where it came from - that
+trust boundary lives entirely outside this package. This assumption rules
+out one specific attack (a party fabricating an arbitrary "reference" to
+forge a match), because any reference used has to trace back to a genuine,
+signed credential.
+
+The public probe embedding carries no such assumption - it may come from an
+unattested source at the point of verification (e.g. a live face-scanning
+device).
+
+This circuit also does not bind proofs to a session, nonce, or liveness
+check; replay of a captured proof (or a captured quantized reference
+embedding) is a concern for the calling protocol, not something this
+circuit addresses.
 `
 
-// CircuitFaceMatch proves knowledge of a private embedding that matches a
-// public reference embedding within a public threshold.
+// CircuitFaceMatch proves knowledge of a private reference embedding that
+// matches a public probe embedding within a public threshold.
 type CircuitFaceMatch struct {
 	// ===== SECRET INPUT (Private Witness) =====
 
-	// ProbeEmbedding is the fixed-point-quantized embedding being verified.
-	// Coordinates may be negative (field arithmetic handles this natively
-	// via modular wraparound, since the field is astronomically larger
-	// than the values involved).
-	ProbeEmbedding [EmbeddingLen]frontend.Variable `gnark:",secret"`
+	// ReferenceEmbedding is the fixed-point-quantized reference embedding,
+	// extracted from an e-ID or other signed credential. Coordinates may be
+	// negative (field arithmetic handles this natively via modular
+	// wraparound, since the field is astronomically larger than the values
+	// involved).
+	ReferenceEmbedding [EmbeddingLen]frontend.Variable `gnark:",secret"`
 
 	// ===== PUBLIC INPUTS (Visible to Verifier) =====
 
-	// ReferenceEmbedding is the fixed-point-quantized reference embedding
-	// (e.g. an enrolled/registered face template extracted from a
-	// digitally signed e-ID credential - see trust-assumption note above).
-	ReferenceEmbedding [EmbeddingLen]frontend.Variable `gnark:",public"`
+	// ProbeEmbedding is the fixed-point-quantized embedding being checked
+	// against the private reference (e.g. captured live at the point of
+	// verification). Carries no provenance assumption of its own.
+	ProbeEmbedding [EmbeddingLen]frontend.Variable `gnark:",public"`
 
 	// Threshold2 is the *squared* maximum allowed distance, in the same
 	// fixed-point scale as the embeddings (i.e. scaled by FixedPointScale^2).
@@ -130,17 +131,17 @@ type CircuitFaceMatch struct {
 
 // Define defines the circuit logic
 //
-// In this circuit, we prove: "I know a probe embedding P such that
+// In this circuit, we prove: "I know a reference embedding R such that
 //
-//	sum_i (P_i - R_i)^2 <= Threshold2"
+//	sum_i (R_i - P_i)^2 <= Threshold2"
 //
-// where R is the public reference embedding and Threshold2 is the public
+// where P is the public probe embedding and Threshold2 is the public
 // squared distance threshold.
 func (c *CircuitFaceMatch) Define(api frontend.API) error {
 	// Step 1: accumulate squared distance across all dimensions.
 	dist2 := frontend.Variable(0)
 	for i := range EmbeddingLen {
-		diff := api.Sub(c.ProbeEmbedding[i], c.ReferenceEmbedding[i])
+		diff := api.Sub(c.ReferenceEmbedding[i], c.ProbeEmbedding[i])
 		sq := api.Mul(diff, diff)
 		dist2 = api.Add(dist2, sq)
 	}
@@ -160,13 +161,16 @@ func (c *CircuitFaceMatch) Define(api frontend.API) error {
 // WitnessInput holds raw floating-point inputs before quantization and
 // conversion to circuit witness values.
 type WitnessInput struct {
-	// Private input - raw probe embedding (unscaled floats)
-	ProbeEmbedding []float64
-
-	// Public inputs - raw reference embedding (unscaled floats) and the
-	// (unscaled, linear) distance threshold
+	// Private input - raw reference embedding (unscaled floats), assumed to
+	// be sourced from a signed e-ID credential. nil in the verification-only
+	// case (no private witness available).
 	ReferenceEmbedding []float64
-	Threshold          float64
+
+	// Public inputs - raw probe embedding (unscaled floats, e.g. from a live
+	// face scan; no provenance assumed) and the (unscaled, linear) distance
+	// threshold. Always required.
+	ProbeEmbedding []float64
+	Threshold      float64
 }
 
 // quantize scales and rounds a single float coordinate to a fixed-point
@@ -233,15 +237,17 @@ func checkNormalized(name string, vec []float64) error {
 	return nil
 }
 
-// Validate performs input validation
+// Validate performs input validation. ProbeEmbedding (public) is always
+// required; ReferenceEmbedding (private) is only present in the proving
+// case and is nil for verification-only witnesses.
 func (w *WitnessInput) Validate() error {
-	if len(w.ReferenceEmbedding) != EmbeddingLen {
-		return fmt.Errorf("reference embedding must have %d dimensions, got %d",
-			EmbeddingLen, len(w.ReferenceEmbedding))
-	}
-	if w.ProbeEmbedding != nil && len(w.ProbeEmbedding) != EmbeddingLen {
+	if len(w.ProbeEmbedding) != EmbeddingLen {
 		return fmt.Errorf("probe embedding must have %d dimensions, got %d",
 			EmbeddingLen, len(w.ProbeEmbedding))
+	}
+	if w.ReferenceEmbedding != nil && len(w.ReferenceEmbedding) != EmbeddingLen {
+		return fmt.Errorf("reference embedding must have %d dimensions, got %d",
+			EmbeddingLen, len(w.ReferenceEmbedding))
 	}
 	if math.IsNaN(w.Threshold) || math.IsInf(w.Threshold, 0) {
 		return fmt.Errorf("threshold is not finite: %v", w.Threshold)
@@ -267,17 +273,17 @@ func (w *WitnessInput) Validate() error {
 		}
 		return nil
 	}
-	if err := checkBounds("reference embedding", w.ReferenceEmbedding); err != nil {
+	if err := checkBounds("probe embedding", w.ProbeEmbedding); err != nil {
 		return err
 	}
-	if err := checkNormalized("reference embedding", w.ReferenceEmbedding); err != nil {
+	if err := checkNormalized("probe embedding", w.ProbeEmbedding); err != nil {
 		return err
 	}
-	if w.ProbeEmbedding != nil {
-		if err := checkBounds("probe embedding", w.ProbeEmbedding); err != nil {
+	if w.ReferenceEmbedding != nil {
+		if err := checkBounds("reference embedding", w.ReferenceEmbedding); err != nil {
 			return err
 		}
-		if err := checkNormalized("probe embedding", w.ProbeEmbedding); err != nil {
+		if err := checkNormalized("reference embedding", w.ReferenceEmbedding); err != nil {
 			return err
 		}
 	}
@@ -287,13 +293,13 @@ func (w *WitnessInput) Validate() error {
 
 // CreateWitness creates a full witness (private + public) for proving
 func (w *WitnessInput) CreateWitness() (frontend.Circuit, error) {
-	probeQ, err := quantizeVector(w.ProbeEmbedding)
-	if err != nil {
-		return nil, fmt.Errorf("failed to quantize probe embedding: %w", err)
-	}
 	refQ, err := quantizeVector(w.ReferenceEmbedding)
 	if err != nil {
 		return nil, fmt.Errorf("failed to quantize reference embedding: %w", err)
+	}
+	probeQ, err := quantizeVector(w.ProbeEmbedding)
+	if err != nil {
+		return nil, fmt.Errorf("failed to quantize probe embedding: %w", err)
 	}
 	t2, err := w.squaredThreshold()
 	if err != nil {
@@ -302,8 +308,8 @@ func (w *WitnessInput) CreateWitness() (frontend.Circuit, error) {
 
 	var circuit CircuitFaceMatch
 	for i := range EmbeddingLen {
-		circuit.ProbeEmbedding[i] = probeQ[i]
 		circuit.ReferenceEmbedding[i] = refQ[i]
+		circuit.ProbeEmbedding[i] = probeQ[i]
 	}
 	circuit.Threshold2 = t2
 
@@ -312,9 +318,9 @@ func (w *WitnessInput) CreateWitness() (frontend.Circuit, error) {
 
 // CreatePublicWitness creates only the public inputs for verification
 func (w *WitnessInput) CreatePublicWitness() (frontend.Circuit, error) {
-	refQ, err := quantizeVector(w.ReferenceEmbedding)
+	probeQ, err := quantizeVector(w.ProbeEmbedding)
 	if err != nil {
-		return nil, fmt.Errorf("failed to quantize reference embedding: %w", err)
+		return nil, fmt.Errorf("failed to quantize probe embedding: %w", err)
 	}
 	t2, err := w.squaredThreshold()
 	if err != nil {
@@ -324,8 +330,8 @@ func (w *WitnessInput) CreatePublicWitness() (frontend.Circuit, error) {
 	var circuit CircuitFaceMatch
 	for i := range EmbeddingLen {
 		// Private field left as zero placeholder; ignored during verification.
-		circuit.ProbeEmbedding[i] = big.NewInt(0)
-		circuit.ReferenceEmbedding[i] = refQ[i]
+		circuit.ReferenceEmbedding[i] = big.NewInt(0)
+		circuit.ProbeEmbedding[i] = probeQ[i]
 	}
 	circuit.Threshold2 = t2
 
@@ -339,20 +345,21 @@ func (w *WitnessInput) CreatePublicWitness() (frontend.Circuit, error) {
 // PrivateInput defines the JSON structure for private inputs to the circuit.
 // This data is known only to the prover.
 type PrivateInput struct {
-	// ProbeEmbedding is the base64url-encoded JSON array of float64
-	// embedding coordinates for the face being verified.
-	ProbeEmbedding string `json:"probe_embedding" description:"BASE64URL encoded JSON array of float64 embedding coordinates (probe face)"`
+	// ReferenceEmbedding is the base64url-encoded JSON array of float64
+	// embedding coordinates for the reference face, sourced from a
+	// verified, digitally signed e-ID credential (see trust-assumption
+	// note in DescriptionLong).
+	ReferenceEmbedding string `json:"reference_embedding" description:"BASE64URL encoded JSON array of float64 embedding coordinates (reference face, sourced from a verified, digitally signed e-ID credential)"`
 }
 
 // PublicInput defines the JSON structure for public inputs to the circuit.
 // This data will be visible to anyone verifying the proof.
 type PublicInput struct {
-	// ReferenceEmbedding is the base64url-encoded JSON array of float64
-	// embedding coordinates for the enrolled/reference face. Callers are
-	// expected to have already verified this embedding traces back to a
-	// digitally signed e-ID credential before calling this API - see the
-	// trust-assumption note in DescriptionLong.
-	ReferenceEmbedding string `json:"reference_embedding" description:"BASE64URL encoded JSON array of float64 embedding coordinates (reference face, sourced from a verified, digitally signed e-ID credential)"`
+	// ProbeEmbedding is the base64url-encoded JSON array of float64
+	// embedding coordinates for the face being checked against the
+	// reference (e.g. captured by a face-scanning device at the point of
+	// verification). Carries no provenance assumption.
+	ProbeEmbedding string `json:"probe_embedding" description:"BASE64URL encoded JSON array of float64 embedding coordinates (probe face)"`
 
 	// Threshold is the maximum allowed (unscaled, linear) Euclidean
 	// distance between probe and reference embeddings for a match.
@@ -378,8 +385,8 @@ func decodeEmbedding(encoded string) ([]float64, error) {
 
 // ProveRequest defines the request body for generating a zero-knowledge proof
 type ProveRequest struct {
-	Public  PublicInput  `json:"public" description:"Public ZK circuit inputs (reference embedding and threshold)"`
-	Private PrivateInput `json:"private" description:"Private ZK circuit inputs (probe embedding)"`
+	Public  PublicInput  `json:"public" description:"Public ZK circuit inputs (probe embedding and threshold)"`
+	Private PrivateInput `json:"private" description:"Private ZK circuit inputs (reference embedding)"`
 }
 
 // ProveResponse defines the response body containing the generated proof
@@ -402,11 +409,7 @@ type VerifyRequest struct {
 type VerifyResponse struct {
 	// Success indicates whether the verification process itself completed
 	// without error (distinct from Valid, which indicates whether the
-	// proof was mathematically valid). NOTE: this was previously typed as
-	// `string`, which read as a copy-paste bug next to `Valid bool` and
-	// left it ambiguous what values it could take; it is now `bool` to
-	// match its actual meaning. This is a breaking change for any existing
-	// client parsing this field as a string - coordinate the rollout.
+	// proof was mathematically valid).
 	Success bool `json:"success"`
 
 	// Valid indicates if the proof is mathematically valid
@@ -430,16 +433,16 @@ func (api *API) Parse(publicInputJSON, privateInputJSON []byte) (frontend.Circui
 		return nil, fmt.Errorf("failed to parse public input JSON: %w", err)
 	}
 
-	refEmbedding, err := decodeEmbedding(publicInput.ReferenceEmbedding)
+	probeEmbedding, err := decodeEmbedding(publicInput.ProbeEmbedding)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode reference embedding: %w", err)
+		return nil, fmt.Errorf("failed to decode probe embedding: %w", err)
 	}
 
 	// Handle verification case (no private input)
 	if privateInputJSON == nil {
 		w := WitnessInput{
-			ReferenceEmbedding: refEmbedding,
-			Threshold:          publicInput.Threshold,
+			ProbeEmbedding: probeEmbedding,
+			Threshold:      publicInput.Threshold,
 		}
 		if err := w.Validate(); err != nil {
 			return nil, fmt.Errorf("public input validation failed: %w", err)
@@ -452,14 +455,14 @@ func (api *API) Parse(publicInputJSON, privateInputJSON []byte) (frontend.Circui
 		return nil, fmt.Errorf("failed to parse private input JSON: %w", err)
 	}
 
-	probeEmbedding, err := decodeEmbedding(privateInput.ProbeEmbedding)
+	referenceEmbedding, err := decodeEmbedding(privateInput.ReferenceEmbedding)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode probe embedding: %w", err)
+		return nil, fmt.Errorf("failed to decode reference embedding: %w", err)
 	}
 
 	w := WitnessInput{
+		ReferenceEmbedding: referenceEmbedding,
 		ProbeEmbedding:     probeEmbedding,
-		ReferenceEmbedding: refEmbedding,
 		Threshold:          publicInput.Threshold,
 	}
 
@@ -485,7 +488,7 @@ var Constraints = map[string]circuits.Constraints{
 // Info contains all metadata needed to register this circuit with the framework
 var Info = &circuits.CircuitInfo{
 	Name:            "assert-face-match",
-	Description:     "Proves a private face embedding is within a public distance threshold of a public reference face embedding, without revealing the private embedding.",
+	Description:     "Proves a public probe face embedding is within a public distance threshold of a private reference face embedding, without revealing the private reference embedding.",
 	LongDescription: DescriptionLong,
 	Version:         1,
 	Circuit:         &CircuitFaceMatch{},
