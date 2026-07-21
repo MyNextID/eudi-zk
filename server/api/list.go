@@ -30,6 +30,7 @@ func init() {
 		overxx.Info,
 		verifyjwscert.Info,
 		minicrl.Info,
+		assertcnf.Info,
 	}
 
 	for _, c := range circuitList {
